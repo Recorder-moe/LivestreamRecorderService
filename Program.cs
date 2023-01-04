@@ -1,6 +1,7 @@
 using Azure.Identity;
 using Azure.ResourceManager;
 using LivestreamRecorderService;
+using LivestreamRecorderService.Models.Interfaces;
 using LivestreamRecorderService.Models.Options;
 using LivestreamRecorderService.Services;
 using Microsoft.Extensions.Azure;
@@ -42,7 +43,8 @@ try
 
         services.AddAzureClients(x => x.UseCredential(new DefaultAzureCredential()));
         services.AddSingleton<ArmClient>(s => new ArmClient(new DefaultAzureCredential()));
-        services.AddSingleton<ACIService>();
+        services.AddSingleton<IACIService, ACIService>();
+        services.AddSingleton<ACIYtarchiveService>();
 
         services.AddHostedService<RecordWorker>();
     })

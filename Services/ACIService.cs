@@ -2,16 +2,20 @@
 using Azure.ResourceManager;
 using Azure.ResourceManager.Resources;
 using Azure.ResourceManager.Resources.Models;
+using LivestreamRecorderService.Models.Interfaces;
 using LivestreamRecorderService.Models.Options;
 using Microsoft.Extensions.Options;
 
 namespace LivestreamRecorderService.Services;
 
-public class ACIService
+public class ACIService : IACIService
 {
     public ArmClient ArmClient { get; }
     public string ResourceGroupName { get; }
-    public ACIService(ArmClient armClient, IOptions<AzureOption> options)
+    public ACIService(
+        ArmClient armClient,
+        IOptions<AzureOption> options
+    )
     {
         ArmClient = armClient;
         ResourceGroupName = options.Value.ResourceGroupName;
