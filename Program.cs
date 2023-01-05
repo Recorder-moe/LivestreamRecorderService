@@ -1,9 +1,12 @@
 using Azure.Identity;
 using Azure.ResourceManager;
 using LivestreamRecorderService;
-using LivestreamRecorderService.Models.Interfaces;
+using LivestreamRecorderService.DB.Core;
+using LivestreamRecorderService.DB.Interfaces;
+using LivestreamRecorderService.Interfaces;
 using LivestreamRecorderService.Models.Options;
 using LivestreamRecorderService.Services;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Azure;
 using Serilog;
 
@@ -34,22 +37,40 @@ Log.Information("Starting up...");
 try
 {
     IHost host = Host.CreateDefaultBuilder(args)
-    .ConfigureServices(services =>
+    .ConfigureServices((context, services) =>
     {
+        var configuration = context.Configuration;
         services.AddOptions<AzureOption>()
                 .Bind(configuration.GetSection(AzureOption.ConfigurationSectionName))
                 .ValidateDataAnnotations()
                 .ValidateOnStart();
 
+        services.AddOptions<CosmosDbOptions>()
+                .Bind(configuration.GetSection(CosmosDbOptions.ConfigurationSectionName))
+                .ValidateDataAnnotations()
+                .ValidateOnStart();
+
+        // Add CosmosDb
+        services.AddDbContext<PublicContext>((options) =>
+        {
+            options.UseCosmos(
+                connectionString: configuration.GetConnectionString("Public")!,
+                databaseName: configuration.GetSection(CosmosDbOptions.ConfigurationSectionName)
+                                           .GetValue<string>(nameof(CosmosDbOptions.DatabaseName))
+                              ?? throw new Exception($"Settings misconfigured. Missing {nameof(CosmosDbOptions.DatabaseName)}"));
+        });
+
         services.AddAzureClients(clientsBuilder =>
         {
             clientsBuilder.UseCredential(new DefaultAzureCredential())
-                          .AddClient<ArmClient, ArmClientOptions>((options, token)=> new ArmClient(token));
+                          .AddClient<ArmClient, ArmClientOptions>((options, token) => new ArmClient(token));
         });
         services.AddSingleton<IACIService, ACIService>();
         services.AddSingleton<ACIYtarchiveService>();
 
         services.AddHostedService<RecordWorker>();
+
+        services.AddScoped<IVideoRepository, VideoRepository>();
     })
     .Build();
 
