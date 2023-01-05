@@ -1,7 +1,7 @@
 ﻿using Azure.ResourceManager;
 using Azure.ResourceManager.Resources;
 
-namespace LivestreamRecorderService.Models.Interfaces
+namespace LivestreamRecorderService.Interfaces
 {
     public interface IACIService
     {

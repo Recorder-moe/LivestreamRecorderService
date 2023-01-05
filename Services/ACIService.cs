@@ -2,7 +2,7 @@
 using Azure.ResourceManager;
 using Azure.ResourceManager.Resources;
 using Azure.ResourceManager.Resources.Models;
-using LivestreamRecorderService.Models.Interfaces;
+using LivestreamRecorderService.Interfaces;
 using LivestreamRecorderService.Models.Options;
 using Microsoft.Extensions.Options;
 

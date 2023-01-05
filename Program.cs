@@ -41,8 +41,11 @@ try
                 .ValidateDataAnnotations()
                 .ValidateOnStart();
 
-        services.AddAzureClients(x => x.UseCredential(new DefaultAzureCredential()));
-        services.AddSingleton<ArmClient>(s => new ArmClient(new DefaultAzureCredential()));
+        services.AddAzureClients(clientsBuilder =>
+        {
+            clientsBuilder.UseCredential(new DefaultAzureCredential())
+                          .AddClient<ArmClient, ArmClientOptions>((options, token)=> new ArmClient(token));
+        });
         services.AddSingleton<IACIService, ACIService>();
         services.AddSingleton<ACIYtarchiveService>();
 
