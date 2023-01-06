@@ -63,7 +63,7 @@ public abstract class CosmosDbRepository<T> : ICosmosDbRepository<T> where T : E
 
     public virtual Task<int> SaveChangesAsync() => _context.SaveChangesAsync();
 
-    public virtual void LoadRelatedData(T entity) { }
+    public virtual T LoadRelatedData(T entity) => entity;
 
     public abstract string CollectionName { get; }
 }

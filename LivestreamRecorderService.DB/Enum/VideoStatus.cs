@@ -2,7 +2,8 @@
 
 public enum VideoStatus
 {
-    Waiting,
+    Scheduled,
+    WaitingToRecord,
     Recording,
     Uploading,
     Archived,

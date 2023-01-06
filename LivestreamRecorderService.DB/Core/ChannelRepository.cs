@@ -9,11 +9,12 @@ public class ChannelRepository : CosmosDbRepository<Channel>, IChannelRepository
     {
     }
 
-    public override void LoadRelatedData(Channel entity)
+    public override Channel LoadRelatedData(Channel entity)
     {
         _context.Entry(entity)
                 .Collection(channel => channel.Videos)
                 .Load();
+        return entity;
     }
 
     public override string CollectionName { get; } = "Channels";

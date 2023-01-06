@@ -9,7 +9,7 @@ public class FileRepository : CosmosDbRepository<File>, IFileRepository
     {
     }
 
-    public override void LoadRelatedData(File entity)
+    public override File LoadRelatedData(File entity)
     {
         _context.Entry(entity)
                 .Reference(file => file.Video)
@@ -17,6 +17,7 @@ public class FileRepository : CosmosDbRepository<File>, IFileRepository
         _context.Entry(entity)
                 .Reference(file => file.Channel)
                 .Load();
+        return entity;
     }
 
     public override string CollectionName { get; } = "Files";

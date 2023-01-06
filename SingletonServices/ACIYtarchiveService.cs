@@ -4,7 +4,7 @@ using LivestreamRecorderService.Interfaces;
 using LivestreamRecorderService.Models.Options;
 using Microsoft.Extensions.Options;
 
-namespace LivestreamRecorderService.Services
+namespace LivestreamRecorderService.SingletonServices
 {
     public class ACIYtarchiveService : ACIService, IACIService
     {

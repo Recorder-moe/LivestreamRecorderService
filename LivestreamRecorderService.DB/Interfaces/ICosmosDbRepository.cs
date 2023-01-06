@@ -14,7 +14,7 @@ public interface ICosmosDbRepository<T> where T : Entity
     IQueryable<T> GetAll();
     Task<T> GetByIdAsync(string id);
     Task<bool> IsExists(string id);
-    void LoadRelatedData(T entity);
+    T LoadRelatedData(T entity);
     Task<int> SaveChangesAsync();
     Task<EntityEntry<T>> UpdateAsync(T entity);
     IQueryable<T> Where(Expression<Func<T, bool>> predicate);

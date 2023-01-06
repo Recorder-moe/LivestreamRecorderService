@@ -9,5 +9,8 @@ public sealed class AzureOption
     public required string ResourceGroupName { get; set; }
     public required string StorageAccountName { get; set; }
     public required string StorageAccountKey { get; set; }
+    public required string ShareName { get; set; }
+    public required string APISubscriptionKey { get; set; }
+    public string ConnectionString => $"DefaultEndpointsProtocol=https;AccountName={StorageAccountName};AccountKey={StorageAccountKey};EndpointSuffix=core.windows.net";
 }
 

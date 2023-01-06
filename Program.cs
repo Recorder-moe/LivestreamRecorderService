@@ -5,9 +5,11 @@ using LivestreamRecorderService.DB.Core;
 using LivestreamRecorderService.DB.Interfaces;
 using LivestreamRecorderService.Interfaces;
 using LivestreamRecorderService.Models.Options;
-using LivestreamRecorderService.Services;
+using LivestreamRecorderService.ScopedServices;
+using LivestreamRecorderService.SingletonServices;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Azure;
+using Microsoft.Extensions.Options;
 using Serilog;
 
 //#if DEBUG
@@ -56,24 +58,31 @@ try
             options
                 //.EnableSensitiveDataLogging()
                 .UseCosmos(connectionString: configuration.GetConnectionString("Public")!,
-                           databaseName: configuration.GetSection(CosmosDbOptions.ConfigurationSectionName)
-                                                      .GetValue<string>(nameof(CosmosDbOptions.DatabaseName))
-                                         ?? throw new Exception($"Settings misconfigured. Missing {nameof(CosmosDbOptions.DatabaseName)}"));
+                           databaseName: services.BuildServiceProvider().GetRequiredService<IOptions<CosmosDbOptions>>().Value.DatabaseName);
         });
+
+        services.AddHttpClient();
 
         services.AddAzureClients(clientsBuilder =>
         {
+            var azureOptions = services.BuildServiceProvider().GetRequiredService<IOptions<AzureOption>>().Value;
+
             clientsBuilder.UseCredential(new DefaultAzureCredential())
                           .AddClient<ArmClient, ArmClientOptions>((options, token) => new ArmClient(token));
+            clientsBuilder.UseCredential(new DefaultAzureCredential())
+                          .AddFileServiceClient(azureOptions.ConnectionString);
         });
         services.AddSingleton<IACIService, ACIService>();
         services.AddSingleton<ACIYtarchiveService>();
+        services.AddSingleton<IAFSService, AFSService>();
 
         services.AddHostedService<RecordWorker>();
 
         services.AddScoped<IVideoRepository, VideoRepository>();
         services.AddScoped<IChannelRepository, ChannelRepository>();
         services.AddScoped<IFileRepository, FileRepository>();
+
+        services.AddScoped<VideoService>();
     })
     .Build();
 
