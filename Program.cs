@@ -53,11 +53,12 @@ try
         // Add CosmosDb
         services.AddDbContext<PublicContext>((options) =>
         {
-            options.UseCosmos(
-                connectionString: configuration.GetConnectionString("Public")!,
-                databaseName: configuration.GetSection(CosmosDbOptions.ConfigurationSectionName)
-                                           .GetValue<string>(nameof(CosmosDbOptions.DatabaseName))
-                              ?? throw new Exception($"Settings misconfigured. Missing {nameof(CosmosDbOptions.DatabaseName)}"));
+            options
+                //.EnableSensitiveDataLogging()
+                .UseCosmos(connectionString: configuration.GetConnectionString("Public")!,
+                           databaseName: configuration.GetSection(CosmosDbOptions.ConfigurationSectionName)
+                                                      .GetValue<string>(nameof(CosmosDbOptions.DatabaseName))
+                                         ?? throw new Exception($"Settings misconfigured. Missing {nameof(CosmosDbOptions.DatabaseName)}"));
         });
 
         services.AddAzureClients(clientsBuilder =>
@@ -71,6 +72,8 @@ try
         services.AddHostedService<RecordWorker>();
 
         services.AddScoped<IVideoRepository, VideoRepository>();
+        services.AddScoped<IChannelRepository, ChannelRepository>();
+        services.AddScoped<IFileRepository, FileRepository>();
     })
     .Build();
 

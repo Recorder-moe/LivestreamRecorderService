@@ -4,12 +4,13 @@ using LivestreamRecorderService.DB.Models;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.ChangeTracking;
 using Omu.ValueInjecter;
+using System.Linq.Expressions;
 
 namespace LivestreamRecorderService.DB.Core;
 
 public abstract class CosmosDbRepository<T> : ICosmosDbRepository<T> where T : Entity
 {
-    private readonly DbContext _context;
+    protected readonly DbContext _context;
 
     public CosmosDbRepository(DbContext context)
     {
@@ -17,28 +18,52 @@ public abstract class CosmosDbRepository<T> : ICosmosDbRepository<T> where T : E
         _context = context;
     }
 
-    public async Task<T> GetByIdAsync(string id)
+    public virtual IQueryable<T> GetAll()
+        => _context.Set<T>().AsQueryable();
+
+    public virtual IQueryable<T> Where(Expression<Func<T, bool>> predicate)
+        => GetAll().Where(predicate);
+
+    public virtual async Task<T> GetByIdAsync(string id)
         => await _context.FindAsync<T>(id) ?? throw new EntityNotFoundException($"Entity with id: {id} was not found.");
 
-    public Task<EntityEntry<T>> AddAsync(T entity) => _context.AddAsync<T>(entity).AsTask();
+    public virtual async Task<bool> IsExists(string id)
+        => await _context.FindAsync<T>(id) != null;
 
-    public async Task<T> UpdateAsync(T entity)
+    public virtual async Task<EntityEntry<T>> AddAsync(T entity)
+        => null == entity
+            ? throw new ArgumentNullException(nameof(entity))
+            : await IsExists(entity.id)
+                ? throw new EntityAlreadyExistsException($"Entity with id: {entity.id} already exists.")
+                : await _context.AddAsync<T>(entity);
+
+    public virtual async Task<EntityEntry<T>> UpdateAsync(T entity)
     {
-        T result = await GetByIdAsync(entity.id);
+        if (!await IsExists(entity.id)) throw new EntityNotFoundException($"Entity with id: {entity.id} was not found.");
 
-        result.InjectFrom(entity);
-        _context.Update<T>(entity);
-        return result;
+        T entityToUpdate = await GetByIdAsync(entity.id);
+
+        entityToUpdate.InjectFrom(entity);
+        return _context.Update<T>(entityToUpdate);
     }
 
-    public async Task<EntityEntry<T>> DeleteAsync(T entity)
-    {
-        await GetByIdAsync(entity.id);
+    public virtual async Task<EntityEntry<T>> AddOrUpdateAsync(T entity)
+        => await IsExists(entity.id)
+            ? await UpdateAsync(entity)
+            : await AddAsync(entity);
 
-        return _context.Remove<T>(entity);
+    public virtual async Task<EntityEntry<T>> DeleteAsync(T entity)
+    {
+        if (!await IsExists(entity.id)) throw new EntityNotFoundException($"Entity with id: {entity.id} was not found.");
+
+        var entityToDelete = await GetByIdAsync(entity.id);
+
+        return _context.Remove<T>(entityToDelete);
     }
 
-    public Task<int> SaveChangesAsync() => _context.SaveChangesAsync();
+    public virtual Task<int> SaveChangesAsync() => _context.SaveChangesAsync();
+
+    public virtual void LoadRelatedData(T entity) { }
 
     public abstract string CollectionName { get; }
 }

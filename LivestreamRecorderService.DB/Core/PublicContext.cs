@@ -1,11 +1,14 @@
 ﻿using LivestreamRecorderService.DB.Models;
 using Microsoft.EntityFrameworkCore;
+using File = LivestreamRecorderService.DB.Models.File;
 
 namespace LivestreamRecorderService.DB.Core;
 
 public class PublicContext : DbContext
 {
     public DbSet<Video> Videos { get; set; }
+    public DbSet<Channel> Channels { get; set; }
+    public DbSet<File> Files { get; set; }
 
     public PublicContext(DbContextOptions options) : base(options)
     {
@@ -14,30 +17,59 @@ public class PublicContext : DbContext
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         #region Videos
-        #region Container
         modelBuilder.Entity<Video>()
             .ToContainer("Videos");
-        #endregion
 
-        #region NoDiscriminator
         modelBuilder.Entity<Video>()
             .HasNoDiscriminator();
-        #endregion
 
         modelBuilder.Entity<Video>()
             .HasKey(nameof(Video.id));
 
-        #region PartitionKey
         modelBuilder.Entity<Video>()
             .HasPartitionKey(o => o.ChannelId);
-        #endregion
 
-        #region ETag
         modelBuilder.Entity<Video>()
             .UseETagConcurrency();
         #endregion
+
+        #region Channels
+        modelBuilder.Entity<Channel>()
+            .ToContainer("Channels");
+
+        modelBuilder.Entity<Channel>()
+            .HasNoDiscriminator();
+
+        modelBuilder.Entity<Channel>()
+            .HasKey(nameof(Channel.id));
+
+        modelBuilder.Entity<Channel>()
+            .HasPartitionKey(o => o.Source);
+
+        modelBuilder.Entity<Channel>()
+            .UseETagConcurrency();
         #endregion
 
+        #region Files
+        modelBuilder.Entity<File>()
+            .ToContainer("Files");
+
+        modelBuilder.Entity<File>()
+            .HasNoDiscriminator();
+
+        modelBuilder.Entity<File>()
+            .HasKey(nameof(File.id));
+
+        modelBuilder.Entity<File>()
+            .HasPartitionKey(o => o.ChannelId);
+
+        modelBuilder.Entity<File>()
+            .UseETagConcurrency();
+        #endregion
+
+
+
+        #region Other Examples
         //#region PropertyNames
         //modelBuilder.Entity<Video>().OwnsOne(
         //    o => o.ShippingAddress,
@@ -58,5 +90,6 @@ public class PublicContext : DbContext
         //    .Property(d => d.ETag)
         //    .IsETagConcurrency();
         //#endregion
+        #endregion
     }
 }

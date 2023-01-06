@@ -6,12 +6,14 @@ namespace LivestreamRecorderService.DB.Models;
 
 [Table("Videos")]
 [PrimaryKey(nameof(id))]
-[Index(nameof(ChannelId))]
 public class Video : Entity
 {
-#pragma warning disable IDE1006 // 命名樣式
-    public new required string id { get; set; }
-#pragma warning restore IDE1006 // 命名樣式
+    public Video()
+    {
+        Files = new HashSet<File>();
+    }
+
+    public override required string id { get; set; }
 
     public required string Source { get; set; }
 
@@ -21,5 +23,28 @@ public class Video : Entity
 
     public required string Title { get; set; }
 
+    public string? Description { get; set; }
+
+    public int? Duration { get; set; }
+
+    public required Timestamps Timestamps { get; set; }
+
+    // My system upload timestamp
+    public DateTime? ArchivedTime { get; set; }
+
     public required string ChannelId { get; set; }
+
+
+    public required Channel Channel { get; set; }
+
+    public ICollection<File> Files { get; set; }
 }
+
+public class Timestamps
+{
+    public DateTime? ActualStartTime { get; set; }
+    public DateTime? PublishedAt { get; set; }
+    public DateTime? ScheduledStartTime { get; set; }
+    public DateTime? ActualEndTime { get; set; }
+}
+
