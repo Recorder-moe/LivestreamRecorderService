@@ -13,7 +13,7 @@ public interface ICosmosDbRepository<T> where T : Entity
     Task<EntityEntry<T>> DeleteAsync(T entity);
     IQueryable<T> GetAll();
     Task<T> GetByIdAsync(string id);
-    Task<bool> IsExists(string id);
+    Task<bool> ExistsAsync(string id);
     T LoadRelatedData(T entity);
     Task<int> SaveChangesAsync();
     Task<EntityEntry<T>> UpdateAsync(T entity);

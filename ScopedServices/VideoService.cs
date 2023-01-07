@@ -56,7 +56,7 @@ public class VideoService
         // Remove files if already exists.
         foreach (var file in files)
         {
-            if(await _fileRepository.IsExists(file.id))
+            if(await _fileRepository.ExistsAsync(file.id))
                 await _fileRepository.DeleteAsync(await _fileRepository.GetByIdAsync(file.id));
         }
         await _fileRepository.SaveChangesAsync();

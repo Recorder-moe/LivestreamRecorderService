@@ -27,19 +27,19 @@ public abstract class CosmosDbRepository<T> : ICosmosDbRepository<T> where T : E
     public virtual async Task<T> GetByIdAsync(string id)
         => await _context.FindAsync<T>(id) ?? throw new EntityNotFoundException($"Entity with id: {id} was not found.");
 
-    public virtual async Task<bool> IsExists(string id)
+    public virtual async Task<bool> ExistsAsync(string id)
         => await _context.FindAsync<T>(id) != null;
 
     public virtual async Task<EntityEntry<T>> AddAsync(T entity)
         => null == entity
             ? throw new ArgumentNullException(nameof(entity))
-            : await IsExists(entity.id)
+            : await ExistsAsync(entity.id)
                 ? throw new EntityAlreadyExistsException($"Entity with id: {entity.id} already exists.")
                 : await _context.AddAsync<T>(entity);
 
     public virtual async Task<EntityEntry<T>> UpdateAsync(T entity)
     {
-        if (!await IsExists(entity.id)) throw new EntityNotFoundException($"Entity with id: {entity.id} was not found.");
+        if (!await ExistsAsync(entity.id)) throw new EntityNotFoundException($"Entity with id: {entity.id} was not found.");
 
         T entityToUpdate = await GetByIdAsync(entity.id);
 
@@ -48,13 +48,13 @@ public abstract class CosmosDbRepository<T> : ICosmosDbRepository<T> where T : E
     }
 
     public virtual async Task<EntityEntry<T>> AddOrUpdateAsync(T entity)
-        => await IsExists(entity.id)
+        => await ExistsAsync(entity.id)
             ? await UpdateAsync(entity)
             : await AddAsync(entity);
 
     public virtual async Task<EntityEntry<T>> DeleteAsync(T entity)
     {
-        if (!await IsExists(entity.id)) throw new EntityNotFoundException($"Entity with id: {entity.id} was not found.");
+        if (!await ExistsAsync(entity.id)) throw new EntityNotFoundException($"Entity with id: {entity.id} was not found.");
 
         var entityToDelete = await GetByIdAsync(entity.id);
 
