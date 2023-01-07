@@ -5,6 +5,7 @@ using LivestreamRecorderService.DB.Models;
 using LivestreamRecorderService.Models.Options;
 using LivestreamRecorderService.SingletonServices;
 using Microsoft.Extensions.Options;
+using System.Web;
 
 namespace LivestreamRecorderService.ScopedServices;
 
@@ -12,19 +13,20 @@ public class VideoService
 {
     private readonly ILogger<VideoService> _logger;
     private readonly IVideoRepository _videoRepository;
+    private readonly IFileRepository _fileRepository;
     private readonly IHttpClientFactory _httpFactory;
-    private readonly AzureOption _azureOptions;
 
     public VideoService(
         ILogger<VideoService> logger,
         IVideoRepository videoRepository,
+        IFileRepository fileRepository,
         IHttpClientFactory httpFactory,
         IOptions<AzureOption> options)
     {
         _logger = logger;
         _videoRepository = videoRepository;
+        _fileRepository = fileRepository;
         _httpFactory = httpFactory;
-        _azureOptions = options.Value;
     }
 
     public List<Video> GetWaitingVideos()
@@ -47,8 +49,18 @@ public class VideoService
 
     public async Task AddFilesToVideoAsync(Video video, List<ShareFileItem> sharefileItems)
     {
+        video = await _videoRepository.GetByIdAsync(video.id);
         _videoRepository.LoadRelatedData(video);
         var files = AFSService.ConvertFileShareItemsToFilesEntities(video, sharefileItems);
+
+        // Remove files if already exists.
+        foreach (var file in files)
+        {
+            if(await _fileRepository.IsExists(file.id))
+                await _fileRepository.DeleteAsync(await _fileRepository.GetByIdAsync(file.id));
+        }
+        await _fileRepository.SaveChangesAsync();
+
         video.Files = files;
         video.ArchivedTime = DateTime.UtcNow;
         video.Timestamps.ActualEndTime = DateTime.UtcNow;
@@ -58,21 +70,21 @@ public class VideoService
 
     public async Task TransferVideoToBlobStorageAsync(Video video)
     {
+        var oldStatus = video.Status;
         await UpdateVideoStatus(video, VideoStatus.Uploading);
 
         try
         {
             _logger.LogInformation("Call Azure Function to transfer video to blob storage: {videoId}", video.id);
-            var request = new HttpRequestMessage(HttpMethod.Post, "https://azurefileshares2blobcontainers.azure-api.net/AzureFileShares2BlobContainers?videoId=" + video.id);
-            request.Headers.Add("Ocp-Apim-Subscription-Key", _azureOptions.APISubscriptionKey);
             var client = _httpFactory.CreateClient();
-            var response = await client.SendAsync(request);
+            var response = await client.PostAsync("AzureFileShares2BlobContainers?videoId=" + HttpUtility.UrlEncode(video.id), null);
             response.EnsureSuccessStatusCode();
 
             await UpdateVideoStatus(video, VideoStatus.Archived);
         }
         catch (Exception e)
         {
+            await UpdateVideoStatus(video, oldStatus);
             _logger.LogError("Exception when calling Azure Function to transfer video to blob storage: {videoId}, {error}, {message}", video.id, e, e.Message);
         }
     }

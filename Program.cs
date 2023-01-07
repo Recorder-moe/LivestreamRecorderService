@@ -27,7 +27,7 @@ IConfiguration configuration = new ConfigurationBuilder()
     .Build();
 
 Log.Logger = new LoggerConfiguration().ReadFrom.Configuration(configuration)
-                                      .CreateBootstrapLogger();
+                                      .CreateLogger();
 
 Log.Information("Starting up...");
 
@@ -39,6 +39,7 @@ Log.Information("Starting up...");
 try
 {
     IHost host = Host.CreateDefaultBuilder(args)
+    .UseSerilog()
     .ConfigureServices((context, services) =>
     {
         var configuration = context.Configuration;
@@ -52,21 +53,28 @@ try
                 .ValidateDataAnnotations()
                 .ValidateOnStart();
 
+        var azureOptions = services.BuildServiceProvider().GetRequiredService<IOptions<AzureOption>>().Value;
+        var cosmosDbOptions = services.BuildServiceProvider().GetRequiredService<IOptions<CosmosDbOptions>>().Value;
+
         // Add CosmosDb
         services.AddDbContext<PublicContext>((options) =>
         {
             options
                 //.EnableSensitiveDataLogging()
                 .UseCosmos(connectionString: configuration.GetConnectionString("Public")!,
-                           databaseName: services.BuildServiceProvider().GetRequiredService<IOptions<CosmosDbOptions>>().Value.DatabaseName);
+                           databaseName: cosmosDbOptions.DatabaseName);
         });
 
-        services.AddHttpClient();
+        services.AddHttpClient("AzureFileShares2BlobContainers", client =>
+        {
+            client.BaseAddress = new Uri("https://azurefileshares2blobcontainers.azure-api.net/");
+            client.DefaultRequestHeaders.Add("Ocp-Apim-Subscription-Key", azureOptions.APISubscriptionKey);
+            // Set this bigger than Azure Function timeout (10min)
+            client.Timeout = TimeSpan.FromMinutes(11); 
+        });
 
         services.AddAzureClients(clientsBuilder =>
         {
-            var azureOptions = services.BuildServiceProvider().GetRequiredService<IOptions<AzureOption>>().Value;
-
             clientsBuilder.UseCredential(new DefaultAzureCredential())
                           .AddClient<ArmClient, ArmClientOptions>((options, token) => new ArmClient(token));
             clientsBuilder.UseCredential(new DefaultAzureCredential())

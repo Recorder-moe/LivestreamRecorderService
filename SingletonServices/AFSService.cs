@@ -45,18 +45,20 @@ namespace LivestreamRecorderService.SingletonServices
         /// <returns></returns>
         public async Task<List<ShareFileItem>> GetShareFilesByVideoId(string videoId, TimeSpan delay)
         {
-            IEnumerable<ShareFileItem> shareFileItems =
+            List<ShareFileItem> shareFileItems =
                 (await GetFileShareClientAsync())
                 .GetFilesAndDirectories(new ShareDirectoryGetFilesAndDirectoriesOptions()
                 {
                     Prefix = videoId
                 })
+                .Where(p => !p.IsDirectory)
                 .ToList();
 
             return shareFileItems != null
-                       && shareFileItems.Any()
-                       && shareFileItems.All(p => p.Properties.LastModified - DateTimeOffset.UtcNow > delay)
-                   ? shareFileItems.Where(p => !p.IsDirectory).ToList()
+                       && shareFileItems.Count() > 0
+                       && !shareFileItems.Any(p => Path.GetExtension(p.Name) == ".ts")
+                       && shareFileItems.Any(p => Path.GetExtension(p.Name) == ".mp4")
+                   ? shareFileItems
                    : new List<ShareFileItem>();
         }
 

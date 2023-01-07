@@ -39,24 +39,27 @@ namespace LivestreamRecorderService
             await TestDBAsync();
             while (!stoppingToken.IsCancellationRequested)
             {
-                #region DI
-                using var scope = _serviceProvider.CreateScope();
-                var videoService = scope.ServiceProvider.GetRequiredService<VideoService>();
-                #endregion
-
-                await CreateACIStartRecord(videoService, stoppingToken);
-
-                await CheckACIDeployStates(videoService, stoppingToken);
-
-                var finished = await MonitorRecordingVideos(videoService);
-
-                foreach (var kvp in finished)
+                _ = Task.Run(async () =>
                 {
-                    var (video, files) = (kvp.Key, kvp.Value);
-                    await videoService.AddFilesToVideoAsync(video, files);
-                    await videoService.TransferVideoToBlobStorageAsync(video);
-                }
-                await Task.Delay(TimeSpan.FromSeconds(30), stoppingToken);
+                    #region DI
+                    using var scope = _serviceProvider.CreateScope();
+                    var videoService = scope.ServiceProvider.GetRequiredService<VideoService>();
+                    #endregion
+
+                    await CreateACIStartRecord(videoService, stoppingToken);
+
+                    await CheckACIDeployStates(videoService, stoppingToken);
+
+                    var finished = await MonitorRecordingVideos(videoService);
+
+                    foreach (var kvp in finished)
+                    {
+                        var (video, files) = (kvp.Key, kvp.Value);
+                        await videoService.AddFilesToVideoAsync(video, files);
+                        await videoService.TransferVideoToBlobStorageAsync(video);
+                    }
+                }, stoppingToken).ConfigureAwait(false);
+                await Task.Delay(TimeSpan.FromMinutes(5), stoppingToken);
             }
         }
 
@@ -105,7 +108,7 @@ namespace LivestreamRecorderService
 
             foreach (var video in videos)
             {
-                if (_operationNotFinish.Any(p=>p.Key.id == video.id))
+                if (_operationNotFinish.Any(p => p.Key.id == video.id))
                 {
                     _logger.LogInformation("ACI deplotment already requested but not finish: {videoId}", video.id);
                     continue;
@@ -140,7 +143,7 @@ namespace LivestreamRecorderService
                 Source = "Youtube",
                 Channel = channel1,
                 ChannelId = channel1.id,
-                Status = DB.Enum.VideoStatus.WaitingToRecord,
+                Status = DB.Enum.VideoStatus.Recording,
                 IsLiveStream = true,
                 Title = @"【歌枠/sing songs】金曜夜、夜遅めにま～っとり歌いましょ【#Vtuber/#間取かける】",
                 ArchivedTime = DateTime.Now,
