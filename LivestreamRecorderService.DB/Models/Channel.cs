@@ -18,6 +18,8 @@ public class Channel : Entity
 
     public required string Source { get; set; }
 
+    public bool Monitoring { get; set; } = false;
+
     public ICollection<Video> Videos { get; set; }
 }
 

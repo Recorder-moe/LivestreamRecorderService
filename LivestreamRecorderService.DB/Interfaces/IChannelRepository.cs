@@ -2,5 +2,8 @@
 
 namespace LivestreamRecorderService.DB.Interfaces
 {
-    public interface IChannelRepository : ICosmosDbRepository<Channel> { }
+    public interface IChannelRepository : ICosmosDbRepository<Channel>
+    {
+        List<Channel> GetMonitoringChannels();
+    }
 }

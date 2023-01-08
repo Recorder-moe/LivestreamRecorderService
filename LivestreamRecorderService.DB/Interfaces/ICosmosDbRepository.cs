@@ -7,6 +7,7 @@ namespace LivestreamRecorderService.DB.Interfaces;
 public interface ICosmosDbRepository<T> where T : Entity
 {
     string CollectionName { get; }
+    bool HasChanged { get; }
 
     Task<EntityEntry<T>> AddAsync(T entity);
     Task<EntityEntry<T>> AddOrUpdateAsync(T entity);

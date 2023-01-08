@@ -19,13 +19,13 @@ public class Video : Entity
 
     public required VideoStatus Status { get; set; }
 
-    public required bool IsLiveStream { get; set; }
+    public bool? IsLiveStream { get; set; }
 
     public required string Title { get; set; }
 
     public string? Description { get; set; }
 
-    public int? Duration { get; set; }
+    public long? Duration { get; set; }
 
     public required Timestamps Timestamps { get; set; }
 
@@ -42,9 +42,8 @@ public class Video : Entity
 
 public class Timestamps
 {
-    public DateTime? ActualStartTime { get; set; }
     public DateTime? PublishedAt { get; set; }
     public DateTime? ScheduledStartTime { get; set; }
-    public DateTime? ActualEndTime { get; set; }
+    public DateTime? ActualStartTime { get; set; }
 }
 

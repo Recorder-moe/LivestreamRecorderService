@@ -80,17 +80,19 @@ try
             clientsBuilder.UseCredential(new DefaultAzureCredential())
                           .AddFileServiceClient(azureOptions.ConnectionString);
         });
+        services.AddSingleton<IAFSService, AFSService>();
         services.AddSingleton<IACIService, ACIService>();
         services.AddSingleton<ACIYtarchiveService>();
-        services.AddSingleton<IAFSService, AFSService>();
 
         services.AddHostedService<RecordWorker>();
+        services.AddHostedService<MonitorWorker>();
 
         services.AddScoped<IVideoRepository, VideoRepository>();
         services.AddScoped<IChannelRepository, ChannelRepository>();
         services.AddScoped<IFileRepository, FileRepository>();
 
         services.AddScoped<VideoService>();
+        services.AddScoped<RSSService>();
     })
     .Build();
 

@@ -11,11 +11,14 @@ public class ChannelRepository : CosmosDbRepository<Channel>, IChannelRepository
 
     public override Channel LoadRelatedData(Channel entity)
     {
-        _context.Entry(entity)
+        context.Entry(entity)
                 .Collection(channel => channel.Videos)
                 .Load();
         return entity;
     }
+
+    public List<Channel> GetMonitoringChannels() 
+        => Where(p => p.Monitoring).ToList();
 
     public override string CollectionName { get; } = "Channels";
 }

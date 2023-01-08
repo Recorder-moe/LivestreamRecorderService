@@ -11,10 +11,10 @@ public class FileRepository : CosmosDbRepository<File>, IFileRepository
 
     public override File LoadRelatedData(File entity)
     {
-        _context.Entry(entity)
+        context.Entry(entity)
                 .Reference(file => file.Video)
                 .Load();
-        _context.Entry(entity)
+        context.Entry(entity)
                 .Reference(file => file.Channel)
                 .Load();
         return entity;

@@ -22,6 +22,7 @@
     <PackageReference Include="Azure.ResourceManager.ContainerInstance" Version="1.0.0" />
     <PackageReference Include="Azure.ResourceManager.Resources" Version="1.3.1" />
     <PackageReference Include="Azure.Storage.Files.Shares" Version="12.12.1" />
+    <PackageReference Include="CodeHollow.FeedReader" Version="1.2.4" />
     <PackageReference Include="Microsoft.EntityFrameworkCore.Cosmos" Version="7.0.1" />
     <PackageReference Include="Microsoft.EntityFrameworkCore.Design" Version="7.0.1">
       <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
@@ -38,6 +39,7 @@
     <PackageReference Include="Serilog.Extensions.Hosting" Version="5.0.1" />
     <PackageReference Include="Serilog.Settings.Configuration" Version="3.4.0" />
     <PackageReference Include="Serilog.Sinks.Console" Version="4.1.0" />
+    <PackageReference Include="YoutubeDLSharp" Version="0.4.3" />
   </ItemGroup>
 
   <ItemGroup>

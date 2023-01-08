@@ -10,32 +10,32 @@ namespace LivestreamRecorderService.DB.Core;
 
 public abstract class CosmosDbRepository<T> : ICosmosDbRepository<T> where T : Entity
 {
-    protected readonly DbContext _context;
+    protected readonly DbContext context;
 
     public CosmosDbRepository(DbContext context)
     {
         context.Database.EnsureCreated();
-        _context = context;
+        this.context = context;
     }
 
     public virtual IQueryable<T> GetAll()
-        => _context.Set<T>().AsQueryable();
+        => context.Set<T>().AsQueryable();
 
     public virtual IQueryable<T> Where(Expression<Func<T, bool>> predicate)
         => GetAll().Where(predicate);
 
     public virtual async Task<T> GetByIdAsync(string id)
-        => await _context.FindAsync<T>(id) ?? throw new EntityNotFoundException($"Entity with id: {id} was not found.");
+        => await context.FindAsync<T>(id) ?? throw new EntityNotFoundException($"Entity with id: {id} was not found.");
 
     public virtual async Task<bool> ExistsAsync(string id)
-        => await _context.FindAsync<T>(id) != null;
+        => await context.FindAsync<T>(id) != null;
 
     public virtual async Task<EntityEntry<T>> AddAsync(T entity)
         => null == entity
             ? throw new ArgumentNullException(nameof(entity))
             : await ExistsAsync(entity.id)
                 ? throw new EntityAlreadyExistsException($"Entity with id: {entity.id} already exists.")
-                : await _context.AddAsync<T>(entity);
+                : await context.AddAsync<T>(entity);
 
     public virtual async Task<EntityEntry<T>> UpdateAsync(T entity)
     {
@@ -44,7 +44,7 @@ public abstract class CosmosDbRepository<T> : ICosmosDbRepository<T> where T : E
         T entityToUpdate = await GetByIdAsync(entity.id);
 
         entityToUpdate.InjectFrom(entity);
-        return _context.Update<T>(entityToUpdate);
+        return context.Update<T>(entityToUpdate);
     }
 
     public virtual async Task<EntityEntry<T>> AddOrUpdateAsync(T entity)
@@ -58,12 +58,13 @@ public abstract class CosmosDbRepository<T> : ICosmosDbRepository<T> where T : E
 
         var entityToDelete = await GetByIdAsync(entity.id);
 
-        return _context.Remove<T>(entityToDelete);
+        return context.Remove<T>(entityToDelete);
     }
 
-    public virtual Task<int> SaveChangesAsync() => _context.SaveChangesAsync();
+    public virtual Task<int> SaveChangesAsync() => context.SaveChangesAsync();
 
-    public virtual T LoadRelatedData(T entity) => entity;
+    public abstract T LoadRelatedData(T entity);
 
     public abstract string CollectionName { get; }
+    public bool HasChanged => context.ChangeTracker.HasChanges();
 }
