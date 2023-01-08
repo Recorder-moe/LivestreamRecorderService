@@ -81,7 +81,7 @@ public class VideoService
         try
         {
             _logger.LogInformation("Call Azure Function to transfer video to blob storage: {videoId}", video.id);
-            var client = _httpFactory.CreateClient();
+            using var client = _httpFactory.CreateClient();
             var response = await client.PostAsync("AzureFileShares2BlobContainers?videoId=" + HttpUtility.UrlEncode(video.id), null);
             response.EnsureSuccessStatusCode();
 

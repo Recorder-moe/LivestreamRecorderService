@@ -1,0 +1,82 @@
+{
+    "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
+    "contentVersion": "1.0.0.0",
+    "parameters": {
+        "containerName": {
+            "type": "string"
+        },
+        "commandOverrideArray": {
+            "type": "array"
+        },
+        "fileshareVolumeName": {
+            "type": "string"
+        },
+        "storageAccountName": {
+            "type": "string"
+        },
+        "storageAccountKey": {
+            "type": "securestring"
+        }
+    },
+    "resources": [
+        {
+            "apiVersion": "2022-09-01",
+            "name": "[parameters('containerName')]",
+            "location": "eastasia",
+            "tags": {},
+            "type": "Microsoft.ContainerInstance/containerGroups",
+            "zones": [],
+            "properties": {
+                "containers": [
+                    {
+                        "name": "[parameters('containerName')]",
+                        "properties": {
+                            // https://github.com/jim60105/dockerfiles/blob/main/yt-dlp/Dockerfile
+                            "image": "jauderho/yt-dlp:2023.01.06",
+                            "resources": {
+                                "requests": {
+                                    "cpu": "1",
+                                    "memoryInGB": "1"
+                                }
+                            },
+                            "command": "[parameters('commandOverrideArray')]",
+                            "ports": [
+                                {
+                                    "port": 80,
+                                    "protocol": "TCP"
+                                }
+                            ],
+                            "volumeMounts": [
+                                {
+                                    "name": "downloads",
+                                    "mountPath": "/downloads"
+                                }
+                            ]
+                        }
+                    }
+                ],
+                "restartPolicy": "Never",
+                "osType": "Linux",
+                "ipAddress": {
+                    "type": "Public",
+                    "ports": [
+                        {
+                            "port": 80,
+                            "protocol": "TCP"
+                        }
+                    ]
+                },
+                "volumes": [
+                    {
+                        "name": "downloads",
+                        "azureFile": {
+                            "shareName": "[parameters('fileshareVolumeName')]",
+                            "storageAccountName": "[parameters('storageAccountName')]",
+                            "storageAccountKey": "[parameters('storageAccountKey')]"
+                        }
+                    }
+                ]
+            }
+        }
+    ]
+}

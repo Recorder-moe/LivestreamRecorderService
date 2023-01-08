@@ -6,11 +6,11 @@ using Microsoft.Extensions.Options;
 
 namespace LivestreamRecorderService.SingletonServices
 {
-    public class ACIYtarchiveService : ACIService, IACIService
+    public class ACIYtdlpService : ACIService, IACIService
     {
         private readonly AzureOption _azureOption;
 
-        public ACIYtarchiveService(
+        public ACIYtdlpService(
             ArmClient armClient,
             IOptions<AzureOption> options) : base(armClient, options)
         {
@@ -19,25 +19,28 @@ namespace LivestreamRecorderService.SingletonServices
 
         public Task<ArmOperation<ArmDeploymentResource>> StartInstanceAsync(string videoId, CancellationToken cancellation = default)
             => CreateAzureContainerInstanceAsync(
-                template: "ACI_ytarchive.json",
+                template: "ACI_ytdlp.json",
                 parameters: new
                 {
                     containerName = new
                     {
-                        value = "ytarchive" + videoId.ToLower().Replace("_", "")  // [a-z0-9]([-a-z0-9]*[a-z0-9])?
+                        value = "ytdlp" + videoId.ToLower().Replace("_", "")  // [a-z0-9]([-a-z0-9]*[a-z0-9])?
                     },
                     commandOverrideArray = new
                     {
                         value = new string[] {
-                            "/usr/bin/dumb-init", "--",
-                            "/ytarchive", "--add-metadata",
-                                          "--merge",
-                                          "--retry-frags", "30",
-                                          "--thumbnail",
-                                          "--write-thumbnail",
-                                          "-o", "%(id)s",
-                                          "https://www.youtube.com/watch?v=" + videoId,
-                                          "best"
+                            "dumb-init", "--",
+                            "yt-dlp", "--ignore-config",
+                                      "--retries", "30",
+                                      "--concurrent-fragments", "16",
+                                      "--merge-output-format", "mp4",
+                                      "-S", "+codec:h264" ,
+                                      "--embed-thumbnail",
+                                      "--embed-metadata",
+                                      "--write-thumbnail",
+                                      "--no-part",
+                                      "-o", "%(id)s.%(ext)s",
+                                      videoId,
                         }
                     },
                     storageAccountName = new
@@ -53,8 +56,8 @@ namespace LivestreamRecorderService.SingletonServices
                         value = "livestream-recorder"
                     }
                 },
-                deploymentName: videoId,
-                cancellation: cancellation);
+        deploymentName: videoId,
+        cancellation: cancellation);
 
     }
 }

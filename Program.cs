@@ -83,6 +83,7 @@ try
         services.AddSingleton<IAFSService, AFSService>();
         services.AddSingleton<IACIService, ACIService>();
         services.AddSingleton<ACIYtarchiveService>();
+        services.AddSingleton<ACIYtdlpService>();
 
         services.AddHostedService<RecordWorker>();
         services.AddHostedService<MonitorWorker>();
