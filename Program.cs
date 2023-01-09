@@ -13,7 +13,7 @@ using Microsoft.Extensions.Options;
 using Serilog;
 
 //#if DEBUG
-//Serilog.Debugging.SelfLog.Enable(msg => Console.WriteLine(msg));
+Serilog.Debugging.SelfLog.Enable(msg => Console.WriteLine(msg));
 //#endif
 
 
