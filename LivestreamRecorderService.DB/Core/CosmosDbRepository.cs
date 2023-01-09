@@ -10,61 +10,71 @@ namespace LivestreamRecorderService.DB.Core;
 
 public abstract class CosmosDbRepository<T> : ICosmosDbRepository<T> where T : Entity
 {
-    protected readonly DbContext context;
 
-    public CosmosDbRepository(DbContext context)
+    public IUnitOfWork UnitOfWork { get; set; }
+    public abstract string CollectionName { get; }
+
+
+    public CosmosDbRepository(IUnitOfWork unitOfWork)
     {
-        context.Database.EnsureCreated();
-        this.context = context;
+        UnitOfWork = unitOfWork;
     }
 
-    public virtual IQueryable<T> GetAll()
-        => context.Set<T>().AsQueryable();
+    private DbSet<T>? _objectset;
+    private DbSet<T> ObjectSet
+    {
+        get
+        {
+            _objectset ??= UnitOfWork.Context.Set<T>();
+            return _objectset;
+        }
+    }
+
+    public virtual IQueryable<T> All()
+        => ObjectSet.AsQueryable();
 
     public virtual IQueryable<T> Where(Expression<Func<T, bool>> predicate)
-        => GetAll().Where(predicate);
+        => All().Where(predicate);
 
-    public virtual async Task<T> GetByIdAsync(string id)
-        => await context.FindAsync<T>(id) ?? throw new EntityNotFoundException($"Entity with id: {id} was not found.");
+    public virtual T GetById(string id)
+        => All().SingleOrDefault(p => p.id == id)
+            ?? throw new EntityNotFoundException($"Entity with id: {id} was not found.");
 
-    public virtual async Task<bool> ExistsAsync(string id)
-        => await context.FindAsync<T>(id) != null;
+    public virtual bool Exists(string id)
+#pragma warning disable CA1827 // 不要在可使用 Any() 時使用 Count() 或 LongCount()
+        => All().Where(p => p.id == id).Count() > 0;
+#pragma warning restore CA1827 // 不要在可使用 Any() 時使用 Count() 或 LongCount()
 
-    public virtual async Task<EntityEntry<T>> AddAsync(T entity)
+    public virtual EntityEntry<T> Add(T entity)
         => null == entity
             ? throw new ArgumentNullException(nameof(entity))
-            : await ExistsAsync(entity.id)
+            : Exists(entity.id)
                 ? throw new EntityAlreadyExistsException($"Entity with id: {entity.id} already exists.")
-                : await context.AddAsync<T>(entity);
+                : ObjectSet.Add(entity);
 
-    public virtual async Task<EntityEntry<T>> UpdateAsync(T entity)
+    public virtual EntityEntry<T> Update(T entity)
     {
-        if (!await ExistsAsync(entity.id)) throw new EntityNotFoundException($"Entity with id: {entity.id} was not found.");
+        if (!Exists(entity.id)) throw new EntityNotFoundException($"Entity with id: {entity.id} was not found.");
 
-        T entityToUpdate = await GetByIdAsync(entity.id);
+        T entityToUpdate = GetById(entity.id);
 
         entityToUpdate.InjectFrom(entity);
-        return context.Update<T>(entityToUpdate);
+        return ObjectSet.Update(entityToUpdate);
     }
 
-    public virtual async Task<EntityEntry<T>> AddOrUpdateAsync(T entity)
-        => await ExistsAsync(entity.id)
-            ? await UpdateAsync(entity)
-            : await AddAsync(entity);
+    public virtual EntityEntry<T> AddOrUpdate(T entity)
+        => Exists(entity.id)
+            ? Update(entity)
+            : Add(entity);
 
-    public virtual async Task<EntityEntry<T>> DeleteAsync(T entity)
+    public virtual EntityEntry<T> Delete(T entity)
     {
-        if (!await ExistsAsync(entity.id)) throw new EntityNotFoundException($"Entity with id: {entity.id} was not found.");
+        if (!Exists(entity.id)) throw new EntityNotFoundException($"Entity with id: {entity.id} was not found.");
 
-        var entityToDelete = await GetByIdAsync(entity.id);
+        var entityToDelete = GetById(entity.id);
 
-        return context.Remove<T>(entityToDelete);
+        return ObjectSet.Remove(entityToDelete);
     }
-
-    public virtual Task<int> SaveChangesAsync() => context.SaveChangesAsync();
 
     public abstract T LoadRelatedData(T entity);
-
-    public abstract string CollectionName { get; }
-    public bool HasChanged => context.ChangeTracker.HasChanges();
 }

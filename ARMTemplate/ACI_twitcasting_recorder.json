@@ -31,7 +31,7 @@
                     {
                         "name": "[parameters('containerName')]",
                         "properties": {
-                            "image": "jauderho/yt-dlp:2023.01.06",
+                            "image": "ghcr.io/jim60105/docker-twitcasting-recorder:latest",
                             "resources": {
                                 "requests": {
                                     "cpu": "1",
@@ -47,8 +47,8 @@
                             ],
                             "volumeMounts": [
                                 {
-                                    "name": "downloads",
-                                    "mountPath": "/downloads"
+                                    "name": "download",
+                                    "mountPath": "/download"
                                 }
                             ]
                         }
@@ -67,7 +67,7 @@
                 },
                 "volumes": [
                     {
-                        "name": "downloads",
+                        "name": "download",
                         "azureFile": {
                             "shareName": "[parameters('fileshareVolumeName')]",
                             "storageAccountName": "[parameters('storageAccountName')]",

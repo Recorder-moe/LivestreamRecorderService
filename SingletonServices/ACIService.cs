@@ -8,10 +8,16 @@ using Microsoft.Extensions.Options;
 
 namespace LivestreamRecorderService.SingletonServices;
 
-public class ACIService : IACIService
+public abstract class ACIService : IACIService
 {
     public ArmClient ArmClient { get; }
     public string ResourceGroupName { get; }
+
+    /// <summary>
+    /// [a-z0-9]([-a-z0-9]*[a-z0-9])?
+    /// </summary>
+    public abstract string DownloaderName { get; }
+
     public ACIService(
         ArmClient armClient,
         IOptions<AzureOption> options
@@ -42,8 +48,16 @@ public class ACIService : IACIService
             Parameters = BinaryData.FromObjectAsJson(parameters),
         });
         return await armDeploymentCollection.CreateOrUpdateAsync(waitUntil: WaitUntil.Started,
-                                                                 deploymentName: $"{template}_{deploymentName}",
+                                                                 deploymentName: $"{deploymentName}",
                                                                  content: deploymentContent,
                                                                  cancellationToken: cancellation);
     }
+
+    protected string GetInstanceName(string videoId) 
+        => DownloaderName + videoId.Split("/").Last()
+                                   .Split("?").First()
+                                   .Split(".").First()
+                                   .ToLower()
+                                   .Replace("_", "")
+                                   .Replace(":", "");
 }

@@ -47,6 +47,9 @@
   </ItemGroup>
 
   <ItemGroup>
+    <Content Update="ARMTemplate\ACI_twitcasting_recorder.json">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </Content>
     <Content Update="ARMTemplate\ACI_ytdlp.json">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
       <ExcludeFromSingleFile>true</ExcludeFromSingleFile>

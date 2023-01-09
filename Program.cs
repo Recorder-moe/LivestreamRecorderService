@@ -70,7 +70,7 @@ try
             client.BaseAddress = new Uri("https://azurefileshares2blobcontainers.azure-api.net/");
             client.DefaultRequestHeaders.Add("Ocp-Apim-Subscription-Key", azureOptions.APISubscriptionKey);
             // Set this bigger than Azure Function timeout (10min)
-            client.Timeout = TimeSpan.FromMinutes(11); 
+            client.Timeout = TimeSpan.FromMinutes(11);
         });
 
         services.AddAzureClients(clientsBuilder =>
@@ -81,19 +81,23 @@ try
                           .AddFileServiceClient(azureOptions.ConnectionString);
         });
         services.AddSingleton<IAFSService, AFSService>();
-        services.AddSingleton<IACIService, ACIService>();
+        //services.AddSingleton<IACIService, ACIService>();
         services.AddSingleton<ACIYtarchiveService>();
         services.AddSingleton<ACIYtdlpService>();
+        services.AddSingleton<ACITwitcastingRecorderService>();
 
         services.AddHostedService<RecordWorker>();
         services.AddHostedService<MonitorWorker>();
 
+        services.AddScoped<IUnitOfWork, UnitOfWork>();
         services.AddScoped<IVideoRepository, VideoRepository>();
         services.AddScoped<IChannelRepository, ChannelRepository>();
         services.AddScoped<IFileRepository, FileRepository>();
 
         services.AddScoped<VideoService>();
         services.AddScoped<RSSService>();
+        services.AddScoped<YoutubeSerivce>();
+        services.AddScoped<TwitcastingService>();
     })
     .Build();
 

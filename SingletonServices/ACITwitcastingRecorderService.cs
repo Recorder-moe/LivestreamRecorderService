@@ -6,40 +6,34 @@ using Microsoft.Extensions.Options;
 
 namespace LivestreamRecorderService.SingletonServices;
 
-public class ACIYtarchiveService : ACIService, IACIService
+public class ACITwitcastingRecorderService : ACIService, IACIService
 {
     private readonly AzureOption _azureOption;
+    public override string DownloaderName => "twitcastingrecorder";
 
-    public override string DownloaderName => "ytarchive";
-
-    public ACIYtarchiveService(
+    public ACITwitcastingRecorderService(
         ArmClient armClient,
         IOptions<AzureOption> options) : base(armClient, options)
     {
         _azureOption = options.Value;
     }
 
-    public Task<ArmOperation<ArmDeploymentResource>> StartInstanceAsync(string url, CancellationToken cancellation = default)
+    public Task<ArmOperation<ArmDeploymentResource>> StartInstanceAsync(string channelId, CancellationToken cancellation = default)
         => CreateAzureContainerInstanceAsync(
-            template: "ACI_ytarchive.json",
+            template: "ACI_twitcasting_recorder.json",
             parameters: new
             {
                 containerName = new
                 {
-                    value = GetInstanceName(url)
+                    value = GetInstanceName(channelId)
                 },
                 commandOverrideArray = new
                 {
                     value = new string[] {
                         "/usr/bin/dumb-init", "--",
-                        "/ytarchive", "--add-metadata",
-                                      "--merge",
-                                      "--retry-frags", "30",
-                                      "--thumbnail",
-                                      "--write-thumbnail",
-                                      "-o", "%(id)s",
-                                      url,
-                                      "best"
+                        "/bin/bash", "record_twitcast.sh",
+                                     channelId,
+                                     "once"
                     }
                 },
                 storageAccountName = new
@@ -55,7 +49,7 @@ public class ACIYtarchiveService : ACIService, IACIService
                     value = "livestream-recorder"
                 }
             },
-            deploymentName: GetInstanceName(url),
+            deploymentName: GetInstanceName(channelId),
             cancellation: cancellation);
 
 }

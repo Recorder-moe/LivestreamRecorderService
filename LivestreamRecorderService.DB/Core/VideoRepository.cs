@@ -1,23 +1,22 @@
-﻿using LivestreamRecorderService.DB.Enum;
-using LivestreamRecorderService.DB.Interfaces;
+﻿using LivestreamRecorderService.DB.Interfaces;
 using LivestreamRecorderService.DB.Models;
 
 namespace LivestreamRecorderService.DB.Core;
 
 public class VideoRepository : CosmosDbRepository<Video>, IVideoRepository
 {
-    public VideoRepository(PublicContext context) : base(context)
+    public VideoRepository(IUnitOfWork unitOfWork) : base(unitOfWork)
     {
     }
 
     public override Video LoadRelatedData(Video entity)
     {
-        context.Entry(entity)
-                .Collection(video => video.Files)
-                .Load();
-        context.Entry(entity)
-                .Reference(video => video.Channel)
-                .Load();
+        UnitOfWork.Context.Entry(entity)
+                          .Collection(video => video.Files)
+                          .Load();
+        UnitOfWork.Context.Entry(entity)
+                          .Reference(video => video.Channel)
+                          .Load();
         return entity;
     }
 

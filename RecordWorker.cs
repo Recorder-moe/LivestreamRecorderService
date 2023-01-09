@@ -1,6 +1,4 @@
-﻿using Azure.ResourceManager;
-using Azure.ResourceManager.Resources;
-using Azure.Storage.Files.Shares.Models;
+﻿using Azure.Storage.Files.Shares.Models;
 using LivestreamRecorderService.DB.Enum;
 using LivestreamRecorderService.DB.Models;
 using LivestreamRecorderService.Interfaces;
@@ -17,14 +15,15 @@ public class RecordWorker : BackgroundService
     private readonly ILogger<RecordWorker> _logger;
     private readonly ACIYtarchiveService _aCIYtarchiveService;
     private readonly ACIYtdlpService _aCIYtdlpService;
+    private readonly ACITwitcastingRecorderService _aCITwitcastingRecorderService;
     private readonly IAFSService _aFSService;
     private readonly IServiceProvider _serviceProvider;
-    readonly Dictionary<Video, ArmOperation<ArmDeploymentResource>> _operationNotFinish = new();
 
     public RecordWorker(
         ILogger<RecordWorker> logger,
         ACIYtarchiveService aCIYtarchiveService,
         ACIYtdlpService aCIYtdlpService,
+        ACITwitcastingRecorderService aCITwitcastingRecorderService,
         IAFSService aFSService,
         IOptions<AzureOption> options,
         IServiceProvider serviceProvider)
@@ -32,6 +31,7 @@ public class RecordWorker : BackgroundService
         _logger = logger;
         _aCIYtarchiveService = aCIYtarchiveService;
         _aCIYtdlpService = aCIYtdlpService;
+        _aCITwitcastingRecorderService = aCITwitcastingRecorderService;
         _aFSService = aFSService;
         _serviceProvider = serviceProvider;
     }
@@ -51,15 +51,13 @@ public class RecordWorker : BackgroundService
                 await CreateACIStartRecord(videoService, stoppingToken);
                 await CreateACIStartDownload(videoService, stoppingToken);
 
-                await CheckACIDeployStates(videoService, stoppingToken);
-
                 var finished = await MonitorRecordingVideos(videoService);
 
                 foreach (var kvp in finished)
                 {
                     var (video, files) = (kvp.Key, kvp.Value);
                     using var _ = LogContext.PushProperty("videoId", video.id);
-                    await videoService.AddFilesToVideoAsync(video, files);
+                    videoService.AddFilesToVideo(video, files);
                     await videoService.TransferVideoToBlobStorageAsync(video);
                 }
             }, stoppingToken).ConfigureAwait(false);
@@ -68,6 +66,13 @@ public class RecordWorker : BackgroundService
         }
     }
 
+    /// <summary>
+    /// CreateACIStartRecord
+    /// </summary>
+    /// <param name="videoService"></param>
+    /// <param name="stoppingToken"></param>
+    /// <returns></returns>
+    /// <exception cref="NotSupportedException"></exception>
     private async Task CreateACIStartRecord(VideoService videoService, CancellationToken stoppingToken)
     {
         _logger.LogInformation("Getting videos to record");
@@ -76,16 +81,26 @@ public class RecordWorker : BackgroundService
 
         foreach (var video in videos)
         {
-            if (_operationNotFinish.Any(p => p.Key.id == video.id))
-            {
-                _logger.LogInformation("ACI deplotment already requested but not finish: {videoId}", video.id);
-                continue;
-            }
-
             _logger.LogInformation("Start to create ACI: {videoId}", video.id);
-            var operation = await _aCIYtarchiveService.StartInstanceAsync(video.id, stoppingToken);
-            _logger.LogInformation("ACI deployment started: {videoId} ", video.id);
-            _operationNotFinish.Add(video, operation);
+            switch (video.Channel.Source)
+            {
+                case "Youtube":
+                    await _aCIYtarchiveService.StartInstanceAsync(
+                        $"https://youtu.be/{video.id}",
+                        stoppingToken);
+                    break;
+                case "Twitcasting":
+                    await _aCITwitcastingRecorderService.StartInstanceAsync(
+                        video.id,
+                        stoppingToken);
+                    break;
+                default:
+                    _logger.LogError("ACI deployment FAILED, Source not support: {source}", video.Channel.Source);
+                    throw new NotSupportedException($"Source {video.Channel.Source} not supported");
+            }
+            videoService.UpdateVideoStatus(video, VideoStatus.Recording);
+
+            _logger.LogInformation("ACI deployed: {videoId} ", video.id);
         }
     }
 
@@ -97,31 +112,25 @@ public class RecordWorker : BackgroundService
 
         foreach (var video in videos)
         {
-            if (_operationNotFinish.Any(p => p.Key.id == video.id))
-            {
-                _logger.LogInformation("ACI deplotment already requested but not finish: {videoId}", video.id);
-                continue;
-            }
-
             _logger.LogInformation("Start to create ACI: {videoId}", video.id);
-            var operation = await _aCIYtdlpService.StartInstanceAsync(video.id, stoppingToken);
-            _logger.LogInformation("ACI deployment started: {videoId} ", video.id);
-            _operationNotFinish.Add(video, operation);
-        }
-    }
-
-    private async Task CheckACIDeployStates(VideoService videoService, CancellationToken stoppingToken)
-    {
-        for (int i = _operationNotFinish.Count - 1; i >= 0; i--)
-        {
-            var kvp = _operationNotFinish.ElementAt(i);
-            _ = await kvp.Value.UpdateStatusAsync(stoppingToken);
-            if (kvp.Value.HasCompleted)
+            switch (video.Channel.Source)
             {
-                _logger.LogInformation("ACI has been deployed: {videoId} ", kvp.Key);
-                await videoService.ACIDeployedAsync(kvp.Key);
-                _operationNotFinish.Remove(kvp.Key);
+                case "Youtube":
+                    await _aCIYtdlpService.StartInstanceAsync(
+                        $"https://youtu.be/{video.id}",
+                        stoppingToken);
+                    break;
+                case "Twitcasting":
+                    await _aCIYtdlpService.StartInstanceAsync(
+                        $"https://twitcasting.tv/{video.ChannelId}/movie/{video.id}",
+                        stoppingToken);
+                    break;
+                default:
+                    _logger.LogError("ACI deployment FAILED, Source not support: {source}", video.Channel.Source);
+                    throw new NotSupportedException($"Source {video.Channel.Source} not supported");
             }
+            videoService.UpdateVideoStatus(video, VideoStatus.Downloading);
+            _logger.LogInformation("ACI deployed: {videoId} ", video.id);
         }
     }
 
@@ -137,8 +146,8 @@ public class RecordWorker : BackgroundService
              .Concat(videoService.GetVideosByStatus(VideoStatus.Downloading));
         foreach (var video in videos)
         {
-            TimeSpan delayTime = TimeSpan.FromMinutes(5);
-            var files = await _aFSService.GetShareFilesByVideoId(video.id, delayTime);
+            var files = await _aFSService.GetShareFilesByVideoId(videoId: video.id,
+                                                                 delay: TimeSpan.FromMinutes(5));
 
             if (files.Count > 0)
             {

@@ -5,18 +5,18 @@ namespace LivestreamRecorderService.DB.Core;
 
 public class FileRepository : CosmosDbRepository<File>, IFileRepository
 {
-    public FileRepository(PublicContext context) : base(context)
+    public FileRepository(IUnitOfWork unitOfWork) : base(unitOfWork)
     {
     }
 
     public override File LoadRelatedData(File entity)
     {
-        context.Entry(entity)
-                .Reference(file => file.Video)
-                .Load();
-        context.Entry(entity)
-                .Reference(file => file.Channel)
-                .Load();
+        UnitOfWork.Context.Entry(entity)
+                          .Reference(file => file.Video)
+                          .Load();
+        UnitOfWork.Context.Entry(entity)
+                          .Reference(file => file.Channel)
+                          .Load();
         return entity;
     }
 

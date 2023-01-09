@@ -1,5 +1,4 @@
-﻿using CodeHollow.FeedReader;
-using LivestreamRecorderService.DB.Models;
+﻿using LivestreamRecorderService.Interfaces;
 using LivestreamRecorderService.Models.Options;
 using LivestreamRecorderService.ScopedServices;
 using Microsoft.Extensions.Options;
@@ -25,34 +24,31 @@ public class MonitorWorker : BackgroundService
     {
         while (!stoppingToken.IsCancellationRequested)
         {
-            _logger.LogTrace("{Worker} starts...",nameof(MonitorWorker));
+            _logger.LogTrace("{Worker} starts...", nameof(MonitorWorker));
 
             #region DI
             using var scope = _serviceProvider.CreateScope();
-            var videoService = scope.ServiceProvider.GetRequiredService<VideoService>();
-            var rssService = scope.ServiceProvider.GetRequiredService<RSSService>();
+            var youtubeSerivce = scope.ServiceProvider.GetRequiredService<YoutubeSerivce>();
+            var twitcastingService = scope.ServiceProvider.GetRequiredService<TwitcastingService>();
             #endregion
 
-            Dictionary<Channel, Feed> feeds = await rssService.ReadRSS();
-
-            foreach (var kvp in feeds)
-            {
-                var (channel, feed) = (kvp.Key, kvp.Value);
-                using var _ = LogContext.PushProperty("channelId", channel.id);
-
-                if (channel.Source == "Youtube")
-                {
-                    foreach (var item in feed.Items)
-                    {
-                        await videoService.UpdateVideosDataAsync(channel, item);
-                    }
-                }
-            }
-
-            await videoService.SaveIfVideoContextHasChangesAsync();
+            await MonitorPlatform(youtubeSerivce);
+            await MonitorPlatform(twitcastingService);
 
             _logger.LogTrace("{Worker} ends. Sleep 5 minutes.", nameof(MonitorWorker));
             await Task.Delay(TimeSpan.FromMinutes(5), stoppingToken);
+        }
+    }
+
+    private async Task MonitorPlatform(IPlatformSerivce PlatformService)
+    {
+        var channels = PlatformService.GetMonitoringChannels();
+        _logger.LogInformation("Get {channelCount} channels for {platform}", channels.Count, PlatformService.PlatformName);
+        foreach (var channel in channels)
+        {
+            using var _ = LogContext.PushProperty("channelId", channel.id);
+
+            await PlatformService.UpdateVideosDataAsync(channel);
         }
     }
 }

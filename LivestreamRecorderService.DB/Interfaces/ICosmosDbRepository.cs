@@ -1,4 +1,5 @@
 ﻿using LivestreamRecorderService.DB.Models;
+using LivestreamRecorderService.DB.Exceptions;
 using Microsoft.EntityFrameworkCore.ChangeTracking;
 using System.Linq.Expressions;
 
@@ -7,16 +8,22 @@ namespace LivestreamRecorderService.DB.Interfaces;
 public interface ICosmosDbRepository<T> where T : Entity
 {
     string CollectionName { get; }
-    bool HasChanged { get; }
+    IUnitOfWork UnitOfWork { get; set; }
 
-    Task<EntityEntry<T>> AddAsync(T entity);
-    Task<EntityEntry<T>> AddOrUpdateAsync(T entity);
-    Task<EntityEntry<T>> DeleteAsync(T entity);
-    IQueryable<T> GetAll();
-    Task<T> GetByIdAsync(string id);
-    Task<bool> ExistsAsync(string id);
+    EntityEntry<T> Add(T entity);
+    EntityEntry<T> AddOrUpdate(T entity);
+    IQueryable<T> All();
+    EntityEntry<T> Delete(T entity);
+    bool Exists(string id);
+
+    /// <summary>
+    /// Get a single entity by id. Will throw a <see cref="EntityNotFoundException"/> if no entity is found.
+    /// </summary>
+    /// <param name="id"></param>
+    /// <returns></returns>
+    /// <exception cref="EntityNotFoundException"></exception>
+    T GetById(string id);
     T LoadRelatedData(T entity);
-    Task<int> SaveChangesAsync();
-    Task<EntityEntry<T>> UpdateAsync(T entity);
+    EntityEntry<T> Update(T entity);
     IQueryable<T> Where(Expression<Func<T, bool>> predicate);
 }

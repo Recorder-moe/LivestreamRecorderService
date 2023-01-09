@@ -5,20 +5,19 @@ namespace LivestreamRecorderService.DB.Core;
 
 public class ChannelRepository : CosmosDbRepository<Channel>, IChannelRepository
 {
-    public ChannelRepository(PublicContext context) : base(context)
+    public ChannelRepository(IUnitOfWork unitOfWork) : base(unitOfWork)
     {
     }
 
     public override Channel LoadRelatedData(Channel entity)
     {
-        context.Entry(entity)
-                .Collection(channel => channel.Videos)
-                .Load();
+        UnitOfWork.Context.Entry(entity)
+                          .Collection(channel => channel.Videos)
+                          .Load();
         return entity;
     }
 
-    public List<Channel> GetMonitoringChannels() 
-        => Where(p => p.Monitoring).ToList();
+    public IQueryable<Channel> GetMonitoringChannels() => Where(p => p.Monitoring);
 
     public override string CollectionName { get; } = "Channels";
 }
