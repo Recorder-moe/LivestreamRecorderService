@@ -62,7 +62,7 @@ public class ACIService : IACIService
     {
         var resourceGroupResource = await GetResourceGroupAsync(cancellation);
         return resourceGroupResource.GetGenericResources(
-                                        filter: $"substringof('{videoId}', name) and resourceType eq 'microsoft.containerinstance/containergroups'",
+                                        filter: $"substringof('{GetInstanceName(videoId)})', name) and resourceType eq 'microsoft.containerinstance/containergroups'",
                                         expand: "provisioningState",
                                         top: 1,
                                         cancellationToken: cancellation)
