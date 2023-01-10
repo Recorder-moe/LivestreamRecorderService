@@ -12,8 +12,9 @@ public class ACITwitcastingRecorderService : ACIService, IACIService
     public override string DownloaderName => "twitcastingrecorder";
 
     public ACITwitcastingRecorderService(
+        ILogger<ACITwitcastingRecorderService> logger,
         ArmClient armClient,
-        IOptions<AzureOption> options) : base(armClient, options)
+        IOptions<AzureOption> options) : base(logger, armClient, options)
     {
         _azureOption = options.Value;
     }

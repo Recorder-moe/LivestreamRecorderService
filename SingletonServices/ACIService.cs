@@ -82,6 +82,7 @@ public class ACIService : IACIService
             else if (instance.Data.ProvisioningState == "Failed")
             {
                 _logger.LogError("ACI status FAILED! {videoId} {aciname}", video.id, instance.Data.Name);
+                throw new Exception($"ACI status FAILED! {instance.Data.Name}");
             }
         }
     }

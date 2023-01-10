@@ -62,7 +62,14 @@ public class RecordWorker : BackgroundService
                     var (video, files) = (kvp.Key, kvp.Value);
                     using var _ = LogContext.PushProperty("videoId", video.id);
 
-                    await _aCIService.RemoveCompletedInstanceContainer(video);
+                    try
+                    {
+                        await _aCIService.RemoveCompletedInstanceContainer(video);
+                    }
+                    catch (Exception)
+                    {
+                        videoService.UpdateVideoStatus(video, VideoStatus.Error);
+                    }
 
                     videoService.AddFilesToVideo(video, files);
                     await videoService.TransferVideoToBlobStorageAsync(video);

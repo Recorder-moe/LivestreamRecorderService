@@ -13,8 +13,9 @@ public class ACIYtarchiveService : ACIService, IACIService
     public override string DownloaderName => "ytarchive";
 
     public ACIYtarchiveService(
+        ILogger<ACIYtarchiveService> logger,
         ArmClient armClient,
-        IOptions<AzureOption> options) : base(armClient, options)
+        IOptions<AzureOption> options) : base(logger, armClient, options)
     {
         _azureOption = options.Value;
     }
