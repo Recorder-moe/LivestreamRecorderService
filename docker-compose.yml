@@ -1,0 +1,15 @@
+version: '3.4'
+
+services:
+  livestreamrecorderservice:
+    container_name: livestreamrecorderservice
+    image: ghcr.io/jim60105/livestreamrecorderservice:latest
+    #build:
+    #  context: .
+    #  dockerfile: Dockerfile
+    env_file:
+      - .env
+    #volumes:
+    #  - ./appsettings.json:/app/appsettings.json
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
