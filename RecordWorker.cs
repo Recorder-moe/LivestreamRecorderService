@@ -41,6 +41,7 @@ public class RecordWorker : BackgroundService
 
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
+        using var __ = LogContext.PushProperty("Worker", nameof(RecordWorker));
         _logger.LogTrace("{Worker} starts asynchronously...", nameof(RecordWorker));
         while (!stoppingToken.IsCancellationRequested)
         {
@@ -60,7 +61,7 @@ public class RecordWorker : BackgroundService
                 foreach (var kvp in finished)
                 {
                     var (video, files) = (kvp.Key, kvp.Value);
-                    using var _ = LogContext.PushProperty("videoId", video.id);
+                    using var ___ = LogContext.PushProperty("videoId", video.id);
 
                     try
                     {
@@ -89,12 +90,17 @@ public class RecordWorker : BackgroundService
     /// <exception cref="NotSupportedException"></exception>
     private async Task CreateACIStartRecord(VideoService videoService, CancellationToken stoppingToken)
     {
-        _logger.LogInformation("Getting videos to record");
+        _logger.LogDebug("Getting videos to record");
         var videos = videoService.GetVideosByStatus(VideoStatus.WaitingToRecord);
-        _logger.LogInformation("Get {count} videos to record: {videoIds}", videos.Count, string.Join(", ", videos.Select(p => p.id).ToList()));
+
+        if (videos.Count > 0)
+            _logger.LogInformation("Get {count} videos to record: {videoIds}", videos.Count, string.Join(", ", videos.Select(p => p.id).ToList()));
+        else
+            _logger.LogDebug("Get {count} videos to record", videos.Count);
 
         foreach (var video in videos)
         {
+            using var _ = LogContext.PushProperty("videoId", video.id);
             _logger.LogInformation("Start to create ACI: {videoId}", video.id);
             switch (video.Channel.Source)
             {
@@ -115,17 +121,22 @@ public class RecordWorker : BackgroundService
             videoService.UpdateVideoStatus(video, VideoStatus.Recording);
 
             _logger.LogInformation("ACI deployed: {videoId} ", video.id);
+            _logger.LogInformation("Start to record {videoId}", video.id);
         }
     }
 
     private async Task CreateACIStartDownload(VideoService videoService, CancellationToken stoppingToken)
     {
-        _logger.LogInformation("Getting videos to download");
+        _logger.LogDebug("Getting videos to download");
         var videos = videoService.GetVideosByStatus(VideoStatus.WaitingToDownload);
-        _logger.LogInformation("Get {count} videos to download: {videoIds}", videos.Count, string.Join(", ", videos.Select(p => p.id).ToList()));
+        if (videos.Count > 0)
+            _logger.LogInformation("Get {count} videos to download: {videoIds}", videos.Count, string.Join(", ", videos.Select(p => p.id).ToList()));
+        else
+            _logger.LogDebug("Get {count} videos to download", videos.Count);
 
         foreach (var video in videos)
         {
+            using var _ = LogContext.PushProperty("videoId", video.id);
             _logger.LogInformation("Start to create ACI: {videoId}", video.id);
             switch (video.Channel.Source)
             {
@@ -145,6 +156,7 @@ public class RecordWorker : BackgroundService
             }
             videoService.UpdateVideoStatus(video, VideoStatus.Downloading);
             _logger.LogInformation("ACI deployed: {videoId} ", video.id);
+            _logger.LogInformation("Start to download {videoId}", video.id);
         }
     }
 
@@ -160,12 +172,13 @@ public class RecordWorker : BackgroundService
              .Concat(videoService.GetVideosByStatus(VideoStatus.Downloading));
         foreach (var video in videos)
         {
+            using var _ = LogContext.PushProperty("videoId", video.id);
             var files = await _aFSService.GetShareFilesByVideoId(videoId: video.id,
                                                                  delay: TimeSpan.FromMinutes(5));
 
             if (files.Count > 0)
             {
-                _logger.LogInformation("Video recording finish! {videoId}", video.id);
+                _logger.LogInformation("Video recording finish {videoId}", video.id);
                 finishedRecordingVideos.Add(video, files);
             }
         }

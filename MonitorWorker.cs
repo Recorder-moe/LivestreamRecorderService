@@ -24,6 +24,7 @@ public class MonitorWorker : BackgroundService
     {
         while (!stoppingToken.IsCancellationRequested)
         {
+            using var _ = LogContext.PushProperty("Worker", nameof(MonitorWorker));
             _logger.LogTrace("{Worker} starts...", nameof(MonitorWorker));
 
             #region DI
@@ -43,7 +44,7 @@ public class MonitorWorker : BackgroundService
     private async Task MonitorPlatform(IPlatformSerivce PlatformService)
     {
         var channels = PlatformService.GetMonitoringChannels();
-        _logger.LogInformation("Get {channelCount} channels for {platform}", channels.Count, PlatformService.PlatformName);
+        _logger.LogDebug("Get {channelCount} channels for {platform}", channels.Count, PlatformService.PlatformName);
         foreach (var channel in channels)
         {
             using var _ = LogContext.PushProperty("channelId", channel.id);

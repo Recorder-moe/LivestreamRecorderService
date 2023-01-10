@@ -22,7 +22,7 @@ public class RSSService
 
     public async Task<Feed?> ReadRSS(string url)
     {
-        _logger.LogInformation("Start to get RSS feed: {url}", url);
+        _logger.LogDebug("Start to get RSS feed: {url}", url);
         Feed? feed = null;
         try
         {
