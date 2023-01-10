@@ -87,4 +87,15 @@ public class VideoService
         }
         _unitOfWork.Commit();
     }
+
+    public void RollbackVideosStatusStuckAtUploading()
+    {
+        GetVideosByStatus(VideoStatus.Uploading)
+            .Where(p => p.ArchivedTime.HasValue
+                        && p.ArchivedTime.Value.AddMinutes(15) < DateTime.UtcNow)
+            .ToList()
+            .ForEach(p => UpdateVideoStatus(p, VideoStatus.Recording));
+        _unitOfWork.Commit();
+    }
+
 }

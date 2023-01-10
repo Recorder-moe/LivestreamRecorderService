@@ -51,8 +51,9 @@ public class RecordWorker : BackgroundService
                 await CreateACIStartRecord(videoService, stoppingToken);
                 await CreateACIStartDownload(videoService, stoppingToken);
 
-                var finished = await MonitorRecordingVideos(videoService);
+                videoService.RollbackVideosStatusStuckAtUploading();
 
+                var finished = await MonitorRecordingVideos(videoService);
                 foreach (var kvp in finished)
                 {
                     var (video, files) = (kvp.Key, kvp.Value);
