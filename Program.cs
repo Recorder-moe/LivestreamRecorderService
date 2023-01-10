@@ -67,8 +67,7 @@ try
 
         services.AddHttpClient("AzureFileShares2BlobContainers", client =>
         {
-            client.BaseAddress = new Uri("https://azurefileshares2blobcontainers.azure-api.net/");
-            client.DefaultRequestHeaders.Add("Ocp-Apim-Subscription-Key", azureOptions.APISubscriptionKey);
+            client.BaseAddress = new Uri("https://azurefileshares2blobcontainers.azurewebsites.net/api/");
             // Set this bigger than Azure Function timeout (10min)
             client.Timeout = TimeSpan.FromMinutes(11);
         });
