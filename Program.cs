@@ -80,7 +80,7 @@ try
                           .AddFileServiceClient(azureOptions.ConnectionString);
         });
         services.AddSingleton<IAFSService, AFSService>();
-        //services.AddSingleton<IACIService, ACIService>();
+        services.AddSingleton<IACIService, ACIService>();
         services.AddSingleton<ACIYtarchiveService>();
         services.AddSingleton<ACIYtdlpService>();
         services.AddSingleton<ACITwitcastingRecorderService>();

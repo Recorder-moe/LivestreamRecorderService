@@ -13,6 +13,7 @@ namespace LivestreamRecorderService;
 public class RecordWorker : BackgroundService
 {
     private readonly ILogger<RecordWorker> _logger;
+    private readonly IACIService _aCIService;
     private readonly ACIYtarchiveService _aCIYtarchiveService;
     private readonly ACIYtdlpService _aCIYtdlpService;
     private readonly ACITwitcastingRecorderService _aCITwitcastingRecorderService;
@@ -21,6 +22,7 @@ public class RecordWorker : BackgroundService
 
     public RecordWorker(
         ILogger<RecordWorker> logger,
+        IACIService aCIService,
         ACIYtarchiveService aCIYtarchiveService,
         ACIYtdlpService aCIYtdlpService,
         ACITwitcastingRecorderService aCITwitcastingRecorderService,
@@ -29,6 +31,7 @@ public class RecordWorker : BackgroundService
         IServiceProvider serviceProvider)
     {
         _logger = logger;
+        _aCIService = aCIService;
         _aCIYtarchiveService = aCIYtarchiveService;
         _aCIYtdlpService = aCIYtdlpService;
         _aCITwitcastingRecorderService = aCITwitcastingRecorderService;
@@ -58,6 +61,9 @@ public class RecordWorker : BackgroundService
                 {
                     var (video, files) = (kvp.Key, kvp.Value);
                     using var _ = LogContext.PushProperty("videoId", video.id);
+
+                    await _aCIService.RemoveCompletedInstanceContainer(video);
+
                     videoService.AddFilesToVideo(video, files);
                     await videoService.TransferVideoToBlobStorageAsync(video);
                 }
