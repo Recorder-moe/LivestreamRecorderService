@@ -69,7 +69,6 @@ public class VideoService
     {
         var oldStatus = video.Status;
         UpdateVideoStatus(video, VideoStatus.Uploading);
-        _unitOfWork.Commit();
 
         try
         {
@@ -85,17 +84,13 @@ public class VideoService
             UpdateVideoStatus(video, oldStatus);
             _logger.LogError("Exception happened when calling Azure Function to transfer files to blob storage: {videoId}, {error}, {message}", video.id, e, e.Message);
         }
-        _unitOfWork.Commit();
     }
 
-    public void RollbackVideosStatusStuckAtUploading()
-    {
-        GetVideosByStatus(VideoStatus.Uploading)
+    public void RollbackVideosStatusStuckAtUploading() 
+        => GetVideosByStatus(VideoStatus.Uploading)
             .Where(p => p.ArchivedTime.HasValue
                         && p.ArchivedTime.Value.AddMinutes(15) < DateTime.UtcNow)
             .ToList()
             .ForEach(p => UpdateVideoStatus(p, VideoStatus.Recording));
-        _unitOfWork.Commit();
-    }
 
 }
