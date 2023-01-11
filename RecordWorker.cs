@@ -46,41 +46,38 @@ public class RecordWorker : BackgroundService
         _logger.LogInformation("{Worker} will sleep 30 seconds to wait for {WorkerToWait} to start.", nameof(RecordWorker), nameof(MonitorWorker));
         await Task.Delay(TimeSpan.FromSeconds(30), stoppingToken);
 #endif
-        _logger.LogTrace("{Worker} starts asynchronously...", nameof(RecordWorker));
+        _logger.LogTrace("{Worker} starts...", nameof(RecordWorker));
         while (!stoppingToken.IsCancellationRequested)
         {
-            _ = Task.Run(async () =>
+            using var ____ = LogContext.PushProperty("WorkerRunId", $"{nameof(RecordWorker)}_{DateTime.Now:yyyyMMddHHmmssfff}");
+            #region DI
+            using var scope = _serviceProvider.CreateScope();
+            var videoService = scope.ServiceProvider.GetRequiredService<VideoService>();
+            #endregion
+
+            await CreateACIStartRecord(videoService, stoppingToken);
+            await CreateACIStartDownload(videoService, stoppingToken);
+
+            videoService.RollbackVideosStatusStuckAtUploading();
+
+            var finished = await MonitorRecordingVideos(videoService);
+            foreach (var kvp in finished)
             {
-                using var ____ = LogContext.PushProperty("WorkerRunId", $"{nameof(RecordWorker)}_{DateTime.Now:yyyyMMddHHmmssfff}");
-                #region DI
-                using var scope = _serviceProvider.CreateScope();
-                var videoService = scope.ServiceProvider.GetRequiredService<VideoService>();
-                #endregion
+                var (video, files) = (kvp.Key, kvp.Value);
+                using var ___ = LogContext.PushProperty("videoId", video.id);
 
-                await CreateACIStartRecord(videoService, stoppingToken);
-                await CreateACIStartDownload(videoService, stoppingToken);
-
-                videoService.RollbackVideosStatusStuckAtUploading();
-
-                var finished = await MonitorRecordingVideos(videoService);
-                foreach (var kvp in finished)
+                try
                 {
-                    var (video, files) = (kvp.Key, kvp.Value);
-                    using var ___ = LogContext.PushProperty("videoId", video.id);
-
-                    try
-                    {
-                        await _aCIService.RemoveCompletedInstanceContainer(video);
-                    }
-                    catch (Exception)
-                    {
-                        videoService.UpdateVideoStatus(video, VideoStatus.Error);
-                    }
-
-                    videoService.AddFilesToVideo(video, files);
-                    await videoService.TransferVideoToBlobStorageAsync(video);
+                    await _aCIService.RemoveCompletedInstanceContainer(video);
                 }
-            }, stoppingToken).ConfigureAwait(false);
+                catch (Exception)
+                {
+                    videoService.UpdateVideoStatus(video, VideoStatus.Error);
+                }
+
+                videoService.AddFilesToVideo(video, files);
+                await videoService.TransferVideoToBlobStorageAsync(video);
+            }
             _logger.LogTrace("{Worker} triggered. Sleep 5 minutes.", nameof(RecordWorker));
             await Task.Delay(TimeSpan.FromMinutes(5), stoppingToken);
         }

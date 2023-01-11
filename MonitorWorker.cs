@@ -22,11 +22,11 @@ public class MonitorWorker : BackgroundService
 
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
+        using var _ = LogContext.PushProperty("Worker", nameof(MonitorWorker));
+        _logger.LogTrace("{Worker} starts...", nameof(MonitorWorker));
         while (!stoppingToken.IsCancellationRequested)
         {
             using var __ = LogContext.PushProperty("WorkerRunId", $"{nameof(MonitorWorker)}_{DateTime.Now:yyyyMMddHHmmssfff}");
-            using var _ = LogContext.PushProperty("Worker", nameof(MonitorWorker));
-            _logger.LogTrace("{Worker} starts...", nameof(MonitorWorker));
 
             #region DI
             using var scope = _serviceProvider.CreateScope();
