@@ -24,6 +24,7 @@ public class MonitorWorker : BackgroundService
     {
         while (!stoppingToken.IsCancellationRequested)
         {
+            using var __ = LogContext.PushProperty("WorkerRunId", $"{nameof(MonitorWorker)}_{DateTime.Now:yyyyMMddHHmmssfff}");
             using var _ = LogContext.PushProperty("Worker", nameof(MonitorWorker));
             _logger.LogTrace("{Worker} starts...", nameof(MonitorWorker));
 

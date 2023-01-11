@@ -51,6 +51,7 @@ public class RecordWorker : BackgroundService
         {
             _ = Task.Run(async () =>
             {
+                using var ____ = LogContext.PushProperty("WorkerRunId", $"{nameof(RecordWorker)}_{DateTime.Now:yyyyMMddHHmmssfff}");
                 #region DI
                 using var scope = _serviceProvider.CreateScope();
                 var videoService = scope.ServiceProvider.GetRequiredService<VideoService>();

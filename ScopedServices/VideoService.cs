@@ -42,7 +42,7 @@ public class VideoService
         video.Status = status;
         _videoRepository.Update(video);
         _unitOfWork.Commit();
-        _logger.LogDebug("Update Video Status to {videostatus}", status);
+        _logger.LogDebug("Update Video {videoId} Status to {videostatus}", video.id, status);
     }
 
     public void AddFilesToVideo(Video video, List<ShareFileItem> sharefileItems)
