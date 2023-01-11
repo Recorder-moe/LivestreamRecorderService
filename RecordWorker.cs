@@ -42,6 +42,10 @@ public class RecordWorker : BackgroundService
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
         using var __ = LogContext.PushProperty("Worker", nameof(RecordWorker));
+#if !DEBUG
+        _logger.LogInformation("{Worker} will sleep 30 seconds to wait for {WorkerToWait} to start.", nameof(RecordWorker), nameof(MonitorWorker));
+        await Task.Delay(TimeSpan.FromSeconds(30), stoppingToken);
+#endif
         _logger.LogTrace("{Worker} starts asynchronously...", nameof(RecordWorker));
         while (!stoppingToken.IsCancellationRequested)
         {
