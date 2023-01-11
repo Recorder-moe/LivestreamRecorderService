@@ -113,7 +113,7 @@ public class RecordWorker : BackgroundService
                     break;
                 case "Twitcasting":
                     await _aCITwitcastingRecorderService.StartInstanceAsync(
-                        video.id,
+                        video.ChannelId,
                         stoppingToken);
                     break;
                 default:
