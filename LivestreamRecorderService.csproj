@@ -7,6 +7,7 @@
     <UserSecretsId>dotnet-LivestreamRecorderService-3a6e3dbc-ab1b-4ee7-bf55-09713c44a431</UserSecretsId>
     <DockerDefaultTargetOS>Linux</DockerDefaultTargetOS>
     <DockerfileContext>.</DockerfileContext>
+    <ServerGarbageCollection>false</ServerGarbageCollection>
   </PropertyGroup>
 
   <ItemGroup>
