@@ -62,7 +62,7 @@ public class ACIService : IACIService
     {
         var resourceGroupResource = await GetResourceGroupAsync(cancellation);
         return resourceGroupResource.GetGenericResources(
-                                        filter: $"substringof('{GetInstanceName(videoId)})', name) and resourceType eq 'microsoft.containerinstance/containergroups'",
+                                        filter: $"substringof('{GetInstanceName(videoId)}', name) and resourceType eq 'microsoft.containerinstance/containergroups'",
                                         expand: "provisioningState",
                                         top: 1,
                                         cancellationToken: cancellation)
@@ -74,16 +74,23 @@ public class ACIService : IACIService
         var instance = (await GetInstanceByVideoIdAsync(video.id));
         if (null != instance && instance.HasData)
         {
-            if (instance.Data.ProvisioningState == "Succeeded")
+            switch (instance.Data.ProvisioningState)
             {
-                await instance.DeleteAsync(Azure.WaitUntil.Completed);
-                _logger.LogInformation("Delete ACI {aciName} for video {videoId}", instance.Data.Name, video.id);
+                case "Succeeded":
+                    await instance.DeleteAsync(Azure.WaitUntil.Completed);
+                    _logger.LogInformation("Delete ACI {aciName} for video {videoId}", instance.Data.Name, video.id);
+                    break;
+                case "Failed":
+                    _logger.LogError("ACI status FAILED! {videoId} {aciname}", video.id, instance.Data.Name);
+                    throw new Exception($"ACI status FAILED! {instance.Data.Name}");
+                default:
+                    _logger.LogWarning("ACI status unhandled! {videoId} {aciname} {ProvisioningState}", video.id, instance.Data.Name, instance.Data.ProvisioningState);
+                    break;
             }
-            else if (instance.Data.ProvisioningState == "Failed")
-            {
-                _logger.LogError("ACI status FAILED! {videoId} {aciname}", video.id, instance.Data.Name);
-                throw new Exception($"ACI status FAILED! {instance.Data.Name}");
-            }
+        }
+        else
+        {
+            _logger.LogWarning("Can not get ACI instance for {videoId} {name}", video.id, GetInstanceName(video.id));
         }
     }
 
