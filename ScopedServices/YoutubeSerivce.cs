@@ -54,6 +54,7 @@ public class YoutubeSerivce : PlatformService, IPlatformSerivce
 
         _rSSService.UpdateChannelName(channel, feed);
 
+        _logger.LogDebug("Get {count} videos for channel {channelId}", feed.Items.Count, channel.id);
         foreach (var item in feed.Items)
         {
             await AddOrUpdateVideoAsync(channel, item, cancellation);

@@ -70,6 +70,10 @@ public class TwitcastingService : PlatformService, IPlatformSerivce
                     video.Status = VideoStatus.WaitingToRecord;
                 _logger.LogInformation("{channelId} is now lived!", channel.id);
             }
+            else
+            {
+                _logger.LogTrace("{channelId} is down", channel.id);
+            }
 
             if (!(await GetTwitcastingIsPublicAsync(videoId, cancellation) ?? false))
             {
