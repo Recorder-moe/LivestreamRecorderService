@@ -17,6 +17,7 @@ public class RecordWorker : BackgroundService
     private readonly ACIYtarchiveService _aCIYtarchiveService;
     private readonly ACIYtdlpService _aCIYtdlpService;
     private readonly ACITwitcastingRecorderService _aCITwitcastingRecorderService;
+    private readonly ACIStreamlinkService _aCIStreamlinkService;
     private readonly IAFSService _aFSService;
     private readonly IServiceProvider _serviceProvider;
 
@@ -26,6 +27,7 @@ public class RecordWorker : BackgroundService
         ACIYtarchiveService aCIYtarchiveService,
         ACIYtdlpService aCIYtdlpService,
         ACITwitcastingRecorderService aCITwitcastingRecorderService,
+        ACIStreamlinkService aCIStreamlinkService,
         IAFSService aFSService,
         IOptions<AzureOption> options,
         IServiceProvider serviceProvider)
@@ -35,6 +37,7 @@ public class RecordWorker : BackgroundService
         _aCIYtarchiveService = aCIYtarchiveService;
         _aCIYtdlpService = aCIYtdlpService;
         _aCITwitcastingRecorderService = aCITwitcastingRecorderService;
+        _aCIStreamlinkService = aCIStreamlinkService;
         _aFSService = aFSService;
         _serviceProvider = serviceProvider;
     }
@@ -116,6 +119,11 @@ public class RecordWorker : BackgroundService
                         video.ChannelId,
                         stoppingToken);
                     break;
+                case "Twitch":
+                    await _aCIStreamlinkService.StartInstanceAsync(
+                        video.ChannelId,
+                        stoppingToken);
+                    break;
                 default:
                     _logger.LogError("ACI deployment FAILED, Source not support: {source}", video.Channel.Source);
                     throw new NotSupportedException($"Source {video.Channel.Source} not supported");
@@ -150,6 +158,11 @@ public class RecordWorker : BackgroundService
                 case "Twitcasting":
                     await _aCIYtdlpService.StartInstanceAsync(
                         $"https://twitcasting.tv/{video.ChannelId}/movie/{video.id}",
+                        stoppingToken);
+                    break;
+                case "Twitch":
+                    await _aCIYtdlpService.StartInstanceAsync(
+                        $"https://www.twitch.tv/videos/{video.id}",
                         stoppingToken);
                     break;
                 default:

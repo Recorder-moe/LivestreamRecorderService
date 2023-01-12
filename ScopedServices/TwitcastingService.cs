@@ -3,6 +3,7 @@ using LivestreamRecorderService.DB.Interfaces;
 using LivestreamRecorderService.DB.Models;
 using LivestreamRecorderService.Interfaces;
 using LivestreamRecorderService.Models;
+using Serilog.Context;
 using System.Net.Http.Json;
 using File = LivestreamRecorderService.DB.Models.File;
 
@@ -37,6 +38,8 @@ public class TwitcastingService : PlatformService, IPlatformSerivce
 
     public override async Task UpdateVideosDataAsync(Channel channel, CancellationToken cancellation = default)
     {
+        using var _ = LogContext.PushProperty("Platform", PlatformName);
+
         var (isLive, videoId) = await GetTwitcastingLiveStatusAsync(channel, cancellation);
 
         if (null != videoId)
@@ -52,7 +55,8 @@ public class TwitcastingService : PlatformService, IPlatformSerivce
                 }
 
                 video = _videoRepository.GetById(videoId);
-                if (video.Status == VideoStatus.Recording)
+                if ((video.Status == VideoStatus.Recording
+                     || video.Status == VideoStatus.WaitingToRecord))
                 {
                     _logger.LogTrace("{channelId} is already recording.", channel.id);
                     return;

@@ -11,6 +11,9 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Azure;
 using Microsoft.Extensions.Options;
 using Serilog;
+using TwitchLib.Api;
+using TwitchLib.Api.Core;
+using TwitchLib.Api.Interfaces;
 
 //#if DEBUG
 Serilog.Debugging.SelfLog.Enable(msg => Console.WriteLine(msg));
@@ -53,8 +56,14 @@ try
                 .ValidateDataAnnotations()
                 .ValidateOnStart();
 
+        services.AddOptions<TwitchOption>()
+                .Bind(configuration.GetSection(TwitchOption.ConfigurationSectionName))
+                .ValidateDataAnnotations()
+                .ValidateOnStart();
+
         var azureOptions = services.BuildServiceProvider().GetRequiredService<IOptions<AzureOption>>().Value;
         var cosmosDbOptions = services.BuildServiceProvider().GetRequiredService<IOptions<CosmosDbOptions>>().Value;
+        var twitchOptions = services.BuildServiceProvider().GetRequiredService<IOptions<TwitchOption>>().Value;
 
         // Add CosmosDb
         services.AddDbContext<PublicContext>((options) =>
@@ -84,6 +93,19 @@ try
         services.AddSingleton<ACIYtarchiveService>();
         services.AddSingleton<ACIYtdlpService>();
         services.AddSingleton<ACITwitcastingRecorderService>();
+        services.AddSingleton<ACIStreamlinkService>();
+
+        services.AddSingleton<ITwitchAPI, TwitchAPI>(s =>
+        {
+            var api = new TwitchAPI(
+                loggerFactory: s.GetRequiredService<ILoggerFactory>(),
+                settings: new ApiSettings()
+                {
+                    ClientId = twitchOptions.ClientId,
+                    Secret = twitchOptions.ClientSecret
+                });
+            return api;
+        });
 
         services.AddHostedService<RecordWorker>();
         services.AddHostedService<MonitorWorker>();
@@ -97,6 +119,7 @@ try
         services.AddScoped<RSSService>();
         services.AddScoped<YoutubeSerivce>();
         services.AddScoped<TwitcastingService>();
+        services.AddScoped<TwitchSerivce>();
     })
     .Build();
 
