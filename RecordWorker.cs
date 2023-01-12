@@ -55,12 +55,12 @@ public class RecordWorker : BackgroundService
             var videoService = scope.ServiceProvider.GetRequiredService<VideoService>();
             #endregion
 
-            await CreateACIStartRecord(videoService, stoppingToken);
-            await CreateACIStartDownload(videoService, stoppingToken);
+            await CreateACIStartRecordAsync(videoService, stoppingToken);
+            await CreateACIStartDownloadAsync(videoService, stoppingToken);
 
             videoService.RollbackVideosStatusStuckAtUploading();
 
-            var finished = await MonitorRecordingVideos(videoService);
+            var finished = await MonitorRecordingVideosAsync(videoService, stoppingToken);
             foreach (var kvp in finished)
             {
                 var (video, files) = (kvp.Key, kvp.Value);
@@ -68,7 +68,7 @@ public class RecordWorker : BackgroundService
 
                 try
                 {
-                    await _aCIService.RemoveCompletedInstanceContainer(video);
+                    await _aCIService.RemoveCompletedInstanceContainerAsync(video, stoppingToken);
                 }
                 catch (Exception)
                 {
@@ -76,7 +76,7 @@ public class RecordWorker : BackgroundService
                 }
 
                 videoService.AddFilesToVideo(video, files);
-                await videoService.TransferVideoToBlobStorageAsync(video);
+                await videoService.TransferVideoToBlobStorageAsync(video, stoppingToken);
             }
             _logger.LogTrace("{Worker} triggered. Sleep 5 minutes.", nameof(RecordWorker));
             await Task.Delay(TimeSpan.FromMinutes(5), stoppingToken);
@@ -90,7 +90,7 @@ public class RecordWorker : BackgroundService
     /// <param name="stoppingToken"></param>
     /// <returns></returns>
     /// <exception cref="NotSupportedException"></exception>
-    private async Task CreateACIStartRecord(VideoService videoService, CancellationToken stoppingToken)
+    private async Task CreateACIStartRecordAsync(VideoService videoService, CancellationToken stoppingToken)
     {
         _logger.LogDebug("Getting videos to record");
         var videos = videoService.GetVideosByStatus(VideoStatus.WaitingToRecord);
@@ -127,7 +127,7 @@ public class RecordWorker : BackgroundService
         }
     }
 
-    private async Task CreateACIStartDownload(VideoService videoService, CancellationToken stoppingToken)
+    private async Task CreateACIStartDownloadAsync(VideoService videoService, CancellationToken stoppingToken)
     {
         _logger.LogDebug("Getting videos to download");
         var videos = videoService.GetVideosByStatus(VideoStatus.WaitingToDownload);
@@ -167,7 +167,7 @@ public class RecordWorker : BackgroundService
     /// </summary>
     /// <param name="videoService"></param>
     /// <returns>Videos that finish recording.</returns>
-    private async Task<Dictionary<Video, List<ShareFileItem>>> MonitorRecordingVideos(VideoService videoService)
+    private async Task<Dictionary<Video, List<ShareFileItem>>> MonitorRecordingVideosAsync(VideoService videoService, CancellationToken cancellation = default)
     {
         var finishedRecordingVideos = new Dictionary<Video, List<ShareFileItem>>();
         var videos = videoService.GetVideosByStatus(VideoStatus.Recording)
@@ -175,8 +175,9 @@ public class RecordWorker : BackgroundService
         foreach (var video in videos)
         {
             using var _ = LogContext.PushProperty("videoId", video.id);
-            var files = await _aFSService.GetShareFilesByVideoId(videoId: video.id,
-                                                                 delay: TimeSpan.FromMinutes(5));
+            var files = await _aFSService.GetShareFilesByVideoIdAsync(videoId: video.id,
+                                                                      delay: TimeSpan.FromMinutes(5),
+                                                                      cancellation: cancellation);
 
             if (files.Count > 0)
             {

@@ -65,7 +65,7 @@ public class VideoService
         _unitOfWork.Commit();
     }
 
-    public async Task TransferVideoToBlobStorageAsync(Video video)
+    public async Task TransferVideoToBlobStorageAsync(Video video, CancellationToken cancellation = default)
     {
         var oldStatus = video.Status;
         UpdateVideoStatus(video, VideoStatus.Uploading);
@@ -74,7 +74,7 @@ public class VideoService
         {
             _logger.LogInformation("Call Azure Function to transfer video to blob storage: {videoId}", video.id);
             using var client = _httpFactory.CreateClient("AzureFileShares2BlobContainers");
-            var response = await client.PostAsync("AzureFileShares2BlobContainers?videoId=" + HttpUtility.UrlEncode(video.id), null);
+            var response = await client.PostAsync("AzureFileShares2BlobContainers?videoId=" + HttpUtility.UrlEncode(video.id), null, cancellation);
             response.EnsureSuccessStatusCode();
 
             UpdateVideoStatus(video, VideoStatus.Archived);

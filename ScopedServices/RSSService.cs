@@ -20,13 +20,13 @@ public class RSSService
         _channelRepository = channelRepository;
     }
 
-    public async Task<Feed?> ReadRSS(string url)
+    public async Task<Feed?> ReadRSS(string url, CancellationToken cancellation = default)
     {
         _logger.LogDebug("Start to get RSS feed: {url}", url);
         Feed? feed = null;
         try
         {
-            feed = await FeedReader.ReadAsync(url);
+            feed = await FeedReader.ReadAsync(url, cancellation);
         }
         catch (Exception e)
         {

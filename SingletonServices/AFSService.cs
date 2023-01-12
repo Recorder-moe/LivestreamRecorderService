@@ -22,10 +22,10 @@ public class AFSService : IAFSService
         _shareClient = shareServiceClient.GetShareClient(options.Value.ShareName);
     }
 
-    public async Task<ShareDirectoryClient> GetFileShareClientAsync()
+    public async Task<ShareDirectoryClient> GetFileShareClientAsync(CancellationToken cancellation = default)
     {
         // Ensure that the share exists
-        if (!await _shareClient.ExistsAsync())
+        if (!await _shareClient.ExistsAsync(cancellation))
         {
             _logger.LogCritical("Share not exists: {fileShareName}!!", _shareClient.Name);
             throw new Exception("File Share does not exist.");
@@ -42,15 +42,15 @@ public class AFSService : IAFSService
     /// <param name="videoId"></param>
     /// <param name="delay"></param>
     /// <returns></returns>
-    public async Task<List<ShareFileItem>> GetShareFilesByVideoId(string videoId, TimeSpan delay)
+    public async Task<List<ShareFileItem>> GetShareFilesByVideoIdAsync(string videoId, TimeSpan delay, CancellationToken cancellation = default)
     {
-        ShareDirectoryClient rootDirectoryClient = await GetFileShareClientAsync();
+        ShareDirectoryClient rootDirectoryClient = await GetFileShareClientAsync(cancellation);
         List<ShareFileItem> shareFileItems =
             rootDirectoryClient
             .GetFilesAndDirectories(new ShareDirectoryGetFilesAndDirectoriesOptions()
             {
                 Prefix = videoId
-            })
+            }, cancellation)
             .Where(p => !p.IsDirectory)
             .ToList();
 

@@ -19,5 +19,5 @@ public interface IACIService
     /// <param name="video"></param>
     /// <returns></returns>
     /// <exception cref="Exception">ACI status is FAILED</exception>
-    Task RemoveCompletedInstanceContainer(Video video);
+    Task RemoveCompletedInstanceContainerAsync(Video video, CancellationToken cancellation = default);
 }

@@ -69,15 +69,15 @@ public class ACIService : IACIService
                                     .FirstOrDefault();
     }
 
-    public async Task RemoveCompletedInstanceContainer(Video video)
+    public async Task RemoveCompletedInstanceContainerAsync(Video video, CancellationToken cancellation = default)
     {
-        var instance = (await GetInstanceByVideoIdAsync(video.id));
+        var instance = (await GetInstanceByVideoIdAsync(video.id, cancellation));
         if (null != instance && instance.HasData)
         {
             switch (instance.Data.ProvisioningState)
             {
                 case "Succeeded":
-                    await instance.DeleteAsync(Azure.WaitUntil.Completed);
+                    await instance.DeleteAsync(Azure.WaitUntil.Completed, cancellation);
                     _logger.LogInformation("Delete ACI {aciName} for video {videoId}", instance.Data.Name, video.id);
                     break;
                 case "Failed":
