@@ -28,16 +28,18 @@ namespace LivestreamRecorderService.ScopedServices
 
         public bool StepInterval(int elapsedTime)
         {
+            if(_elapsedTime == 0)
+            {
+                _elapsedTime += elapsedTime;
+                return true;
+            }
+
             _elapsedTime += elapsedTime;
             if (_elapsedTime >= Interval)
             {
                 _elapsedTime = 0;
-                return true;
             }
-            else
-            {
-                return false;
-            }
+            return false;
         }
     }
 }

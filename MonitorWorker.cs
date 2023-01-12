@@ -40,7 +40,7 @@ public class MonitorWorker : BackgroundService
             await MonitorPlatform(youtubeSerivce, stoppingToken);
             await MonitorPlatform(twitcastingService, stoppingToken);
 
-            _logger.LogTrace("{Worker} ends. Sleep {interval} sec.", nameof(MonitorWorker), _interval);
+            _logger.LogTrace("{Worker} ends. Sleep {interval} seconds.", nameof(MonitorWorker), _interval);
             await Task.Delay(TimeSpan.FromSeconds(_interval), stoppingToken);
         }
     }

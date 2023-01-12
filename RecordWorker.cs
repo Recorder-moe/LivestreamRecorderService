@@ -78,7 +78,7 @@ public class RecordWorker : BackgroundService
                 videoService.AddFilesToVideo(video, files);
                 await videoService.TransferVideoToBlobStorageAsync(video, stoppingToken);
             }
-            _logger.LogTrace("{Worker} triggered. Sleep 5 minutes.", nameof(RecordWorker));
+            _logger.LogTrace("{Worker} ends. Sleep 5 minutes.", nameof(RecordWorker));
             await Task.Delay(TimeSpan.FromMinutes(5), stoppingToken);
         }
     }
