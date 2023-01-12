@@ -10,7 +10,6 @@ public class MonitorWorker : BackgroundService
 {
     private readonly ILogger<MonitorWorker> _logger;
     private readonly IServiceProvider _serviceProvider;
-
     private const int _interval = 10;   // in seconds
 
     public MonitorWorker(

@@ -17,7 +17,7 @@ namespace LivestreamRecorderService.ScopedServices
             IChannelRepository channelRepository)
         {
             _channelRepository = channelRepository;
-            if(!_elapsedTime.ContainsKey(PlatformName))
+            if (!_elapsedTime.ContainsKey(PlatformName))
             {
                 _elapsedTime.Add(PlatformName, 0);
             }

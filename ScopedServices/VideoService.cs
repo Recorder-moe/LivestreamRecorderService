@@ -86,7 +86,7 @@ public class VideoService
         }
     }
 
-    public void RollbackVideosStatusStuckAtUploading() 
+    public void RollbackVideosStatusStuckAtUploading()
         => GetVideosByStatus(VideoStatus.Uploading)
             .Where(p => p.ArchivedTime.HasValue
                         && p.ArchivedTime.Value.AddMinutes(15) < DateTime.UtcNow)

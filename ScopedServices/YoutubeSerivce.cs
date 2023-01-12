@@ -44,6 +44,8 @@ public class YoutubeSerivce : PlatformService, IPlatformSerivce
 
     public override async Task UpdateVideosDataAsync(Channel channel, CancellationToken cancellation = default)
     {
+        using var _ = LogContext.PushProperty("Platform", PlatformName);
+
         var feed = await _rSSService.ReadRSS(GetRSSFeed(channel), cancellation);
 
         if (null == feed)
