@@ -41,9 +41,26 @@ public class TwitcastingService : PlatformService, IPlatformSerivce
 
         if (null != videoId)
         {
-            Video video = _videoRepository.Exists(videoId)
-                ? _videoRepository.GetById(videoId)
-                : new Video()
+            Video video;
+
+            if (_videoRepository.Exists(videoId))
+            {
+                if (!isLive)
+                {
+                    _logger.LogTrace("{channelId} is down.", channel.id);
+                    return;
+                }
+
+                video = _videoRepository.GetById(videoId);
+                if (video.Status == VideoStatus.Recording)
+                {
+                    _logger.LogTrace("{channelId} is already recording.", channel.id);
+                    return;
+                }
+            }
+            else
+            {
+                video = new Video()
                 {
                     id = videoId,
                     Source = PlatformName,
@@ -58,27 +75,23 @@ public class TwitcastingService : PlatformService, IPlatformSerivce
                     },
                     Files = new List<File>()
                 };
+            }
 
             var (title, telop) = await GetTwitcastingStreamTitleAsync(videoId, cancellation);
             video.Title ??= title ?? "";
             video.Description ??= telop ?? "";
 
-            if (isLive)
-            {
-                if (video.Status < VideoStatus.Recording
-                    || video.Status == VideoStatus.Missing)
-                    video.Status = VideoStatus.WaitingToRecord;
-                _logger.LogInformation("{channelId} is now lived!", channel.id);
-            }
-            else
-            {
-                _logger.LogTrace("{channelId} is down", channel.id);
-            }
-
             if (!(await GetTwitcastingIsPublicAsync(videoId, cancellation) ?? false))
             {
                 video.Status = VideoStatus.Reject;
                 _logger.LogWarning("This video is not public! Skip {videoId}", videoId);
+            }
+
+            if (isLive && (video.Status < VideoStatus.Recording
+                           || video.Status == VideoStatus.Missing))
+            {
+                video.Status = VideoStatus.WaitingToRecord;
+                _logger.LogInformation("{channelId} is now lived! Start recording.", channel.id);
             }
 
             _videoRepository.AddOrUpdate(video);
