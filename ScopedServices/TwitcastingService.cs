@@ -15,7 +15,8 @@ public class TwitcastingService : PlatformService, IPlatformSerivce
     private readonly IUnitOfWork _unitOfWork;
     private readonly IVideoRepository _videoRepository;
 
-    public override string PlatformName { get; } = "Twitcasting";
+    public override string PlatformName => "Twitcasting";
+    public override int Interval => 30;
 
     private const string _streamServerApi = "https://twitcasting.tv/streamserver.php";
     private const string _frontendApi = "https://frontendapi.twitcasting.tv";
@@ -34,9 +35,9 @@ public class TwitcastingService : PlatformService, IPlatformSerivce
         _videoRepository = videoRepository;
     }
 
-    public override async Task UpdateVideosDataAsync(Channel channel)
+    public override async Task UpdateVideosDataAsync(Channel channel, CancellationToken cancellation = default)
     {
-        var (isLive, videoId) = await GetTwitcastingLiveStatusAsync(channel);
+        var (isLive, videoId) = await GetTwitcastingLiveStatusAsync(channel, cancellation);
 
         if (null != videoId)
         {
@@ -58,7 +59,7 @@ public class TwitcastingService : PlatformService, IPlatformSerivce
                     Files = new List<File>()
                 };
 
-            var (title, telop) = await GetTwitcastingStreamTitle(videoId);
+            var (title, telop) = await GetTwitcastingStreamTitleAsync(videoId, cancellation);
             video.Title ??= title ?? "";
             video.Description ??= telop ?? "";
 
@@ -70,7 +71,7 @@ public class TwitcastingService : PlatformService, IPlatformSerivce
                 _logger.LogInformation("{channelId} is now lived!", channel.id);
             }
 
-            if (!(await GetTwitcastingIsPublic(videoId) ?? false))
+            if (!(await GetTwitcastingIsPublicAsync(videoId, cancellation) ?? false))
             {
                 video.Status = VideoStatus.Reject;
                 _logger.LogWarning("This video is not public! Skip {videoId}", videoId);
@@ -83,34 +84,34 @@ public class TwitcastingService : PlatformService, IPlatformSerivce
 
     // Example
     // https://github.com/kkent030315/twitcasting-py/blob/main/src/twitcasting.py
-    private async Task<(bool Live, string? Id)> GetTwitcastingLiveStatusAsync(Channel channel)
+    private async Task<(bool Live, string? Id)> GetTwitcastingLiveStatusAsync(Channel channel, CancellationToken cancellation = default)
     {
         using var client = _httpFactory.CreateClient();
-        var response = await client.GetAsync($@"{_streamServerApi}?target={channel.id}&mode=client");
+        var response = await client.GetAsync($@"{_streamServerApi}?target={channel.id}&mode=client", cancellation);
         response.EnsureSuccessStatusCode();
-        var data = await response.Content.ReadFromJsonAsync<TwitcastingStreamData>();
+        var data = await response.Content.ReadFromJsonAsync<TwitcastingStreamData>(cancellationToken: cancellation);
 
         return null == data
                 ? (false, null)
                 : (data.Movie.Live ?? false, data.Movie.Id.ToString());
     }
 
-    private async Task<(string? title, string? telop)> GetTwitcastingStreamTitle(string videoId)
+    private async Task<(string? title, string? telop)> GetTwitcastingStreamTitleAsync(string videoId, CancellationToken cancellation = default)
     {
         using var client = _httpFactory.CreateClient();
 
-        var token = await GetTwitcastingTokenAsync(videoId);
+        var token = await GetTwitcastingTokenAsync(videoId, cancellation);
         if (null == token) return default;
 
-        var response = await client.GetAsync($@"{_frontendApi}/movies/{videoId}/status/viewer?token={token}");
-        var data = await response.Content.ReadFromJsonAsync<TwitcastingViewerData>();
+        var response = await client.GetAsync($@"{_frontendApi}/movies/{videoId}/status/viewer?token={token}", cancellation);
+        var data = await response.Content.ReadFromJsonAsync<TwitcastingViewerData>(cancellationToken: cancellation);
 
         return !string.IsNullOrEmpty(data?.Movie.Title)
                 ? (data?.Movie.Title, data?.Movie.Telop)
                 : (data?.Movie.Telop, "");
     }
 
-    private async Task<string?> GetTwitcastingTokenAsync(string videoId)
+    private async Task<string?> GetTwitcastingTokenAsync(string videoId, CancellationToken cancellation = default)
     {
         using var client = _httpFactory.CreateClient();
         int epochTimeStamp = (int)(DateTime.UtcNow - new DateTime(1970, 1, 1)).TotalSeconds;
@@ -120,9 +121,9 @@ public class TwitcastingService : PlatformService, IPlatformSerivce
         };
         try
         {
-            var response = await client.PostAsync($@"{_happytokenApi}?__n={epochTimeStamp}", content);
+            var response = await client.PostAsync($@"{_happytokenApi}?__n={epochTimeStamp}", content, cancellation);
             response.EnsureSuccessStatusCode();
-            var data = await response.Content.ReadFromJsonAsync<TwitcastingTokenData>();
+            var data = await response.Content.ReadFromJsonAsync<TwitcastingTokenData>(cancellationToken: cancellation);
 
             return null != data
                     && !string.IsNullOrEmpty(data.Token)
@@ -137,19 +138,19 @@ public class TwitcastingService : PlatformService, IPlatformSerivce
         return null;
     }
 
-    private async Task<bool?> GetTwitcastingIsPublic(string videoId)
-        => (await GetTwitcastingInfoDataAsync(videoId))?.Visibility?.Type == "public";
+    private async Task<bool?> GetTwitcastingIsPublicAsync(string videoId, CancellationToken cancellation = default)
+        => (await GetTwitcastingInfoDataAsync(videoId, cancellation))?.Visibility?.Type == "public";
 
-    private async Task<TwitcastingInfoData?> GetTwitcastingInfoDataAsync(string videoId)
+    private async Task<TwitcastingInfoData?> GetTwitcastingInfoDataAsync(string videoId, CancellationToken cancellation = default)
     {
         using var client = _httpFactory.CreateClient();
         int epochTimeStamp = (int)(DateTime.UtcNow - new DateTime(1970, 1, 1)).TotalSeconds;
 
-        var token = await GetTwitcastingTokenAsync(videoId);
+        var token = await GetTwitcastingTokenAsync(videoId, cancellation);
         if (null == token) return null;
-        var response = await client.GetAsync($@"{_frontendApi}/movies/{videoId}/info?__n={epochTimeStamp}&token={token}");
+        var response = await client.GetAsync($@"{_frontendApi}/movies/{videoId}/info?__n={epochTimeStamp}&token={token}", cancellation);
         response.EnsureSuccessStatusCode();
-        var data = await response.Content.ReadFromJsonAsync<TwitcastingInfoData>();
+        var data = await response.Content.ReadFromJsonAsync<TwitcastingInfoData>(cancellationToken: cancellation);
         return data;
     }
 

@@ -24,7 +24,7 @@ namespace LivestreamRecorderService.ScopedServices
                                  .Where(p => p.Source == PlatformName)
                                  .ToList();
 
-        public abstract Task UpdateVideosDataAsync(Channel channel);
+        public abstract Task UpdateVideosDataAsync(Channel channel, CancellationToken cancellation = default);
 
         public bool StepInterval(int elapsedTime)
         {

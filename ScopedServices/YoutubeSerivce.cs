@@ -42,7 +42,7 @@ public class YoutubeSerivce : PlatformService, IPlatformSerivce
     public static string GetRSSFeed(Channel channel)
         => $"https://www.youtube.com/feeds/videos.xml?channel_id={channel.id}";
 
-    public override async Task UpdateVideosDataAsync(Channel channel)
+    public override async Task UpdateVideosDataAsync(Channel channel, CancellationToken cancellation = default)
     {
         var feed = await _rSSService.ReadRSS(GetRSSFeed(channel));
 
@@ -56,12 +56,12 @@ public class YoutubeSerivce : PlatformService, IPlatformSerivce
 
         foreach (var item in feed.Items)
         {
-            await AddOrUpdateVideoAsync(channel, item);
+            await AddOrUpdateVideoAsync(channel, item, cancellation);
         }
         _unitOfWork.Commit();
     }
 
-    private async Task<YtdlpVideoData> GetVideoInfoByYtdlp(string videoId)
+    private async Task<YtdlpVideoData> GetVideoInfoByYtdlpAsync(string videoId, CancellationToken cancellation = default)
     {
         if (!System.IO.File.Exists(_ytdlPath) || !System.IO.File.Exists(_ffmpegPath))
         {
@@ -79,7 +79,7 @@ public class YoutubeSerivce : PlatformService, IPlatformSerivce
         OptionSet optionSet = new();
         optionSet.AddCustomOption("--ignore-no-formats-error", true);
 
-        var res = await ytdl.RunVideoDataFetch_Alt($"https://youtu.be/{videoId}", overrideOptions: optionSet);
+        var res = await ytdl.RunVideoDataFetch_Alt($"https://youtu.be/{videoId}", overrideOptions: optionSet, ct: cancellation);
         YtdlpVideoData videoData = res.Data;
         return videoData;
     }
@@ -91,7 +91,7 @@ public class YoutubeSerivce : PlatformService, IPlatformSerivce
     /// <param name="channel"></param>
     /// <param name="item"></param>
     /// <returns></returns>
-    private async Task AddOrUpdateVideoAsync(Channel channel, FeedItem item)
+    private async Task AddOrUpdateVideoAsync(Channel channel, FeedItem item, CancellationToken cancellation = default)
     {
         var videoId = item.Id.Split(':').Last();
         using var _ = LogContext.PushProperty("videoId", videoId);
@@ -132,7 +132,7 @@ public class YoutubeSerivce : PlatformService, IPlatformSerivce
             _videoRepository.LoadRelatedData(video);
         }
 
-        YtdlpVideoData videoData = await GetVideoInfoByYtdlp(videoId);
+        YtdlpVideoData videoData = await GetVideoInfoByYtdlpAsync(videoId, cancellation);
 
         UpdateVideoData(video!, videoData);
 

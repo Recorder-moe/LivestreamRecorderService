@@ -37,15 +37,15 @@ public class MonitorWorker : BackgroundService
             var twitcastingService = scope.ServiceProvider.GetRequiredService<TwitcastingService>();
             #endregion
 
-            await MonitorPlatform(youtubeSerivce);
-            await MonitorPlatform(twitcastingService);
+            await MonitorPlatform(youtubeSerivce, stoppingToken);
+            await MonitorPlatform(twitcastingService, stoppingToken);
 
             _logger.LogTrace("{Worker} ends. Sleep {interval} sec.", nameof(MonitorWorker), _interval);
             await Task.Delay(TimeSpan.FromSeconds(_interval), stoppingToken);
         }
     }
 
-    private async Task MonitorPlatform(IPlatformSerivce PlatformService)
+    private async Task MonitorPlatform(IPlatformSerivce PlatformService, CancellationToken cancellation = default)
     {
         if (!PlatformService.StepInterval(_interval)) return;
 
@@ -55,7 +55,7 @@ public class MonitorWorker : BackgroundService
         {
             using var _ = LogContext.PushProperty("channelId", channel.id);
 
-            await PlatformService.UpdateVideosDataAsync(channel);
+            await PlatformService.UpdateVideosDataAsync(channel, cancellation);
         }
     }
 }

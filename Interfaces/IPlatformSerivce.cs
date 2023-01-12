@@ -6,7 +6,7 @@ public interface IPlatformSerivce
 {
     public string PlatformName { get; }
     List<Channel> GetMonitoringChannels();
-    Task UpdateVideosDataAsync(Channel channel);
+    Task UpdateVideosDataAsync(Channel channel, CancellationToken cancellation = default);
 
     /// <summary>
     /// Step interval and return true if interval is reached
