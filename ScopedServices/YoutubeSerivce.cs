@@ -22,7 +22,9 @@ public class YoutubeSerivce : PlatformService, IPlatformSerivce
     private string _ffmpegPath = "/usr/bin/ffmpeg";
     private string _ytdlPath = "/usr/bin/yt-dlp";
 
-    public override string PlatformName { get; } = "Youtube";
+    public override string PlatformName => "Youtube";
+
+    public override int Interval => 5 * 60;
 
     public YoutubeSerivce(
         ILogger<YoutubeSerivce> logger,

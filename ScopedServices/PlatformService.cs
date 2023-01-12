@@ -9,6 +9,9 @@ namespace LivestreamRecorderService.ScopedServices
         private readonly IChannelRepository _channelRepository;
 
         public abstract string PlatformName { get; }
+        public abstract int Interval { get; }
+
+        private int _elapsedTime = 0;
 
         public PlatformService(
             IChannelRepository channelRepository)
@@ -22,5 +25,19 @@ namespace LivestreamRecorderService.ScopedServices
                                  .ToList();
 
         public abstract Task UpdateVideosDataAsync(Channel channel);
+
+        public bool StepInterval(int elapsedTime)
+        {
+            _elapsedTime += elapsedTime;
+            if (_elapsedTime >= Interval)
+            {
+                _elapsedTime = 0;
+                return true;
+            }
+            else
+            {
+                return false;
+            }
+        }
     }
 }

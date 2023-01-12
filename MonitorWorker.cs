@@ -11,6 +11,8 @@ public class MonitorWorker : BackgroundService
     private readonly ILogger<MonitorWorker> _logger;
     private readonly IServiceProvider _serviceProvider;
 
+    private const int _interval = 10;   // in seconds
+
     public MonitorWorker(
         ILogger<MonitorWorker> logger,
         IOptions<AzureOption> options,
@@ -24,6 +26,7 @@ public class MonitorWorker : BackgroundService
     {
         using var _ = LogContext.PushProperty("Worker", nameof(MonitorWorker));
         _logger.LogTrace("{Worker} starts...", nameof(MonitorWorker));
+
         while (!stoppingToken.IsCancellationRequested)
         {
             using var __ = LogContext.PushProperty("WorkerRunId", $"{nameof(MonitorWorker)}_{DateTime.Now:yyyyMMddHHmmssfff}");
@@ -37,13 +40,15 @@ public class MonitorWorker : BackgroundService
             await MonitorPlatform(youtubeSerivce);
             await MonitorPlatform(twitcastingService);
 
-            _logger.LogTrace("{Worker} ends. Sleep 5 minutes.", nameof(MonitorWorker));
-            await Task.Delay(TimeSpan.FromMinutes(5), stoppingToken);
+            _logger.LogTrace("{Worker} ends. Sleep {interval} sec.", nameof(MonitorWorker), _interval);
+            await Task.Delay(TimeSpan.FromSeconds(_interval), stoppingToken);
         }
     }
 
     private async Task MonitorPlatform(IPlatformSerivce PlatformService)
     {
+        if (!PlatformService.StepInterval(_interval)) return;
+
         var channels = PlatformService.GetMonitoringChannels();
         _logger.LogDebug("Get {channelCount} channels for {platform}", channels.Count, PlatformService.PlatformName);
         foreach (var channel in channels)
