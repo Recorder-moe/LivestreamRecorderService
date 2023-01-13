@@ -54,8 +54,6 @@ public class MonitorWorker : BackgroundService
         _logger.LogDebug("Get {channelCount} channels for {platform}", channels.Count, PlatformService.PlatformName);
         foreach (var channel in channels)
         {
-            using var _ = LogContext.PushProperty("channelId", channel.id);
-
             await PlatformService.UpdateVideosDataAsync(channel, cancellation);
         }
     }

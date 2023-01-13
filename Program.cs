@@ -30,6 +30,7 @@ IConfiguration configuration = new ConfigurationBuilder()
     .Build();
 
 Log.Logger = new LoggerConfiguration().ReadFrom.Configuration(configuration)
+                                      .Enrich.WithMachineName()
                                       .CreateLogger();
 
 Log.Information("Starting up...");

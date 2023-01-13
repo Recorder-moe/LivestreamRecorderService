@@ -34,6 +34,7 @@ public class TwitchSerivce : PlatformService, IPlatformSerivce
     public override async Task UpdateVideosDataAsync(Channel channel, CancellationToken cancellation = default)
     {
         using var _ = LogContext.PushProperty("Platform", PlatformName);
+        using var __ = LogContext.PushProperty("channelId", channel.id);
 
         _logger.LogTrace("Start to get Twitch stream: {channelId}", channel.id);
         var streams = await _twitchAPI.Helix.Streams.GetStreamsAsync(userLogins: new() { channel.id });
@@ -42,6 +43,7 @@ public class TwitchSerivce : PlatformService, IPlatformSerivce
             && streams.Streams.First() is TwitchLib.Api.Helix.Models.Streams.GetStreams.Stream stream)
         {
             Video video;
+            using var ___ = LogContext.PushProperty("videoId", stream.Id);
 
             if (_videoRepository.Exists(stream.Id))
             {
