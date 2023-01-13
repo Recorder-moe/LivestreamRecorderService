@@ -39,8 +39,10 @@ public class TwitcastingService : PlatformService, IPlatformSerivce
     public override async Task UpdateVideosDataAsync(Channel channel, CancellationToken cancellation = default)
     {
         using var _ = LogContext.PushProperty("Platform", PlatformName);
+        using var __ = LogContext.PushProperty("channelId", channel.id);
 
         var (isLive, videoId) = await GetTwitcastingLiveStatusAsync(channel, cancellation);
+        using var ___ = LogContext.PushProperty("videoId", videoId);
 
         if (null != videoId)
         {
@@ -55,11 +57,15 @@ public class TwitcastingService : PlatformService, IPlatformSerivce
                 }
 
                 video = _videoRepository.GetById(videoId);
-                if ((video.Status == VideoStatus.Recording
-                     || video.Status == VideoStatus.WaitingToRecord))
+                switch (video.Status)
                 {
-                    _logger.LogTrace("{channelId} is already recording.", channel.id);
-                    return;
+                    case VideoStatus.Recording:
+                    case VideoStatus.WaitingToRecord:
+                        _logger.LogTrace("{channelId} is already recording.", channel.id);
+                        return;
+                    case VideoStatus.Reject:
+                        _logger.LogTrace("{videoId} is rejected for recording.", video.id);
+                        return;
                 }
             }
             else
@@ -81,21 +87,23 @@ public class TwitcastingService : PlatformService, IPlatformSerivce
                 };
             }
 
-            var (title, telop) = await GetTwitcastingStreamTitleAsync(videoId, cancellation);
-            video.Title ??= title ?? "";
-            video.Description ??= telop ?? "";
+            if (await GetTwitcastingIsPublicAsync(videoId, cancellation))
+            {
+                var (title, telop) = await GetTwitcastingStreamTitleAsync(videoId, cancellation);
+                video.Title ??= title ?? "";
+                video.Description ??= telop ?? "";
 
-            if (!(await GetTwitcastingIsPublicAsync(videoId, cancellation) ?? false))
+                if (isLive && (video.Status < VideoStatus.Recording
+                               || video.Status == VideoStatus.Missing))
+                {
+                    video.Status = VideoStatus.WaitingToRecord;
+                    _logger.LogInformation("{channelId} is now lived! Start recording.", channel.id);
+                }
+            }
+            else
             {
                 video.Status = VideoStatus.Reject;
                 _logger.LogWarning("This video is not public! Skip {videoId}", videoId);
-            }
-
-            if (isLive && (video.Status < VideoStatus.Recording
-                           || video.Status == VideoStatus.Missing))
-            {
-                video.Status = VideoStatus.WaitingToRecord;
-                _logger.LogInformation("{channelId} is now lived! Start recording.", channel.id);
             }
 
             _videoRepository.AddOrUpdate(video);
@@ -122,7 +130,11 @@ public class TwitcastingService : PlatformService, IPlatformSerivce
         using var client = _httpFactory.CreateClient();
 
         var token = await GetTwitcastingTokenAsync(videoId, cancellation);
-        if (null == token) return default;
+        if (null == token)
+        {
+            _logger.LogError("Failed to get video title! {videoId}", videoId);
+            return default;
+        }
 
         var response = await client.GetAsync($@"{_frontendApi}/movies/{videoId}/status/viewer?token={token}", cancellation);
         var data = await response.Content.ReadFromJsonAsync<TwitcastingViewerData>(cancellationToken: cancellation);
@@ -153,14 +165,18 @@ public class TwitcastingService : PlatformService, IPlatformSerivce
         }
         catch (Exception)
         {
-            _logger.LogError("Failed to get Twitcasting token!");
-            _logger.LogError("Failed to get video title! {videoId}", videoId);
+            _logger.LogWarning("Failed to get Twitcasting token!");
         }
         return null;
     }
 
-    private async Task<bool?> GetTwitcastingIsPublicAsync(string videoId, CancellationToken cancellation = default)
-        => (await GetTwitcastingInfoDataAsync(videoId, cancellation))?.Visibility?.Type == "public";
+    private async Task<bool> GetTwitcastingIsPublicAsync(string videoId, CancellationToken cancellation = default)
+    {
+        var data = await GetTwitcastingInfoDataAsync(videoId, cancellation);
+        // 事實上，私人影片會在取得token時失敗，並不會回傳TwitcastingInfoData物件
+        return null != data
+            && data.Visibility?.Type == "public";
+    }
 
     private async Task<TwitcastingInfoData?> GetTwitcastingInfoDataAsync(string videoId, CancellationToken cancellation = default)
     {
