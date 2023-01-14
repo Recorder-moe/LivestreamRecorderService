@@ -3,7 +3,6 @@ using LivestreamRecorderService.DB.Enum;
 using LivestreamRecorderService.DB.Interfaces;
 using LivestreamRecorderService.DB.Models;
 using LivestreamRecorderService.Models.Options;
-using LivestreamRecorderService.SingletonServices;
 using Microsoft.Extensions.Options;
 using System.Web;
 
@@ -14,21 +13,18 @@ public class VideoService
     private readonly ILogger<VideoService> _logger;
     private readonly IUnitOfWork _unitOfWork;
     private readonly IVideoRepository _videoRepository;
-    private readonly IFileRepository _fileRepository;
     private readonly IHttpClientFactory _httpFactory;
 
     public VideoService(
         ILogger<VideoService> logger,
         IUnitOfWork unitOfWork,
         IVideoRepository videoRepository,
-        IFileRepository fileRepository,
         IHttpClientFactory httpFactory,
         IOptions<AzureOption> options)
     {
         _logger = logger;
         _unitOfWork = unitOfWork;
         _videoRepository = videoRepository;
-        _fileRepository = fileRepository;
         _httpFactory = httpFactory;
     }
 
@@ -49,17 +45,24 @@ public class VideoService
     {
         video = _videoRepository.GetById(video.id);
         _videoRepository.LoadRelatedData(video);
-        var files = AFSService.ConvertFileShareItemsToFilesEntities(video, sharefileItems);
 
-        // Remove files if already exists.
-        foreach (var file in files)
+        var videoFile = sharefileItems.FirstOrDefault(p => p.Name.Split('.').Last() is "mp4" or "mkv" or "webm");
+        if (null != videoFile)
         {
-            if (_fileRepository.Exists(file.id))
-                _fileRepository.Delete(_fileRepository.GetById(file.id));
+            video.Size = videoFile.FileSize;
+            video.Filename = videoFile.Name;
         }
-        _unitOfWork.Commit();
+        else
+        {
+            _logger.LogWarning("No video file found for video {videoId}", video.id);
+        }
 
-        video.Files = files;
+        var thumbnail = sharefileItems.FirstOrDefault(p => p.Name.Split('.').Last() is "webp" or "jpg" or "jpeg" or "png");
+        if (null != thumbnail)
+        {
+            video.Thumbnail = thumbnail.Name;
+        }
+
         video.ArchivedTime = DateTime.UtcNow;
         _videoRepository.Update(video);
         _unitOfWork.Commit();

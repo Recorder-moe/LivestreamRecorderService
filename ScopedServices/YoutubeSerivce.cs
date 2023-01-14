@@ -8,7 +8,6 @@ using LivestreamRecorderService.Models;
 using Serilog.Context;
 using System.Configuration;
 using YoutubeDLSharp.Options;
-using File = LivestreamRecorderService.DB.Models.File;
 
 namespace LivestreamRecorderService.ScopedServices;
 
@@ -119,6 +118,7 @@ public class YoutubeSerivce : PlatformService, IPlatformSerivce
                 id = videoId,
                 Source = PlatformName,
                 Status = VideoStatus.Unknown,
+                SourceStatus = VideoStatus.Unknown,
                 Title = item.Title,
                 ChannelId = channel.id,
                 Channel = channel,
@@ -126,7 +126,6 @@ public class YoutubeSerivce : PlatformService, IPlatformSerivce
                 {
                     PublishedAt = item.PublishingDate
                 },
-                Files = new List<File>()
             };
             _logger.LogInformation("Found a new Video {videoId} from {channelId}", videoId, channel.id);
             isNewVideo = true;

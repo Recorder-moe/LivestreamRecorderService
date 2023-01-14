@@ -1,6 +1,5 @@
 ﻿using LivestreamRecorderService.DB.Models;
 using Microsoft.EntityFrameworkCore;
-using File = LivestreamRecorderService.DB.Models.File;
 
 namespace LivestreamRecorderService.DB.Core;
 
@@ -8,7 +7,6 @@ public class PublicContext : DbContext
 {
     public DbSet<Video> Videos { get; set; }
     public DbSet<Channel> Channels { get; set; }
-    public DbSet<File> Files { get; set; }
 
     public PublicContext(DbContextOptions options) : base(options)
     {
@@ -49,24 +47,6 @@ public class PublicContext : DbContext
         modelBuilder.Entity<Channel>()
             .UseETagConcurrency();
         #endregion
-
-        #region Files
-        modelBuilder.Entity<File>()
-            .ToContainer("Files");
-
-        modelBuilder.Entity<File>()
-            .HasNoDiscriminator();
-
-        modelBuilder.Entity<File>()
-            .HasKey(nameof(File.id));
-
-        modelBuilder.Entity<File>()
-            .HasPartitionKey(o => o.ChannelId);
-
-        modelBuilder.Entity<File>()
-            .UseETagConcurrency();
-        #endregion
-
 
 
         #region Other Examples

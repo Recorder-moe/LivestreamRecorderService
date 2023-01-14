@@ -5,7 +5,6 @@ using LivestreamRecorderService.Interfaces;
 using LivestreamRecorderService.Models;
 using Serilog.Context;
 using System.Net.Http.Json;
-using File = LivestreamRecorderService.DB.Models.File;
 
 namespace LivestreamRecorderService.ScopedServices;
 
@@ -75,6 +74,7 @@ public class TwitcastingService : PlatformService, IPlatformSerivce
                     id = videoId,
                     Source = PlatformName,
                     Status = VideoStatus.Missing,
+                    SourceStatus = VideoStatus.Unknown,
                     IsLiveStream = true,
                     Title = null!,
                     ChannelId = channel.id,
@@ -83,7 +83,6 @@ public class TwitcastingService : PlatformService, IPlatformSerivce
                     {
                         PublishedAt = DateTime.UtcNow
                     },
-                    Files = new List<File>()
                 };
             }
 

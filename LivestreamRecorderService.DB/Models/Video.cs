@@ -8,11 +8,6 @@ namespace LivestreamRecorderService.DB.Models;
 [PrimaryKey(nameof(id))]
 public class Video : Entity
 {
-    public Video()
-    {
-        Files = new HashSet<File>();
-    }
-
     public override required string id { get; set; }
 
     public required string Source { get; set; }
@@ -32,12 +27,17 @@ public class Video : Entity
     // My system upload timestamp
     public DateTime? ArchivedTime { get; set; }
 
+    public string? Thumbnail { get; set; }
+
+    public string? Filename { get; set; }
+
+    public long? Size { get; set; }
+
+    public VideoStatus? SourceStatus { get; set; } = VideoStatus.Unknown;
+
     public required string ChannelId { get; set; }
 
-
     public required Channel Channel { get; set; }
-
-    public ICollection<File> Files { get; set; }
 }
 
 public class Timestamps

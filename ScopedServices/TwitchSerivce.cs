@@ -64,6 +64,7 @@ public class TwitchSerivce : PlatformService, IPlatformSerivce
                     id = stream.Id,
                     Source = PlatformName,
                     Status = VideoStatus.WaitingToRecord,
+                    SourceStatus = VideoStatus.Unknown,
                     IsLiveStream = true,
                     Title = stream.Title,
                     Description = stream.GameName,

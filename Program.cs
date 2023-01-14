@@ -114,7 +114,6 @@ try
         services.AddScoped<IUnitOfWork, UnitOfWork>();
         services.AddScoped<IVideoRepository, VideoRepository>();
         services.AddScoped<IChannelRepository, ChannelRepository>();
-        services.AddScoped<IFileRepository, FileRepository>();
 
         services.AddScoped<VideoService>();
         services.AddScoped<RSSService>();

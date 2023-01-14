@@ -4,7 +4,6 @@ using LivestreamRecorderService.DB.Models;
 using LivestreamRecorderService.Interfaces;
 using LivestreamRecorderService.Models.Options;
 using Microsoft.Extensions.Options;
-using File = LivestreamRecorderService.DB.Models.File;
 
 namespace LivestreamRecorderService.SingletonServices;
 
@@ -66,21 +65,4 @@ public class AFSService : IAFSService
                ? shareFileItems
                : new List<ShareFileItem>();
     }
-
-    public static List<File> ConvertFileShareItemsToFilesEntities(Video video, IEnumerable<ShareFileItem> shareFileItems)
-        => shareFileItems.Select(p => new File()
-        {
-            id = p.Name,
-            ChannelId = video.ChannelId,
-            Channel = video.Channel,
-            Directory = p.Name.Split('.').Last() switch
-            {
-                "jpg" or "jpeg" or "png" or "webp" => "/thumbnails",
-                "mp4" or "webm" or "mkv" => "/videos",
-                _ => "/"
-            },
-            Size = p.FileSize,
-            Video = video,
-            VideoId = video.id
-        }).ToList();
 }
