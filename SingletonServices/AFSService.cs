@@ -73,7 +73,12 @@ public class AFSService : IAFSService
             id = p.Name,
             ChannelId = video.ChannelId,
             Channel = video.Channel,
-            Directory = "/",
+            Directory = p.Name.Split('.').Last() switch
+            {
+                "jpg" or "jpeg" or "png" or "webp" => "/thumbnails",
+                "mp4" or "webm" or "mkv" => "/videos",
+                _ => "/"
+            },
             Size = p.FileSize,
             Video = video,
             VideoId = video.id
