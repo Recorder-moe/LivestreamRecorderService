@@ -88,8 +88,11 @@ try
                           .AddClient<ArmClient, ArmClientOptions>((options, token) => new ArmClient(token));
             clientsBuilder.UseCredential(new DefaultAzureCredential())
                           .AddFileServiceClient(azureOptions.ConnectionString);
+            clientsBuilder.UseCredential(new DefaultAzureCredential())
+                          .AddBlobServiceClient(azureOptions.ConnectionString);
         });
         services.AddSingleton<IAFSService, AFSService>();
+        services.AddSingleton<IABSService, ABSService>();
         services.AddSingleton<IACIService, ACIService>();
         services.AddSingleton<ACIYtarchiveService>();
         services.AddSingleton<ACIYtdlpService>();
@@ -110,6 +113,7 @@ try
 
         services.AddHostedService<RecordWorker>();
         services.AddHostedService<MonitorWorker>();
+        services.AddHostedService<ChannelInfoWorker>();
 
         services.AddScoped<IUnitOfWork, UnitOfWork>();
         services.AddScoped<IVideoRepository, VideoRepository>();

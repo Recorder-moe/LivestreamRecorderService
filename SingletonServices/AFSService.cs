@@ -1,6 +1,5 @@
 ﻿using Azure.Storage.Files.Shares;
 using Azure.Storage.Files.Shares.Models;
-using LivestreamRecorderService.DB.Models;
 using LivestreamRecorderService.Interfaces;
 using LivestreamRecorderService.Models.Options;
 using Microsoft.Extensions.Options;

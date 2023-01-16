@@ -23,7 +23,7 @@ namespace LivestreamRecorderService.ScopedServices
             }
         }
 
-        List<Channel> IPlatformSerivce.GetMonitoringChannels()
+        public List<Channel> GetMonitoringChannels()
             => _channelRepository.GetMonitoringChannels()
                                  .Where(p => p.Source == PlatformName)
                                  .ToList();

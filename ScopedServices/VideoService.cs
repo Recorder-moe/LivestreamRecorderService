@@ -3,6 +3,7 @@ using LivestreamRecorderService.DB.Enum;
 using LivestreamRecorderService.DB.Interfaces;
 using LivestreamRecorderService.DB.Models;
 using LivestreamRecorderService.Models.Options;
+using LivestreamRecorderService.SingletonServices;
 using Microsoft.Extensions.Options;
 using System.Web;
 
@@ -41,7 +42,7 @@ public class VideoService
         _logger.LogDebug("Update Video {videoId} Status to {videostatus}", video.id, status);
     }
 
-    public void AddFilesToVideo(Video video, List<ShareFileItem> sharefileItems)
+    public void AddFilePropertiesToVideo(Video video, List<ShareFileItem> sharefileItems)
     {
         video = _videoRepository.GetById(video.id);
         _videoRepository.LoadRelatedData(video);
@@ -70,21 +71,21 @@ public class VideoService
 
     public async Task TransferVideoToBlobStorageAsync(Video video, CancellationToken cancellation = default)
     {
-        var oldStatus = video.Status;
-        UpdateVideoStatus(video, VideoStatus.Uploading);
-
         try
         {
+            UpdateVideoStatus(video, VideoStatus.Uploading);
+
             _logger.LogInformation("Call Azure Function to transfer video to blob storage: {videoId}", video.id);
             using var client = _httpFactory.CreateClient("AzureFileShares2BlobContainers");
             var response = await client.PostAsync("AzureFileShares2BlobContainers?videoId=" + HttpUtility.UrlEncode(video.id), null, cancellation);
             response.EnsureSuccessStatusCode();
 
+            _logger.LogInformation("Video {videoId} is uploaded to Azure Storage.", video.id);
             UpdateVideoStatus(video, VideoStatus.Archived);
         }
         catch (Exception e)
         {
-            UpdateVideoStatus(video, oldStatus);
+            UpdateVideoStatus(video, VideoStatus.Error);
             _logger.LogError("Exception happened when calling Azure Function to transfer files to blob storage: {videoId}, {error}, {message}", video.id, e, e.Message);
         }
     }

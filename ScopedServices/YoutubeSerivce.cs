@@ -1,10 +1,13 @@
-﻿using CodeHollow.FeedReader;
+﻿using Azure.Storage.Blobs.Models;
+using CodeHollow.FeedReader;
 using LivestreamRecorderService.DB.Enum;
 using LivestreamRecorderService.DB.Interfaces;
 using LivestreamRecorderService.DB.Models;
 using LivestreamRecorderService.Helper;
 using LivestreamRecorderService.Interfaces;
 using LivestreamRecorderService.Models;
+using LivestreamRecorderService.SingletonServices;
+using MimeMapping;
 using Serilog.Context;
 using System.Configuration;
 using YoutubeDLSharp.Options;
@@ -16,7 +19,10 @@ public class YoutubeSerivce : PlatformService, IPlatformSerivce
     private readonly ILogger<YoutubeSerivce> _logger;
     private readonly IUnitOfWork _unitOfWork;
     private readonly IVideoRepository _videoRepository;
+    private readonly IChannelRepository _channelRepository;
     private readonly RSSService _rSSService;
+    private readonly IABSService _aBSService;
+    private readonly IHttpClientFactory _httpFactory;
 
     private string _ffmpegPath = "/usr/bin/ffmpeg";
     private string _ytdlPath = "/usr/bin/yt-dlp";
@@ -30,12 +36,17 @@ public class YoutubeSerivce : PlatformService, IPlatformSerivce
         IUnitOfWork unitOfWork,
         IVideoRepository videoRepository,
         IChannelRepository channelRepository,
-        RSSService rSSService) : base(channelRepository)
+        RSSService rSSService,
+        IABSService aBSService,
+        IHttpClientFactory httpClientFactory) : base(channelRepository)
     {
         _logger = logger;
         _unitOfWork = unitOfWork;
         _videoRepository = videoRepository;
+        _channelRepository = channelRepository;
         _rSSService = rSSService;
+        _aBSService = aBSService;
+        _httpFactory = httpClientFactory;
     }
 
     public static string GetRSSFeed(Channel channel)
@@ -54,7 +65,7 @@ public class YoutubeSerivce : PlatformService, IPlatformSerivce
             return;
         }
 
-        _rSSService.UpdateChannelName(channel, feed);
+        //_rSSService.UpdateChannelName(channel, feed);
 
         _logger.LogDebug("Get {count} videos for channel {channelId}", feed.Items.Count, channel.id);
         foreach (var item in feed.Items)
@@ -66,7 +77,7 @@ public class YoutubeSerivce : PlatformService, IPlatformSerivce
 
     private async Task<YtdlpVideoData> GetVideoInfoByYtdlpAsync(string videoId, CancellationToken cancellation = default)
     {
-        if (!System.IO.File.Exists(_ytdlPath) || !System.IO.File.Exists(_ffmpegPath))
+        if (!File.Exists(_ytdlPath) || !File.Exists(_ffmpegPath))
         {
             (string? YtdlPath, string? FFmpegPath) = YoutubeDL.WhereIs();
             _ytdlPath = YtdlPath ?? throw new ConfigurationErrorsException("Yt-dlp is missing.");
@@ -83,6 +94,29 @@ public class YoutubeSerivce : PlatformService, IPlatformSerivce
         optionSet.AddCustomOption("--ignore-no-formats-error", true);
 
         var res = await ytdl.RunVideoDataFetch_Alt($"https://youtu.be/{videoId}", overrideOptions: optionSet, ct: cancellation);
+        YtdlpVideoData videoData = res.Data;
+        return videoData;
+    }
+
+    private async Task<YtdlpVideoData> GetChannelInfoByYtdlpAsync(string ChannelId, CancellationToken cancellation = default)
+    {
+        if (!File.Exists(_ytdlPath) || !File.Exists(_ffmpegPath))
+        {
+            (string? YtdlPath, string? FFmpegPath) = YoutubeDL.WhereIs();
+            _ytdlPath = YtdlPath ?? throw new ConfigurationErrorsException("Yt-dlp is missing.");
+            _ffmpegPath = FFmpegPath ?? throw new ConfigurationErrorsException("FFmpeg is missing.");
+            _logger.LogTrace("Use yt-dlp and ffmpeg executables at {ytdlp} and {ffmpeg}", _ytdlPath, _ffmpegPath);
+        }
+        var ytdl = new YoutubeDLSharp.YoutubeDL
+        {
+            YoutubeDLPath = _ytdlPath,
+            FFmpegPath = _ffmpegPath
+        };
+
+        OptionSet optionSet = new();
+        optionSet.AddCustomOption("--ignore-no-formats-error", true);
+
+        var res = await ytdl.RunVideoDataFetch_Alt($"https://www.youtube.com/channel/{ChannelId}/about", overrideOptions: optionSet, ct: cancellation);
         YtdlpVideoData videoData = res.Data;
         return videoData;
     }
@@ -222,5 +256,54 @@ public class YoutubeSerivce : PlatformService, IPlatformSerivce
         if (video.Status < 0)
             _logger.LogError("Video {videoId} has a Unknown status!", video.id);
         return video;
+    }
+
+    internal async Task UpdateChannelData(Channel channel, CancellationToken cancellation)
+    {
+        var info = await GetChannelInfoByYtdlpAsync(channel.id, cancellation);
+        if (channel.ChannelName != info.Title)
+        {
+            channel.ChannelName = info.Title;
+            _channelRepository.Update(channel);
+            _unitOfWork.Commit();
+        }
+
+        var thumbnails = info.Thumbnails.OrderByDescending(p => p.Preference).ToList();
+        var avatarUrl = thumbnails.FirstOrDefault()?.Url;
+        if (!string.IsNullOrEmpty(avatarUrl))
+        {
+            using var client = _httpFactory.CreateClient();
+            var response = await client.GetAsync(avatarUrl, cancellation);
+            if (response.IsSuccessStatusCode)
+            {
+                var contentType = response.Content.Headers.ContentType?.MediaType;
+                var extension = MimeUtility.GetExtensions(contentType)?.FirstOrDefault();
+                extension = extension == "jpeg" ? "jpg" : extension;
+                var blobClient = _aBSService.GetBlobByName($"avatar/{channel.id}.{extension}", cancellation);
+                _ = await blobClient.UploadAsync(
+                     content: await response.Content.ReadAsStreamAsync(cancellation),
+                     httpHeaders: new BlobHttpHeaders { ContentType = contentType },
+                     accessTier: AccessTier.Hot,
+                     cancellationToken: cancellation);
+            }
+        }
+        var bannerUrl = thumbnails.Skip(1).FirstOrDefault()?.Url;
+        if (!string.IsNullOrEmpty(bannerUrl))
+        {
+            using var client = _httpFactory.CreateClient();
+            var response = await client.GetAsync(bannerUrl, cancellation);
+            if (response.IsSuccessStatusCode)
+            {
+                var contentType = response.Content.Headers.ContentType?.MediaType;
+                var extension = MimeUtility.GetExtensions(contentType)?.FirstOrDefault();
+                extension = extension == "jpeg" ? "jpg" : extension;
+                var blobClient = _aBSService.GetBlobByName($"banner/{channel.id}.{extension}", cancellation);
+                _ = await blobClient.UploadAsync(
+                     content: await response.Content.ReadAsStreamAsync(cancellation),
+                     httpHeaders: new BlobHttpHeaders { ContentType = contentType },
+                     accessTier: AccessTier.Hot,
+                     cancellationToken: cancellation);
+            }
+        }
     }
 }
