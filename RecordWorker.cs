@@ -64,6 +64,7 @@ public class RecordWorker : BackgroundService
             videoService.RollbackVideosStatusStuckAtUploading();
 
             var finished = await MonitorRecordingVideosAsync(videoService, stoppingToken);
+            List<Task> tasks = new();
             foreach (var kvp in finished)
             {
                 var (video, files) = (kvp.Key, kvp.Value);
@@ -78,9 +79,14 @@ public class RecordWorker : BackgroundService
                     videoService.UpdateVideoStatus(video, VideoStatus.Error);
                 }
 
-                videoService.AddFilesToVideo(video, files);
-                await videoService.TransferVideoToBlobStorageAsync(video, stoppingToken);
+                videoService.AddFilePropertiesToVideo(video, files);
+                tasks.Add(videoService.TransferVideoToBlobStorageAsync(video, stoppingToken));
+
+                // Avoid concurrency requests
+                await Task.Delay(TimeSpan.FromSeconds(5), stoppingToken);
             }
+            await Task.WhenAll(tasks);
+
             _logger.LogTrace("{Worker} ends. Sleep 5 minutes.", nameof(RecordWorker));
             await Task.Delay(TimeSpan.FromMinutes(5), stoppingToken);
         }
