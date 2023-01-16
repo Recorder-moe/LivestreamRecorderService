@@ -37,7 +37,6 @@ public class ACIYtarchiveService : ACIService, IACIService
                                       "--merge",
                                       "--retry-frags", "30",
                                       "--thumbnail",
-                                      "--write-thumbnail",
                                       "-o", "%(id)s",
                                       url,
                                       "best"

@@ -171,7 +171,7 @@ public class YoutubeSerivce : PlatformService, IPlatformSerivce
 
         YtdlpVideoData videoData = await GetVideoInfoByYtdlpAsync(videoId, cancellation);
 
-        UpdateVideoData(video!, videoData);
+        await UpdateVideoDataAsync(video!, videoData, cancellation);
 
         if (isNewVideo)
             _videoRepository.Add(video);
@@ -179,7 +179,7 @@ public class YoutubeSerivce : PlatformService, IPlatformSerivce
             _videoRepository.Update(video);
     }
 
-    private Video UpdateVideoData(Video video, YtdlpVideoData videoData)
+    private async Task<Video> UpdateVideoDataAsync(Video video, YtdlpVideoData videoData, CancellationToken cancellation = default)
     {
         video.Title = videoData.Title;
         video.Description = videoData.Description;
@@ -190,10 +190,12 @@ public class YoutubeSerivce : PlatformService, IPlatformSerivce
                 video.Status = VideoStatus.Scheduled;
                 video.Timestamps.ScheduledStartTime =
                     DateTimeOffset.FromUnixTimeSeconds(videoData.ReleaseTimestamp ?? 0).UtcDateTime;
+                await DownloadThumbnailAsync(video, cancellation);
                 break;
             case "is_live":
                 if (video.Status != VideoStatus.Recording)
                     video.Status = VideoStatus.WaitingToRecord;
+                await DownloadThumbnailAsync(video, cancellation);
                 goto case "_live";
             case "post_live":
                 // Livestream is finished but cannot download yet.
@@ -203,6 +205,7 @@ public class YoutubeSerivce : PlatformService, IPlatformSerivce
             case "was_live":
                 if (video.Status != VideoStatus.Recording)
                     video.Status = VideoStatus.WaitingToDownload;
+                await DownloadThumbnailAsync(video, cancellation);
                 goto case "_live";
             case "_live":
                 video.IsLiveStream = true;
@@ -223,6 +226,7 @@ public class YoutubeSerivce : PlatformService, IPlatformSerivce
                     videoData.ReleaseTimestamp.HasValue
                         ? DateTimeOffset.FromUnixTimeSeconds(videoData.ReleaseTimestamp.Value).UtcDateTime
                         : DateTime.ParseExact(videoData.UploadDate, "yyyyMMdd", System.Globalization.CultureInfo.InvariantCulture);
+                await DownloadThumbnailAsync(video, cancellation);
                 break;
             default:
                 // Deleted
@@ -271,39 +275,55 @@ public class YoutubeSerivce : PlatformService, IPlatformSerivce
         var thumbnails = info.Thumbnails.OrderByDescending(p => p.Preference).ToList();
         var avatarUrl = thumbnails.FirstOrDefault()?.Url;
         if (!string.IsNullOrEmpty(avatarUrl))
-        {
-            using var client = _httpFactory.CreateClient();
-            var response = await client.GetAsync(avatarUrl, cancellation);
-            if (response.IsSuccessStatusCode)
-            {
-                var contentType = response.Content.Headers.ContentType?.MediaType;
-                var extension = MimeUtility.GetExtensions(contentType)?.FirstOrDefault();
-                extension = extension == "jpeg" ? "jpg" : extension;
-                var blobClient = _aBSService.GetBlobByName($"avatar/{channel.id}.{extension}", cancellation);
-                _ = await blobClient.UploadAsync(
-                     content: await response.Content.ReadAsStreamAsync(cancellation),
-                     httpHeaders: new BlobHttpHeaders { ContentType = contentType },
-                     accessTier: AccessTier.Hot,
-                     cancellationToken: cancellation);
-            }
-        }
+            await DownloadImageAndUploadToBlobStorage(avatarUrl, $"avatar/{channel.id}", cancellation);
+
         var bannerUrl = thumbnails.Skip(1).FirstOrDefault()?.Url;
         if (!string.IsNullOrEmpty(bannerUrl))
+            await DownloadImageAndUploadToBlobStorage(bannerUrl, $"banner/{channel.id}", cancellation);
+    }
+
+    /// <summary>
+    /// Download image and upload it to Blob Storage
+    /// </summary>
+    /// <param name="url">Image source url to download.</param>
+    /// <param name="path">Path in Blob storage (without extension)</param>
+    /// <param name="cancellation"></param>
+    /// <returns></returns>
+    /// <exception cref="ArgumentNullException"></exception>
+    private async Task DownloadImageAndUploadToBlobStorage(string url, string path, CancellationToken cancellation)
+    {
+        if (string.IsNullOrEmpty(url))
         {
-            using var client = _httpFactory.CreateClient();
-            var response = await client.GetAsync(bannerUrl, cancellation);
-            if (response.IsSuccessStatusCode)
-            {
-                var contentType = response.Content.Headers.ContentType?.MediaType;
-                var extension = MimeUtility.GetExtensions(contentType)?.FirstOrDefault();
-                extension = extension == "jpeg" ? "jpg" : extension;
-                var blobClient = _aBSService.GetBlobByName($"banner/{channel.id}.{extension}", cancellation);
-                _ = await blobClient.UploadAsync(
-                     content: await response.Content.ReadAsStreamAsync(cancellation),
-                     httpHeaders: new BlobHttpHeaders { ContentType = contentType },
-                     accessTier: AccessTier.Hot,
-                     cancellationToken: cancellation);
-            }
+            throw new ArgumentNullException(nameof(url));
         }
+
+        if (string.IsNullOrEmpty(path))
+        {
+            throw new ArgumentNullException(nameof(path));
+        }
+
+        using var client = _httpFactory.CreateClient();
+        var response = await client.GetAsync(url, cancellation);
+        if (response.IsSuccessStatusCode)
+        {
+            var contentType = response.Content.Headers.ContentType?.MediaType;
+            var extension = MimeUtility.GetExtensions(contentType)?.FirstOrDefault();
+            extension = extension == "jpeg" ? "jpg" : extension;
+            var blobClient = _aBSService.GetBlobByName($"{path}.{extension}", cancellation);
+            _ = await blobClient.UploadAsync(
+                 content: await response.Content.ReadAsStreamAsync(cancellation),
+                 httpHeaders: new BlobHttpHeaders { ContentType = contentType },
+                 accessTier: AccessTier.Hot,
+                 cancellationToken: cancellation);
+        }
+    }
+
+    private async Task DownloadThumbnailAsync(Video video, CancellationToken cancellation = default)
+    {
+        var info = await GetVideoInfoByYtdlpAsync(video.id, cancellation);
+
+        var thumbinail = info.Thumbnail;
+        if (!string.IsNullOrEmpty(thumbinail))
+            await DownloadImageAndUploadToBlobStorage(thumbinail, $"thumbnails/{video.id}", cancellation);
     }
 }

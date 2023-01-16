@@ -39,7 +39,6 @@ public class ACIYtdlpService : ACIService, IACIService
                                   "-S", "+codec:h264" ,
                                   "--embed-thumbnail",
                                   "--embed-metadata",
-                                  "--write-thumbnail",
                                   "--no-part",
                                   "-o", "%(id)s.%(ext)s",
                                   url,
