@@ -30,7 +30,8 @@ public class TwitcastingService : PlatformService, IPlatformSerivce
         IUnitOfWork unitOfWork,
         IVideoRepository videoRepository,
         ACITwitcastingRecorderService aCITwitcastingRecorderService,
-        IChannelRepository channelRepository) : base(channelRepository)
+        IABSService aBSService,
+        IChannelRepository channelRepository) : base(channelRepository, aBSService, httpClientFactory)
     {
         _logger = logger;
         _httpFactory = httpClientFactory;
@@ -90,11 +91,14 @@ public class TwitcastingService : PlatformService, IPlatformSerivce
                 };
             }
 
+            await DownloadThumbnailAsync($"https://twitcasting.tv/{channel.id}/thumb/{videoId}", video.id, cancellation);
+
             if (await GetTwitcastingIsPublicAsync(videoId, cancellation))
             {
                 var (title, telop) = await GetTwitcastingStreamTitleAsync(videoId, cancellation);
                 video.Title ??= title ?? "";
                 video.Description ??= telop ?? "";
+                video.SourceStatus = VideoStatus.Exist;
 
                 if (isLive && (video.Status < VideoStatus.Recording
                                || video.Status == VideoStatus.Missing))
@@ -109,6 +113,7 @@ public class TwitcastingService : PlatformService, IPlatformSerivce
             else
             {
                 video.Status = VideoStatus.Reject;
+                video.SourceStatus = VideoStatus.Reject;
                 _logger.LogWarning("This video is not public! Skip {videoId}", videoId);
             }
 
@@ -195,6 +200,27 @@ public class TwitcastingService : PlatformService, IPlatformSerivce
         response.EnsureSuccessStatusCode();
         var data = await response.Content.ReadFromJsonAsync<TwitcastingInfoData>(cancellationToken: cancellation);
         return data;
+    }
+
+    private async Task<bool> GetTwitcastingIsPublishAsync(Video video, CancellationToken cancellation = default)
+    {
+        // Web page will contains this string if the video is not published
+        var keyword = "tw-player-empty-message";
+
+        using var client = _httpFactory.CreateClient();
+        var response = await client.GetAsync($"https://twitcasting.tv/{video.ChannelId}/movie/{video.id}", cancellation);
+        var data = await response.Content.ReadAsStringAsync(cancellation);
+        return !data.Contains(keyword);
+    }
+
+    public override async Task UpdateVideoDataAsync(Video video, CancellationToken cancellation = default)
+    {
+        if (string.IsNullOrEmpty(video.Thumbnail))
+            video.Thumbnail = await DownloadThumbnailAsync($"https://twitcasting.tv/{video.ChannelId}/thumb/{video.id}", video.id, cancellation);
+        if (!await GetTwitcastingIsPublishAsync(video, cancellation))
+            video.SourceStatus = VideoStatus.Deleted;
+        _videoRepository.Update(video);
+        _unitOfWork.Commit();
     }
 
 }

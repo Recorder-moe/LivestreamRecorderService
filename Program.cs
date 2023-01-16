@@ -113,7 +113,8 @@ try
 
         services.AddHostedService<RecordWorker>();
         services.AddHostedService<MonitorWorker>();
-        services.AddHostedService<ChannelInfoWorker>();
+        services.AddHostedService<UpdateChannelInfoWorker>();
+        services.AddHostedService<UpdateVideoStatusWorker>();
 
         services.AddScoped<IUnitOfWork, UnitOfWork>();
         services.AddScoped<IVideoRepository, VideoRepository>();

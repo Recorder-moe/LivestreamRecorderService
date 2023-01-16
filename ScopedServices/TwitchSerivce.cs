@@ -26,7 +26,9 @@ public class TwitchSerivce : PlatformService, IPlatformSerivce
         IVideoRepository videoRepository,
         IChannelRepository channelRepository,
         ACIStreamlinkService aCIStreamlinkService,
-        ITwitchAPI twitchAPI) : base(channelRepository)
+        ITwitchAPI twitchAPI,
+        IABSService aBSService,
+        IHttpClientFactory httpClientFactory) : base(channelRepository, aBSService, httpClientFactory)
     {
         _logger = logger;
         _unitOfWork = unitOfWork;
@@ -105,5 +107,16 @@ public class TwitchSerivce : PlatformService, IPlatformSerivce
         {
             _logger.LogTrace("{channelId} is down.", channel.id);
         }
+    }
+
+    public override async Task UpdateVideoDataAsync(Video video, CancellationToken cancellation = default)
+    {
+        if (string.IsNullOrEmpty(video.Thumbnail))
+        {
+            video.Thumbnail = await DownloadThumbnailAsync($"https://www.twitch.tv/videos/{video.id}", video.id, cancellation);
+            _videoRepository.Update(video);
+            _unitOfWork.Commit();
+        }
+        // TODO: Detect if Twitch VOD has been deleted.
     }
 }

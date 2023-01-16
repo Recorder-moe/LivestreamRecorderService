@@ -1,16 +1,11 @@
-﻿using Azure.Storage.Blobs.Models;
-using CodeHollow.FeedReader;
+﻿using CodeHollow.FeedReader;
 using LivestreamRecorderService.DB.Enum;
 using LivestreamRecorderService.DB.Interfaces;
 using LivestreamRecorderService.DB.Models;
-using LivestreamRecorderService.Helper;
 using LivestreamRecorderService.Interfaces;
 using LivestreamRecorderService.Models;
 using LivestreamRecorderService.SingletonServices;
-using MimeMapping;
 using Serilog.Context;
-using System.Configuration;
-using YoutubeDLSharp.Options;
 
 namespace LivestreamRecorderService.ScopedServices;
 
@@ -21,11 +16,6 @@ public class YoutubeSerivce : PlatformService, IPlatformSerivce
     private readonly IVideoRepository _videoRepository;
     private readonly IChannelRepository _channelRepository;
     private readonly RSSService _rSSService;
-    private readonly IABSService _aBSService;
-    private readonly IHttpClientFactory _httpFactory;
-
-    private string _ffmpegPath = "/usr/bin/ffmpeg";
-    private string _ytdlPath = "/usr/bin/yt-dlp";
 
     public override string PlatformName => "Youtube";
 
@@ -38,15 +28,13 @@ public class YoutubeSerivce : PlatformService, IPlatformSerivce
         IChannelRepository channelRepository,
         RSSService rSSService,
         IABSService aBSService,
-        IHttpClientFactory httpClientFactory) : base(channelRepository)
+        IHttpClientFactory httpClientFactory) : base(channelRepository, aBSService, httpClientFactory)
     {
         _logger = logger;
         _unitOfWork = unitOfWork;
         _videoRepository = videoRepository;
         _channelRepository = channelRepository;
         _rSSService = rSSService;
-        _aBSService = aBSService;
-        _httpFactory = httpClientFactory;
     }
 
     public static string GetRSSFeed(Channel channel)
@@ -75,51 +63,8 @@ public class YoutubeSerivce : PlatformService, IPlatformSerivce
         _unitOfWork.Commit();
     }
 
-    private async Task<YtdlpVideoData> GetVideoInfoByYtdlpAsync(string videoId, CancellationToken cancellation = default)
-    {
-        if (!File.Exists(_ytdlPath) || !File.Exists(_ffmpegPath))
-        {
-            (string? YtdlPath, string? FFmpegPath) = YoutubeDL.WhereIs();
-            _ytdlPath = YtdlPath ?? throw new ConfigurationErrorsException("Yt-dlp is missing.");
-            _ffmpegPath = FFmpegPath ?? throw new ConfigurationErrorsException("FFmpeg is missing.");
-            _logger.LogTrace("Use yt-dlp and ffmpeg executables at {ytdlp} and {ffmpeg}", _ytdlPath, _ffmpegPath);
-        }
-        var ytdl = new YoutubeDLSharp.YoutubeDL
-        {
-            YoutubeDLPath = _ytdlPath,
-            FFmpegPath = _ffmpegPath
-        };
-
-        OptionSet optionSet = new();
-        optionSet.AddCustomOption("--ignore-no-formats-error", true);
-
-        var res = await ytdl.RunVideoDataFetch_Alt($"https://youtu.be/{videoId}", overrideOptions: optionSet, ct: cancellation);
-        YtdlpVideoData videoData = res.Data;
-        return videoData;
-    }
-
-    private async Task<YtdlpVideoData> GetChannelInfoByYtdlpAsync(string ChannelId, CancellationToken cancellation = default)
-    {
-        if (!File.Exists(_ytdlPath) || !File.Exists(_ffmpegPath))
-        {
-            (string? YtdlPath, string? FFmpegPath) = YoutubeDL.WhereIs();
-            _ytdlPath = YtdlPath ?? throw new ConfigurationErrorsException("Yt-dlp is missing.");
-            _ffmpegPath = FFmpegPath ?? throw new ConfigurationErrorsException("FFmpeg is missing.");
-            _logger.LogTrace("Use yt-dlp and ffmpeg executables at {ytdlp} and {ffmpeg}", _ytdlPath, _ffmpegPath);
-        }
-        var ytdl = new YoutubeDLSharp.YoutubeDL
-        {
-            YoutubeDLPath = _ytdlPath,
-            FFmpegPath = _ffmpegPath
-        };
-
-        OptionSet optionSet = new();
-        optionSet.AddCustomOption("--ignore-no-formats-error", true);
-
-        var res = await ytdl.RunVideoDataFetch_Alt($"https://www.youtube.com/channel/{ChannelId}/about", overrideOptions: optionSet, ct: cancellation);
-        YtdlpVideoData videoData = res.Data;
-        return videoData;
-    }
+    private Task<YtdlpVideoData> GetChannelInfoByYtdlpAsync(string ChannelId, CancellationToken cancellation = default)
+        => GetVideoInfoByYtdlpAsync($"https://www.youtube.com/channel/{ChannelId}/about", cancellation);
 
     /// <summary>
     /// Update video status from RSS feed item.
@@ -169,9 +114,7 @@ public class YoutubeSerivce : PlatformService, IPlatformSerivce
             _videoRepository.LoadRelatedData(video);
         }
 
-        YtdlpVideoData videoData = await GetVideoInfoByYtdlpAsync(videoId, cancellation);
-
-        await UpdateVideoDataAsync(video!, videoData, cancellation);
+        await UpdateVideoDataAsync(video!, cancellation);
 
         if (isNewVideo)
             _videoRepository.Add(video);
@@ -179,8 +122,12 @@ public class YoutubeSerivce : PlatformService, IPlatformSerivce
             _videoRepository.Update(video);
     }
 
-    private async Task<Video> UpdateVideoDataAsync(Video video, YtdlpVideoData videoData, CancellationToken cancellation = default)
+    public override async Task UpdateVideoDataAsync(Video video, CancellationToken cancellation = default)
     {
+        YtdlpVideoData videoData = await GetVideoInfoByYtdlpAsync($"https://youtu.be/{video.id}", cancellation);
+
+        string videoUrl = $"https://youtu.be/{video.id}";
+
         video.Title = videoData.Title;
         video.Description = videoData.Description;
 
@@ -190,12 +137,14 @@ public class YoutubeSerivce : PlatformService, IPlatformSerivce
                 video.Status = VideoStatus.Scheduled;
                 video.Timestamps.ScheduledStartTime =
                     DateTimeOffset.FromUnixTimeSeconds(videoData.ReleaseTimestamp ?? 0).UtcDateTime;
-                await DownloadThumbnailAsync(video, cancellation);
+                video.Thumbnail = await DownloadThumbnailAsync(videoUrl, video.id, cancellation);
                 break;
             case "is_live":
                 if (video.Status != VideoStatus.Recording)
+                {
                     video.Status = VideoStatus.WaitingToRecord;
-                await DownloadThumbnailAsync(video, cancellation);
+                    video.Thumbnail = await DownloadThumbnailAsync(videoUrl, video.id, cancellation);
+                }
                 goto case "_live";
             case "post_live":
                 // Livestream is finished but cannot download yet.
@@ -205,7 +154,6 @@ public class YoutubeSerivce : PlatformService, IPlatformSerivce
             case "was_live":
                 if (video.Status != VideoStatus.Recording)
                     video.Status = VideoStatus.WaitingToDownload;
-                await DownloadThumbnailAsync(video, cancellation);
                 goto case "_live";
             case "_live":
                 video.IsLiveStream = true;
@@ -226,14 +174,16 @@ public class YoutubeSerivce : PlatformService, IPlatformSerivce
                     videoData.ReleaseTimestamp.HasValue
                         ? DateTimeOffset.FromUnixTimeSeconds(videoData.ReleaseTimestamp.Value).UtcDateTime
                         : DateTime.ParseExact(videoData.UploadDate, "yyyyMMdd", System.Globalization.CultureInfo.InvariantCulture);
-                await DownloadThumbnailAsync(video, cancellation);
+                video.Thumbnail = await DownloadThumbnailAsync(videoUrl, video.id, cancellation);
                 break;
             default:
                 // Deleted
                 if (string.IsNullOrEmpty(videoData.LiveStatus)
-                   && videoData.Formats?.Count == 0)
+                   && videoData.Formats?.Count == 0
+                   && string.IsNullOrEmpty(videoData.Fulltitle))
                 {
-                    _logger.LogWarning("Failed to fetch video data, maybe it is deleted! {videoId}", video.id);
+                    //_logger.LogWarning("Failed to fetch video data, maybe it is deleted! {videoId}", video.id);
+                    video.SourceStatus = VideoStatus.Deleted;
                 }
                 else
                 {
@@ -247,19 +197,19 @@ public class YoutubeSerivce : PlatformService, IPlatformSerivce
         {
             case "public":
             case "unlisted":
+                video.SourceStatus = VideoStatus.Exist;
                 break;
             // Member only
             case "subscriber_only":
             // Copyright Notice
             case "needs_auth":
-            default:
                 video.Status = VideoStatus.Reject;
+                video.SourceStatus = VideoStatus.Reject;
                 break;
         }
 
         if (video.Status < 0)
             _logger.LogError("Video {videoId} has a Unknown status!", video.id);
-        return video;
     }
 
     internal async Task UpdateChannelData(Channel channel, CancellationToken cancellation)
@@ -280,50 +230,5 @@ public class YoutubeSerivce : PlatformService, IPlatformSerivce
         var bannerUrl = thumbnails.Skip(1).FirstOrDefault()?.Url;
         if (!string.IsNullOrEmpty(bannerUrl))
             await DownloadImageAndUploadToBlobStorage(bannerUrl, $"banner/{channel.id}", cancellation);
-    }
-
-    /// <summary>
-    /// Download image and upload it to Blob Storage
-    /// </summary>
-    /// <param name="url">Image source url to download.</param>
-    /// <param name="path">Path in Blob storage (without extension)</param>
-    /// <param name="cancellation"></param>
-    /// <returns></returns>
-    /// <exception cref="ArgumentNullException"></exception>
-    private async Task DownloadImageAndUploadToBlobStorage(string url, string path, CancellationToken cancellation)
-    {
-        if (string.IsNullOrEmpty(url))
-        {
-            throw new ArgumentNullException(nameof(url));
-        }
-
-        if (string.IsNullOrEmpty(path))
-        {
-            throw new ArgumentNullException(nameof(path));
-        }
-
-        using var client = _httpFactory.CreateClient();
-        var response = await client.GetAsync(url, cancellation);
-        if (response.IsSuccessStatusCode)
-        {
-            var contentType = response.Content.Headers.ContentType?.MediaType;
-            var extension = MimeUtility.GetExtensions(contentType)?.FirstOrDefault();
-            extension = extension == "jpeg" ? "jpg" : extension;
-            var blobClient = _aBSService.GetBlobByName($"{path}.{extension}", cancellation);
-            _ = await blobClient.UploadAsync(
-                 content: await response.Content.ReadAsStreamAsync(cancellation),
-                 httpHeaders: new BlobHttpHeaders { ContentType = contentType },
-                 accessTier: AccessTier.Hot,
-                 cancellationToken: cancellation);
-        }
-    }
-
-    private async Task DownloadThumbnailAsync(Video video, CancellationToken cancellation = default)
-    {
-        var info = await GetVideoInfoByYtdlpAsync(video.id, cancellation);
-
-        var thumbinail = info.Thumbnail;
-        if (!string.IsNullOrEmpty(thumbinail))
-            await DownloadImageAndUploadToBlobStorage(thumbinail, $"thumbnails/{video.id}", cancellation);
     }
 }

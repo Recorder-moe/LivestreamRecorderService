@@ -3,7 +3,6 @@ using LivestreamRecorderService.DB.Enum;
 using LivestreamRecorderService.DB.Interfaces;
 using LivestreamRecorderService.DB.Models;
 using LivestreamRecorderService.Models.Options;
-using LivestreamRecorderService.SingletonServices;
 using Microsoft.Extensions.Options;
 using System.Web;
 
