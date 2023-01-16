@@ -19,14 +19,14 @@ public class ACIStreamlinkService : ACIService, IACIService
         _azureOption = options.Value;
     }
 
-    public Task<ArmOperation<ArmDeploymentResource>> StartInstanceAsync(string userid, CancellationToken cancellation = default)
+    public Task<ArmOperation<ArmDeploymentResource>> StartInstanceAsync(string userid, string videoId = "", CancellationToken cancellation = default)
         => CreateAzureContainerInstanceAsync(
             template: "ACI_streamlink.json",
             parameters: new
             {
                 containerName = new
                 {
-                    value = GetInstanceName(userid)
+                    value = GetInstanceName(userid + videoId)
                 },
                 commandOverrideArray = new
                 {
@@ -51,6 +51,6 @@ public class ACIStreamlinkService : ACIService, IACIService
                     value = "livestream-recorder"
                 }
             },
-            deploymentName: GetInstanceName(userid),
+            deploymentName: GetInstanceName(userid + videoId),
             cancellation: cancellation);
 }

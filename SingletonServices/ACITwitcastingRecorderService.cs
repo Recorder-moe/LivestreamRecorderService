@@ -19,14 +19,14 @@ public class ACITwitcastingRecorderService : ACIService, IACIService
         _azureOption = options.Value;
     }
 
-    public Task<ArmOperation<ArmDeploymentResource>> StartInstanceAsync(string channelId, CancellationToken cancellation = default)
+    public Task<ArmOperation<ArmDeploymentResource>> StartInstanceAsync(string channelId, string videoId = "", CancellationToken cancellation = default)
         => CreateAzureContainerInstanceAsync(
             template: "ACI_twitcasting_recorder.json",
             parameters: new
             {
                 containerName = new
                 {
-                    value = GetInstanceName(channelId)
+                    value = GetInstanceName(channelId + videoId)
                 },
                 commandOverrideArray = new
                 {
@@ -50,7 +50,7 @@ public class ACITwitcastingRecorderService : ACIService, IACIService
                     value = "livestream-recorder"
                 }
             },
-            deploymentName: GetInstanceName(channelId),
+            deploymentName: GetInstanceName(channelId + videoId),
             cancellation: cancellation);
 
 }

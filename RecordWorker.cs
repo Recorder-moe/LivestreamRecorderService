@@ -126,11 +126,13 @@ public class RecordWorker : BackgroundService
                 case "Twitcasting":
                     await _aCITwitcastingRecorderService.StartInstanceAsync(
                         video.ChannelId,
+                        video.id,
                         stoppingToken);
                     break;
                 case "Twitch":
                     await _aCIStreamlinkService.StartInstanceAsync(
                         video.ChannelId,
+                        video.id,
                         stoppingToken);
                     break;
 
