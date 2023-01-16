@@ -3,6 +3,7 @@ using LivestreamRecorderService.DB.Interfaces;
 using LivestreamRecorderService.DB.Models;
 using LivestreamRecorderService.Interfaces;
 using LivestreamRecorderService.Models;
+using LivestreamRecorderService.SingletonServices;
 using Serilog.Context;
 using System.Net.Http.Json;
 
@@ -14,9 +15,10 @@ public class TwitcastingService : PlatformService, IPlatformSerivce
     private readonly IHttpClientFactory _httpFactory;
     private readonly IUnitOfWork _unitOfWork;
     private readonly IVideoRepository _videoRepository;
+    private readonly ACITwitcastingRecorderService _aCITwitcastingRecorderService;
 
     public override string PlatformName => "Twitcasting";
-    public override int Interval => 30;
+    public override int Interval => 10;
 
     private const string _streamServerApi = "https://twitcasting.tv/streamserver.php";
     private const string _frontendApi = "https://frontendapi.twitcasting.tv";
@@ -27,12 +29,14 @@ public class TwitcastingService : PlatformService, IPlatformSerivce
         IHttpClientFactory httpClientFactory,
         IUnitOfWork unitOfWork,
         IVideoRepository videoRepository,
+        ACITwitcastingRecorderService aCITwitcastingRecorderService,
         IChannelRepository channelRepository) : base(channelRepository)
     {
         _logger = logger;
         _httpFactory = httpClientFactory;
         _unitOfWork = unitOfWork;
         _videoRepository = videoRepository;
+        _aCITwitcastingRecorderService = aCITwitcastingRecorderService;
     }
 
     public override async Task UpdateVideosDataAsync(Channel channel, CancellationToken cancellation = default)
@@ -58,8 +62,8 @@ public class TwitcastingService : PlatformService, IPlatformSerivce
                 video = _videoRepository.GetById(videoId);
                 switch (video.Status)
                 {
-                    case VideoStatus.Recording:
                     case VideoStatus.WaitingToRecord:
+                    case VideoStatus.Recording:
                         _logger.LogTrace("{channelId} is already recording.", channel.id);
                         return;
                     case VideoStatus.Reject:
@@ -95,7 +99,9 @@ public class TwitcastingService : PlatformService, IPlatformSerivce
                 if (isLive && (video.Status < VideoStatus.Recording
                                || video.Status == VideoStatus.Missing))
                 {
-                    video.Status = VideoStatus.WaitingToRecord;
+                    await _aCITwitcastingRecorderService.StartInstanceAsync(video.ChannelId,
+                                                                            cancellation);
+                    video.Status = VideoStatus.Recording;
                     _logger.LogInformation("{channelId} is now lived! Start recording.", channel.id);
                 }
             }

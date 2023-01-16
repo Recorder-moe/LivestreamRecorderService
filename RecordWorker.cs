@@ -120,6 +120,9 @@ public class RecordWorker : BackgroundService
                         $"https://youtu.be/{video.id}",
                         stoppingToken);
                     break;
+
+                // Twitch and Twitcasting will start recording immediately when detected goes live.
+                // So in fact these cases will not be executed.
                 case "Twitcasting":
                     await _aCITwitcastingRecorderService.StartInstanceAsync(
                         video.ChannelId,
@@ -130,6 +133,7 @@ public class RecordWorker : BackgroundService
                         video.ChannelId,
                         stoppingToken);
                     break;
+
                 default:
                     _logger.LogError("ACI deployment FAILED, Source not support: {source}", video.Channel.Source);
                     throw new NotSupportedException($"Source {video.Channel.Source} not supported");

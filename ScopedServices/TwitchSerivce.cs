@@ -2,6 +2,7 @@
 using LivestreamRecorderService.DB.Interfaces;
 using LivestreamRecorderService.DB.Models;
 using LivestreamRecorderService.Interfaces;
+using LivestreamRecorderService.SingletonServices;
 using Serilog.Context;
 using TwitchLib.Api.Interfaces;
 
@@ -12,6 +13,7 @@ public class TwitchSerivce : PlatformService, IPlatformSerivce
     private readonly ILogger<TwitchSerivce> _logger;
     private readonly IUnitOfWork _unitOfWork;
     private readonly IVideoRepository _videoRepository;
+    private readonly ACIStreamlinkService _aCIStreamlinkService;
     private readonly ITwitchAPI _twitchAPI;
 
     public override string PlatformName => "Twitch";
@@ -23,11 +25,13 @@ public class TwitchSerivce : PlatformService, IPlatformSerivce
         IUnitOfWork unitOfWork,
         IVideoRepository videoRepository,
         IChannelRepository channelRepository,
+        ACIStreamlinkService aCIStreamlinkService,
         ITwitchAPI twitchAPI) : base(channelRepository)
     {
         _logger = logger;
         _unitOfWork = unitOfWork;
         _videoRepository = videoRepository;
+        _aCIStreamlinkService = aCIStreamlinkService;
         _twitchAPI = twitchAPI;
     }
 
@@ -87,7 +91,9 @@ public class TwitchSerivce : PlatformService, IPlatformSerivce
             if (video.Status < VideoStatus.Recording
                 || video.Status == VideoStatus.Missing)
             {
-                video.Status = VideoStatus.WaitingToRecord;
+                await _aCIStreamlinkService.StartInstanceAsync(video.ChannelId,
+                                                               cancellation);
+                video.Status = VideoStatus.Recording;
                 _logger.LogInformation("{channelId} is now lived! Start recording.", channel.id);
             }
 
