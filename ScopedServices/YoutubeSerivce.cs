@@ -149,7 +149,6 @@ public class YoutubeSerivce : PlatformService, IPlatformSerivce
     {
         video.Title = videoData.Title;
         video.Description = videoData.Description;
-        video.Duration = videoData.Duration;
 
         switch (videoData.LiveStatus)
         {

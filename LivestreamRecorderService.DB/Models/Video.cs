@@ -20,8 +20,6 @@ public class Video : Entity
 
     public string? Description { get; set; }
 
-    public long? Duration { get; set; }
-
     public required Timestamps Timestamps { get; set; }
 
     // My system upload timestamp
