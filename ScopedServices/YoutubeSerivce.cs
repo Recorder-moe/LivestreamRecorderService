@@ -139,12 +139,16 @@ public class YoutubeSerivce : PlatformService, IPlatformSerivce
         switch (videoData.LiveStatus)
         {
             case "is_upcoming":
+                // New stream published
+                if(video.Status == VideoStatus.Unknown)
+                    video.Thumbnail = await DownloadThumbnailAsync(videoUrl, video.id, cancellation);
+
                 video.Status = VideoStatus.Scheduled;
                 video.Timestamps.ScheduledStartTime =
                     DateTimeOffset.FromUnixTimeSeconds(videoData.ReleaseTimestamp ?? 0).UtcDateTime;
-                video.Thumbnail = await DownloadThumbnailAsync(videoUrl, video.id, cancellation);
                 break;
             case "is_live":
+                // Stream started
                 if (video.Status != VideoStatus.Recording)
                 {
                     video.Status = VideoStatus.WaitingToRecord;
@@ -159,14 +163,20 @@ public class YoutubeSerivce : PlatformService, IPlatformSerivce
             case "was_live":
                 switch (video.Status)
                 {
+                    // Old unarchived streams.
+                    // Will fall in here when adding a new channel.
                     case VideoStatus.Unknown:
                         video.Status = VideoStatus.Expired;
                         _logger.LogInformation("Change video {videoId} status to {videoStatus}", video.id, Enum.GetName(typeof(VideoStatus), video.Status));
+                        video.Thumbnail = await DownloadThumbnailAsync(videoUrl, video.id, cancellation);
                         break;
+                    // Should record these streams but not recorded.
+                    // Download them.
                     case VideoStatus.Scheduled:
                     case VideoStatus.Pending:
                     case VideoStatus.WaitingToRecord:
                         video.Status = VideoStatus.WaitingToDownload;
+                        video.Thumbnail = await DownloadThumbnailAsync(videoUrl, video.id, cancellation);
                         _logger.LogInformation("Change video {videoId} status to {videoStatus}", video.id, Enum.GetName(typeof(VideoStatus), video.Status));
                         break;
                     default:
@@ -192,7 +202,7 @@ public class YoutubeSerivce : PlatformService, IPlatformSerivce
                 // Don't download uploaded videos.
                 if (video.Status == VideoStatus.Unknown)
                 {
-                    video.Status = VideoStatus.Expired;
+                    video.Status = VideoStatus.Reject;
                     _logger.LogInformation("Change video {videoId} status to {videoStatus}", video.id, Enum.GetName(typeof(VideoStatus), video.Status));
                 }
 
@@ -219,7 +229,7 @@ public class YoutubeSerivce : PlatformService, IPlatformSerivce
                 break;
         }
 
-        if (!(video.SourceStatus == VideoStatus.Deleted))
+        if (video.SourceStatus != VideoStatus.Deleted)
         {
             video.Title = videoData.Title;
             video.Description = videoData.Description;
@@ -230,7 +240,8 @@ public class YoutubeSerivce : PlatformService, IPlatformSerivce
         {
             video.Status = VideoStatus.Archived;
         }
-        else if (video.SourceStatus == VideoStatus.Deleted)
+        else if (video.SourceStatus == VideoStatus.Deleted
+                 && video.Status < VideoStatus.Uploading)
         {
             video.Status = VideoStatus.Missing;
             _logger.LogInformation("Source removed and not archived, change video status to {status}", Enum.GetName(typeof(VideoStatus), VideoStatus.Missing));
