@@ -1,7 +1,7 @@
 ﻿using Azure.Storage.Blobs;
 using LivestreamRecorderService.DB.Models;
 
-namespace LivestreamRecorderService.SingletonServices
+namespace LivestreamRecorderService.Interfaces
 {
     public interface IABSService
     {

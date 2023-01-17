@@ -48,6 +48,7 @@ public class UpdateVideoStatusWorker : BackgroundService
                 videos = videoRepository.Where(p => p.Status != VideoStatus.Reject
                                                     && p.Status != VideoStatus.Expired
                                                     && p.SourceStatus != VideoStatus.Deleted)
+                                        .OrderBy(p => p.Timestamps.PublishedAt)
                                         .ToList();
 
                 // Iterate over all elements, regardless of whether their content has changed.

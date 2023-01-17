@@ -4,7 +4,6 @@ using LivestreamRecorderService.DB.Interfaces;
 using LivestreamRecorderService.DB.Models;
 using LivestreamRecorderService.Interfaces;
 using LivestreamRecorderService.Models;
-using LivestreamRecorderService.SingletonServices;
 using Serilog.Context;
 
 namespace LivestreamRecorderService.ScopedServices;
@@ -16,6 +15,7 @@ public class YoutubeSerivce : PlatformService, IPlatformSerivce
     private readonly IVideoRepository _videoRepository;
     private readonly IChannelRepository _channelRepository;
     private readonly RSSService _rSSService;
+    private readonly IABSService _aBSService;
 
     public override string PlatformName => "Youtube";
 
@@ -35,6 +35,7 @@ public class YoutubeSerivce : PlatformService, IPlatformSerivce
         _videoRepository = videoRepository;
         _channelRepository = channelRepository;
         _rSSService = rSSService;
+        _aBSService = aBSService;
     }
 
     public static string GetRSSFeed(Channel channel)
@@ -122,14 +123,18 @@ public class YoutubeSerivce : PlatformService, IPlatformSerivce
             _videoRepository.Update(video);
     }
 
+    /// <summary>
+    /// Update video data.
+    /// </summary>
+    /// <remarks>!!! Updates will not save to DB !!! Must call SaveChanges yourself !!!</remarks>
+    /// <param name="video"></param>
+    /// <param name="cancellation"></param>
+    /// <returns></returns>
     public override async Task UpdateVideoDataAsync(Video video, CancellationToken cancellation = default)
     {
         YtdlpVideoData videoData = await GetVideoInfoByYtdlpAsync($"https://youtu.be/{video.id}", cancellation);
 
         string videoUrl = $"https://youtu.be/{video.id}";
-
-        video.Title = videoData.Title;
-        video.Description = videoData.Description;
 
         switch (videoData.LiveStatus)
         {
@@ -191,6 +196,22 @@ public class YoutubeSerivce : PlatformService, IPlatformSerivce
                     goto case "not_live";
                 }
                 break;
+        }
+
+        if (!(video.SourceStatus == VideoStatus.Deleted))
+        {
+            video.Title = videoData.Title;
+            video.Description = videoData.Description;
+        }
+
+        if (_aBSService.GetBlobByVideo(video, cancellation)
+                       .Exists(cancellation))
+        {
+            video.Status = VideoStatus.Archived;
+        }
+        else if (video.SourceStatus == VideoStatus.Deleted)
+        {
+            video.Status = VideoStatus.Missing;
         }
 
         switch (videoData.Availability)

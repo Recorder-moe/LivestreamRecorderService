@@ -4,7 +4,6 @@ using LivestreamRecorderService.DB.Models;
 using LivestreamRecorderService.Helper;
 using LivestreamRecorderService.Interfaces;
 using LivestreamRecorderService.Models;
-using LivestreamRecorderService.SingletonServices;
 using MimeMapping;
 using System.Configuration;
 using YoutubeDLSharp.Options;
