@@ -259,9 +259,9 @@ public class YoutubeSerivce : PlatformService, IPlatformSerivce
     internal async Task UpdateChannelData(Channel channel, CancellationToken cancellation)
     {
         var info = await GetChannelInfoByYtdlpAsync(channel.id, cancellation);
-        if (channel.ChannelName != info.Title)
+        if (channel.ChannelName != info.Uploader)
         {
-            channel.ChannelName = info.Title;
+            channel.ChannelName = info.Uploader;
             _channelRepository.Update(channel);
             _unitOfWork.Commit();
         }
