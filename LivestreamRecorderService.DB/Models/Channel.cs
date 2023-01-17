@@ -20,6 +20,10 @@ public class Channel : Entity
 
     public bool Monitoring { get; set; } = false;
 
+    public string? Avatar { get; set; }
+
+    public string? Banner { get; set; }
+
     public ICollection<Video> Videos { get; set; }
 }
 

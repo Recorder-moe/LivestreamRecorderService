@@ -140,7 +140,7 @@ public class YoutubeSerivce : PlatformService, IPlatformSerivce
         {
             case "is_upcoming":
                 // New stream published
-                if(video.Status == VideoStatus.Unknown)
+                if (video.Status == VideoStatus.Unknown)
                     video.Thumbnail = await DownloadThumbnailAsync(videoUrl, video.id, cancellation);
 
                 video.Status = VideoStatus.Scheduled;
@@ -273,17 +273,22 @@ public class YoutubeSerivce : PlatformService, IPlatformSerivce
         if (channel.ChannelName != info.Uploader)
         {
             channel.ChannelName = info.Uploader;
-            _channelRepository.Update(channel);
-            _unitOfWork.Commit();
         }
 
         var thumbnails = info.Thumbnails.OrderByDescending(p => p.Preference).ToList();
         var avatarUrl = thumbnails.FirstOrDefault()?.Url;
         if (!string.IsNullOrEmpty(avatarUrl))
-            await DownloadImageAndUploadToBlobStorage(avatarUrl, $"avatar/{channel.id}", cancellation);
+        {
+            channel.Avatar = (await DownloadImageAndUploadToBlobStorage(avatarUrl, $"avatar/{channel.id}", cancellation))?.Replace("avatar/", "");
+        }
 
         var bannerUrl = thumbnails.Skip(1).FirstOrDefault()?.Url;
         if (!string.IsNullOrEmpty(bannerUrl))
-            await DownloadImageAndUploadToBlobStorage(bannerUrl, $"banner/{channel.id}", cancellation);
+        {
+            channel.Banner = (await DownloadImageAndUploadToBlobStorage(bannerUrl, $"banner/{channel.id}", cancellation))?.Replace("banner/", "");
+        }
+
+        _channelRepository.Update(channel);
+        _unitOfWork.Commit();
     }
 }
