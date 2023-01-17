@@ -229,6 +229,7 @@ public class TwitcastingService : PlatformService, IPlatformSerivce
         }
         else
         {
+            _logger.LogInformation("Twitcasting video {videoId} is not published.", video.id);
             video.SourceStatus = VideoStatus.Deleted;
             video.Status = VideoStatus.Missing;
         }

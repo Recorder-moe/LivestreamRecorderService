@@ -157,8 +157,22 @@ public class YoutubeSerivce : PlatformService, IPlatformSerivce
                     video.Status = VideoStatus.Pending;
                 goto case "_live";
             case "was_live":
-                if (video.Status != VideoStatus.Recording)
-                    video.Status = VideoStatus.WaitingToDownload;
+                switch (video.Status)
+                {
+                    case VideoStatus.Unknown:
+                        video.Status = VideoStatus.Expired;
+                        _logger.LogInformation("Change video {videoId} status to {videoStatus}", video.id, Enum.GetName(typeof(VideoStatus), video.Status));
+                        break;
+                    case VideoStatus.Scheduled:
+                    case VideoStatus.Pending:
+                    case VideoStatus.WaitingToRecord:
+                        video.Status = VideoStatus.WaitingToDownload;
+                        _logger.LogInformation("Change video {videoId} status to {videoStatus}", video.id, Enum.GetName(typeof(VideoStatus), video.Status));
+                        break;
+                    default:
+                        // Don't modify status.
+                        break;
+                }
                 goto case "_live";
             case "_live":
                 video.IsLiveStream = true;
@@ -174,7 +188,14 @@ public class YoutubeSerivce : PlatformService, IPlatformSerivce
                 break;
             case "not_live":
                 video.IsLiveStream = false;
-                video.Status = VideoStatus.WaitingToDownload;
+
+                // Don't download uploaded videos.
+                if (video.Status == VideoStatus.Unknown)
+                {
+                    video.Status = VideoStatus.Expired;
+                    _logger.LogInformation("Change video {videoId} status to {videoStatus}", video.id, Enum.GetName(typeof(VideoStatus), video.Status));
+                }
+
                 video.Timestamps.ActualStartTime ??=
                     videoData.ReleaseTimestamp.HasValue
                         ? DateTimeOffset.FromUnixTimeSeconds(videoData.ReleaseTimestamp.Value).UtcDateTime
@@ -187,8 +208,8 @@ public class YoutubeSerivce : PlatformService, IPlatformSerivce
                    && videoData.Formats?.Count == 0
                    && string.IsNullOrEmpty(videoData.Fulltitle))
                 {
-                    //_logger.LogWarning("Failed to fetch video data, maybe it is deleted! {videoId}", video.id);
                     video.SourceStatus = VideoStatus.Deleted;
+                    _logger.LogInformation("Failed to fetch video data, maybe it is deleted! {videoId}", video.id);
                 }
                 else
                 {
@@ -212,6 +233,7 @@ public class YoutubeSerivce : PlatformService, IPlatformSerivce
         else if (video.SourceStatus == VideoStatus.Deleted)
         {
             video.Status = VideoStatus.Missing;
+            _logger.LogInformation("Source removed and not archived, change video status to {status}", Enum.GetName(typeof(VideoStatus), VideoStatus.Missing));
         }
 
         switch (videoData.Availability)
@@ -226,6 +248,7 @@ public class YoutubeSerivce : PlatformService, IPlatformSerivce
             case "needs_auth":
                 video.Status = VideoStatus.Reject;
                 video.SourceStatus = VideoStatus.Reject;
+                _logger.LogInformation("Video is detected member_only or needs_auth, change video status to {status}", Enum.GetName(typeof(VideoStatus), VideoStatus.Reject));
                 break;
         }
 

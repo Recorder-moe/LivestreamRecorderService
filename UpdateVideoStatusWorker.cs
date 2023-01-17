@@ -55,7 +55,10 @@ public class UpdateVideoStatusWorker : BackgroundService
                 i++;
                 if (i >= videos.Count) i = 0;
 
+                _logger.LogInformation("Process: {index}/{amount}", i, videos.Count);
+
                 var video = videos[i];
+                _logger.LogInformation("Update video data: {videoId}", video.id);
 
                 switch (video.Source)
                 {
