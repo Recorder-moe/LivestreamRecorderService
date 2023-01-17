@@ -225,7 +225,7 @@ public class TwitcastingService : PlatformService, IPlatformSerivce
         if (await GetTwitcastingIsPublishAsync(video, cancellation))
         {
             video.SourceStatus = VideoStatus.Exist;
-            video.Status = VideoStatus.WaitingToDownload;
+            //video.Status = VideoStatus.WaitingToDownload;
         }
         else
         {
@@ -239,6 +239,12 @@ public class TwitcastingService : PlatformService, IPlatformSerivce
         {
             video.Status = VideoStatus.Archived;
         }
+        else if (video.Status == VideoStatus.Archived)
+        {
+            video.Status = VideoStatus.Expired;
+            _logger.LogInformation("Can not found archived, change video status to {status}", Enum.GetName(typeof(VideoStatus), VideoStatus.Expired));
+        }
+
 
         _videoRepository.Update(video);
         _unitOfWork.Commit();

@@ -246,6 +246,11 @@ public class YoutubeSerivce : PlatformService, IPlatformSerivce
             video.Status = VideoStatus.Missing;
             _logger.LogInformation("Source removed and not archived, change video status to {status}", Enum.GetName(typeof(VideoStatus), VideoStatus.Missing));
         }
+        else if (video.Status == VideoStatus.Archived)
+        {
+            video.Status = VideoStatus.Expired;
+            _logger.LogInformation("Can not found archived, change video status to {status}", Enum.GetName(typeof(VideoStatus), VideoStatus.Expired));
+        }
 
         switch (videoData.Availability)
         {

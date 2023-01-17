@@ -121,7 +121,7 @@ public class TwitchSerivce : PlatformService, IPlatformSerivce
         if (await GetTwitchIsPublishAsync(video, cancellation))
         {
             video.SourceStatus = VideoStatus.Exist;
-            video.Status = VideoStatus.WaitingToDownload;
+            //video.Status = VideoStatus.WaitingToDownload;
         }
         else
         {
@@ -133,6 +133,11 @@ public class TwitchSerivce : PlatformService, IPlatformSerivce
                        .Exists(cancellation))
         {
             video.Status = VideoStatus.Archived;
+        }
+        else if (video.Status == VideoStatus.Archived)
+        {
+            video.Status = VideoStatus.Expired;
+            _logger.LogInformation("Can not found archived, change video status to {status}", Enum.GetName(typeof(VideoStatus), VideoStatus.Expired));
         }
 
         _videoRepository.Update(video);
