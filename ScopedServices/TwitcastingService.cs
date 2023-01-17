@@ -16,6 +16,7 @@ public class TwitcastingService : PlatformService, IPlatformSerivce
     private readonly IUnitOfWork _unitOfWork;
     private readonly IVideoRepository _videoRepository;
     private readonly ACITwitcastingRecorderService _aCITwitcastingRecorderService;
+    private readonly IABSService _aBSService;
 
     public override string PlatformName => "Twitcasting";
     public override int Interval => 10;
@@ -38,6 +39,7 @@ public class TwitcastingService : PlatformService, IPlatformSerivce
         _unitOfWork = unitOfWork;
         _videoRepository = videoRepository;
         _aCITwitcastingRecorderService = aCITwitcastingRecorderService;
+        _aBSService = aBSService;
     }
 
     public override async Task UpdateVideosDataAsync(Channel channel, CancellationToken cancellation = default)
@@ -216,9 +218,27 @@ public class TwitcastingService : PlatformService, IPlatformSerivce
     public override async Task UpdateVideoDataAsync(Video video, CancellationToken cancellation = default)
     {
         if (string.IsNullOrEmpty(video.Thumbnail))
+        {
             video.Thumbnail = await DownloadThumbnailAsync($"https://twitcasting.tv/{video.ChannelId}/thumb/{video.id}", video.id, cancellation);
-        if (!await GetTwitcastingIsPublishAsync(video, cancellation))
+        }
+
+        if (await GetTwitcastingIsPublishAsync(video, cancellation))
+        {
+            video.SourceStatus = VideoStatus.Exist;
+            video.Status = VideoStatus.WaitingToDownload;
+        }
+        else
+        {
             video.SourceStatus = VideoStatus.Deleted;
+            video.Status = VideoStatus.Missing;
+        }
+
+        if (_aBSService.GetBlobByVideo(video, cancellation)
+                       .Exists(cancellation))
+        {
+            video.Status = VideoStatus.Archived;
+        }
+
         _videoRepository.Update(video);
         _unitOfWork.Commit();
     }

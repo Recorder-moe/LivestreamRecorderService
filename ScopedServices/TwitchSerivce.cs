@@ -15,6 +15,7 @@ public class TwitchSerivce : PlatformService, IPlatformSerivce
     private readonly IVideoRepository _videoRepository;
     private readonly ACIStreamlinkService _aCIStreamlinkService;
     private readonly ITwitchAPI _twitchAPI;
+    private readonly IABSService _aBSService;
 
     public override string PlatformName => "Twitch";
 
@@ -35,6 +36,7 @@ public class TwitchSerivce : PlatformService, IPlatformSerivce
         _videoRepository = videoRepository;
         _aCIStreamlinkService = aCIStreamlinkService;
         _twitchAPI = twitchAPI;
+        _aBSService = aBSService;
     }
 
     public override async Task UpdateVideosDataAsync(Channel channel, CancellationToken cancellation = default)
@@ -114,9 +116,31 @@ public class TwitchSerivce : PlatformService, IPlatformSerivce
         if (string.IsNullOrEmpty(video.Thumbnail))
         {
             video.Thumbnail = await DownloadThumbnailAsync($"https://www.twitch.tv/videos/{video.id}", video.id, cancellation);
-            _videoRepository.Update(video);
-            _unitOfWork.Commit();
         }
-        // TODO: Detect if Twitch VOD has been deleted.
+
+        if (await GetTwitchIsPublishAsync(video, cancellation))
+        {
+            video.SourceStatus = VideoStatus.Exist;
+            video.Status = VideoStatus.WaitingToDownload;
+        }
+        else
+        {
+            video.SourceStatus = VideoStatus.Deleted;
+            video.Status = VideoStatus.Missing;
+        }
+
+        if (_aBSService.GetBlobByVideo(video, cancellation)
+                       .Exists(cancellation))
+        {
+            video.Status = VideoStatus.Archived;
+        }
+
+        _videoRepository.Update(video);
+        _unitOfWork.Commit();
     }
+
+    // TODO: Detect if Twitch VOD has been deleted.
+    private Task<bool> GetTwitchIsPublishAsync(Video video, CancellationToken cancellation)
+        => Task.FromResult(false);
+    //=> throw new NotImplementedException();
 }
