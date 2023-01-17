@@ -1,4 +1,5 @@
 ﻿using LivestreamRecorderService.DB.Interfaces;
+using LivestreamRecorderService.DB.Models;
 using Microsoft.EntityFrameworkCore;
 
 namespace LivestreamRecorderService.DB.Core
@@ -15,5 +16,10 @@ namespace LivestreamRecorderService.DB.Core
 
         public void Commit() => Context.SaveChanges();
 
+        public T ReloadEntityFromDB<T>(T entity) where T : Entity
+        {
+            Context.Entry(entity).Reload();
+            return entity;
+        }
     }
 }

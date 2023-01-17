@@ -35,6 +35,7 @@ public class VideoService
 
     public void UpdateVideoStatus(Video video, VideoStatus status)
     {
+        _unitOfWork.ReloadEntityFromDB(video);
         video.Status = status;
         _videoRepository.Update(video);
         _unitOfWork.Commit();
