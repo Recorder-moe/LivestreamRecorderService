@@ -91,7 +91,7 @@ public class TwitcastingService : PlatformService, IPlatformSerivce
                 };
             }
 
-            await DownloadThumbnailAsync($"https://twitcasting.tv/{channel.id}/thumb/{videoId}", video.id, cancellation);
+            video.Thumbnail = await DownloadThumbnailAsync($"https://twitcasting.tv/{channel.id}/thumb/{videoId}", video.id, cancellation);
 
             if (await GetTwitcastingIsPublicAsync(videoId, cancellation))
             {

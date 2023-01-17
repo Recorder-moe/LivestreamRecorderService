@@ -86,14 +86,21 @@ namespace LivestreamRecorderService.ScopedServices
             return videoData;
         }
 
+        /// <summary>
+        /// Download thumbnail.
+        /// </summary>
+        /// <param name="url">Url to download the thumbnail.</param>
+        /// <param name="videoId"></param>
+        /// <param name="cancellation"></param>
+        /// <returns>Thumbnail file name with extension.</returns>
         protected async Task<string?> DownloadThumbnailAsync(string url, string videoId, CancellationToken cancellation = default)
         {
             var info = await GetVideoInfoByYtdlpAsync(url, cancellation);
 
             var thumbinail = info.Thumbnail;
-            return !string.IsNullOrEmpty(thumbinail)
-                ? await DownloadImageAndUploadToBlobStorage(thumbinail, $"thumbnails/{videoId}", cancellation)
-                : null;
+            return string.IsNullOrEmpty(thumbinail)
+                ? null
+                : (await DownloadImageAndUploadToBlobStorage(thumbinail, $"thumbnails/{videoId}", cancellation))?.Replace("thumbnails/", "");
         }
 
         /// <summary>
