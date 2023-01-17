@@ -67,7 +67,7 @@ public class YoutubeSerivce : PlatformService, IPlatformSerivce
         => GetVideoInfoByYtdlpAsync($"https://www.youtube.com/channel/{ChannelId}/about", cancellation);
 
     /// <summary>
-    /// Update video status from RSS feed item.
+    /// Update video info from RSS feed item. (Which are in Scheduled and Unknown states.)
     /// </summary>
     /// <remarks>!!! Updates will not save to DB !!! Must call SaveChanges yourself !!!</remarks>
     /// <param name="channel"></param>
@@ -83,9 +83,9 @@ public class YoutubeSerivce : PlatformService, IPlatformSerivce
 
         // Don't need to track anymore.
         if (null != video
-            && video.Status >= VideoStatus.Recording)
+            && video.Status > VideoStatus.Scheduled)
         {
-            _logger.LogTrace("Video {videoId} is skipped. It is {videoStatus}.", videoId, Enum.GetName(typeof(VideoStatus), video.Status));
+            _logger.LogTrace("Video {videoId} from RSSFeed is skipped. It is {videoStatus}.", videoId, Enum.GetName(typeof(VideoStatus), video.Status));
             return;
         }
 
