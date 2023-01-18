@@ -78,8 +78,8 @@ public class TwitchSerivce : PlatformService, IPlatformSerivce
                     Description = stream.GameName,
                     Timestamps = new()
                     {
-                        ActualStartTime = stream.StartedAt,
                         PublishedAt = stream.StartedAt,
+                        ActualStartTime = stream.StartedAt,
                     },
 
                     ChannelId = channel.id,
@@ -111,8 +111,14 @@ public class TwitchSerivce : PlatformService, IPlatformSerivce
             _logger.LogTrace("{channelId} is down.", channel.id);
         }
     }
+
     public override async Task UpdateVideoDataAsync(Video video, CancellationToken cancellation = default)
     {
+        if (null == video.Timestamps.ActualStartTime)
+        {
+            video.Timestamps.ActualStartTime = video.Timestamps.PublishedAt;
+        }
+
         if (await _aBSService.GetBlobByVideo(video)
                              .ExistsAsync(cancellation))
         {

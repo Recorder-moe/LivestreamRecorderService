@@ -13,18 +13,21 @@ public class VideoService
     private readonly ILogger<VideoService> _logger;
     private readonly IUnitOfWork _unitOfWork;
     private readonly IVideoRepository _videoRepository;
+    private readonly IChannelRepository _channelRepository;
     private readonly IHttpClientFactory _httpFactory;
 
     public VideoService(
         ILogger<VideoService> logger,
         IUnitOfWork unitOfWork,
         IVideoRepository videoRepository,
+        IChannelRepository channelRepository,
         IHttpClientFactory httpFactory,
         IOptions<AzureOption> options)
     {
         _logger = logger;
         _unitOfWork = unitOfWork;
         _videoRepository = videoRepository;
+        _channelRepository = channelRepository;
         _httpFactory = httpFactory;
     }
 
@@ -97,4 +100,11 @@ public class VideoService
             .ToList()
             .ForEach(p => UpdateVideoStatus(p, VideoStatus.Recording));
 
+    public void UpdateChannelLatestVideo(Video video)
+    {
+        var channel = _channelRepository.GetById(video.ChannelId);
+        channel.LatestVideoId = video.id;
+        _channelRepository.Update(channel);
+        _unitOfWork.Commit();
+    }
 }

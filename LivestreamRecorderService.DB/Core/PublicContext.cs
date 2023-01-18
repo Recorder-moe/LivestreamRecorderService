@@ -46,6 +46,11 @@ public class PublicContext : DbContext
 
         modelBuilder.Entity<Channel>()
             .UseETagConcurrency();
+
+        modelBuilder.Entity<Channel>()
+            .HasOne(p=>p.LatestVideo)
+            .WithOne(p=>p.Channel)
+            .HasForeignKey<Channel>(p => p.LatestVideoId);
         #endregion
 
 

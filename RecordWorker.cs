@@ -80,6 +80,8 @@ public class RecordWorker : BackgroundService
                         videoService.UpdateVideoStatus(video, VideoStatus.Error);
                     }
 
+                    videoService.UpdateChannelLatestVideo(video);
+
                     videoService.AddFilePropertiesToVideo(video, files);
                     tasks.Add(videoService.TransferVideoToBlobStorageAsync(video, stoppingToken));
 

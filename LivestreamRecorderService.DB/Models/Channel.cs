@@ -24,6 +24,10 @@ public class Channel : Entity
 
     public string? Banner { get; set; }
 
+    public string? LatestVideoId { get; set; }
+
+    public Video? LatestVideo { get; set; }
+
     public ICollection<Video> Videos { get; set; }
 }
 

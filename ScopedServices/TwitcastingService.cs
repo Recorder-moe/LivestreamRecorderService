@@ -88,7 +88,8 @@ public class TwitcastingService : PlatformService, IPlatformSerivce
                     Channel = channel,
                     Timestamps = new Timestamps()
                     {
-                        PublishedAt = DateTime.UtcNow
+                        PublishedAt = DateTime.UtcNow,
+                        ActualStartTime = DateTime.UtcNow
                     },
                 };
             }
@@ -217,6 +218,11 @@ public class TwitcastingService : PlatformService, IPlatformSerivce
 
     public override async Task UpdateVideoDataAsync(Video video, CancellationToken cancellation = default)
     {
+        if (null == video.Timestamps.ActualStartTime)
+        {
+            video.Timestamps.ActualStartTime = video.Timestamps.PublishedAt;
+        }
+
         if (string.IsNullOrEmpty(video.Thumbnail))
         {
             video.Thumbnail = await DownloadThumbnailAsync($"https://twitcasting.tv/{video.ChannelId}/thumb/{video.id}", video.id, cancellation);
