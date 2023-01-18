@@ -111,19 +111,6 @@ public class TwitchSerivce : PlatformService, IPlatformSerivce
             _logger.LogTrace("{channelId} is down.", channel.id);
         }
     }
-
-    /// <summary>
-    /// Download thumbnail.
-    /// </summary>
-    /// <param name="thumbnail">Url to download the thumbnail.</param>
-    /// <param name="videoId"></param>
-    /// <param name="cancellation"></param>
-    /// <returns>Thumbnail file name with extension.</returns>
-    protected new async Task<string?> DownloadThumbnailAsync(string thumbnail, string videoId, CancellationToken cancellation = default) 
-        => string.IsNullOrEmpty(thumbnail)
-            ? null
-            : (await DownloadImageAndUploadToBlobStorage(thumbnail, $"thumbnails/{videoId}", cancellation))?.Replace("thumbnails/", "");
-
     public override async Task UpdateVideoDataAsync(Video video, CancellationToken cancellation = default)
     {
         if (await _aBSService.GetBlobByVideo(video)

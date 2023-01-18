@@ -134,14 +134,12 @@ public class YoutubeSerivce : PlatformService, IPlatformSerivce
     {
         YtdlpVideoData videoData = await GetVideoInfoByYtdlpAsync($"https://youtu.be/{video.id}", cancellation);
 
-        string videoUrl = $"https://youtu.be/{video.id}";
-
         switch (videoData.LiveStatus)
         {
             case "is_upcoming":
                 // New stream published
                 if (video.Status == VideoStatus.Unknown)
-                    video.Thumbnail = await DownloadThumbnailAsync(videoUrl, video.id, cancellation);
+                    video.Thumbnail = await DownloadThumbnailAsync(videoData.Thumbnail, video.id, cancellation);
 
                 video.Status = VideoStatus.Scheduled;
                 video.Timestamps.ScheduledStartTime =
@@ -152,7 +150,7 @@ public class YoutubeSerivce : PlatformService, IPlatformSerivce
                 if (video.Status != VideoStatus.Recording)
                 {
                     video.Status = VideoStatus.WaitingToRecord;
-                    video.Thumbnail = await DownloadThumbnailAsync(videoUrl, video.id, cancellation);
+                    video.Thumbnail = await DownloadThumbnailAsync(videoData.Thumbnail, video.id, cancellation);
                 }
                 goto case "_live";
             case "post_live":
@@ -168,7 +166,7 @@ public class YoutubeSerivce : PlatformService, IPlatformSerivce
                     case VideoStatus.Unknown:
                         video.Status = VideoStatus.Expired;
                         _logger.LogInformation("Change video {videoId} status to {videoStatus}", video.id, Enum.GetName(typeof(VideoStatus), video.Status));
-                        video.Thumbnail = await DownloadThumbnailAsync(videoUrl, video.id, cancellation);
+                        video.Thumbnail = await DownloadThumbnailAsync(videoData.Thumbnail, video.id, cancellation);
                         break;
                     // Should record these streams but not recorded.
                     // Download them.
@@ -176,7 +174,7 @@ public class YoutubeSerivce : PlatformService, IPlatformSerivce
                     case VideoStatus.Pending:
                     case VideoStatus.WaitingToRecord:
                         video.Status = VideoStatus.WaitingToDownload;
-                        video.Thumbnail = await DownloadThumbnailAsync(videoUrl, video.id, cancellation);
+                        video.Thumbnail = await DownloadThumbnailAsync(videoData.Thumbnail, video.id, cancellation);
                         _logger.LogInformation("Change video {videoId} status to {videoStatus}", video.id, Enum.GetName(typeof(VideoStatus), video.Status));
                         break;
                     default:
@@ -210,7 +208,7 @@ public class YoutubeSerivce : PlatformService, IPlatformSerivce
                     videoData.ReleaseTimestamp.HasValue
                         ? DateTimeOffset.FromUnixTimeSeconds(videoData.ReleaseTimestamp.Value).UtcDateTime
                         : DateTime.ParseExact(videoData.UploadDate, "yyyyMMdd", System.Globalization.CultureInfo.InvariantCulture);
-                video.Thumbnail = await DownloadThumbnailAsync(videoUrl, video.id, cancellation);
+                video.Thumbnail = await DownloadThumbnailAsync(videoData.Thumbnail, video.id, cancellation);
                 break;
             default:
                 // Deleted
