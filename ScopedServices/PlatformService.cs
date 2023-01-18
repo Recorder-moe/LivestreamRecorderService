@@ -88,18 +88,18 @@ namespace LivestreamRecorderService.ScopedServices
         /// <summary>
         /// Download thumbnail.
         /// </summary>
-        /// <param name="url">Url to download the thumbnail.</param>
+        /// <param name="videoUrl">VideoUrl that will pass to yt-dlp to download the thumbnail.</param>
         /// <param name="videoId"></param>
         /// <param name="cancellation"></param>
         /// <returns>Thumbnail file name with extension.</returns>
-        protected async Task<string?> DownloadThumbnailAsync(string url, string videoId, CancellationToken cancellation = default)
+        protected async Task<string?> DownloadThumbnailAsync(string videoUrl, string videoId, CancellationToken cancellation = default)
         {
-            var info = await GetVideoInfoByYtdlpAsync(url, cancellation);
+            var info = await GetVideoInfoByYtdlpAsync(videoUrl, cancellation);
 
-            var thumbinail = info.Thumbnail;
-            return string.IsNullOrEmpty(thumbinail)
+            var thumbnail = info.Thumbnail;
+            return string.IsNullOrEmpty(thumbnail)
                 ? null
-                : (await DownloadImageAndUploadToBlobStorage(thumbinail, $"thumbnails/{videoId}", cancellation))?.Replace("thumbnails/", "");
+                : (await DownloadImageAndUploadToBlobStorage(thumbnail, $"thumbnails/{videoId}", cancellation))?.Replace("thumbnails/", "");
         }
 
         /// <summary>
@@ -129,7 +129,7 @@ namespace LivestreamRecorderService.ScopedServices
                 var contentType = response.Content.Headers.ContentType?.MediaType;
                 var extension = MimeUtility.GetExtensions(contentType)?.FirstOrDefault();
                 extension = extension == "jpeg" ? "jpg" : extension;
-                var blobClient = _aBSService.GetBlobByName($"{path}.{extension}", cancellation);
+                var blobClient = _aBSService.GetBlobByName($"{path}.{extension}");
                 _ = await blobClient.UploadAsync(
                      content: await response.Content.ReadAsStreamAsync(cancellation),
                      httpHeaders: new BlobHttpHeaders { ContentType = contentType },

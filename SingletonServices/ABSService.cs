@@ -23,8 +23,8 @@ public class ABSService : IABSService
     /// <param name="video"></param>
     /// <param name="cancellation"></param>
     /// <returns></returns>
-    public BlobClient GetBlobByVideo(Video video, CancellationToken cancellation = default)
-        => GetBlobByName($"videos/{video.Filename}", cancellation);
+    public BlobClient GetBlobByVideo(Video video)
+        => GetBlobByName($"videos/{video.Filename}");
 
     /// <summary>
     /// Get the BlobClient with videoId in the blob container.
@@ -32,7 +32,7 @@ public class ABSService : IABSService
     /// <param name="name"></param>
     /// <param name="cancellation"></param>
     /// <returns></returns>
-    public BlobClient GetBlobByName(string name, CancellationToken cancellation = default)
+    public BlobClient GetBlobByName(string name)
         => _blobContainerClient.GetBlobClient(name);
 
 }

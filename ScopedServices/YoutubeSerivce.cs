@@ -235,8 +235,8 @@ public class YoutubeSerivce : PlatformService, IPlatformSerivce
             video.Description = videoData.Description;
         }
 
-        if (_aBSService.GetBlobByVideo(video, cancellation)
-                       .Exists(cancellation))
+        if (await _aBSService.GetBlobByVideo(video)
+                             .ExistsAsync(cancellation))
         {
             video.Status = VideoStatus.Archived;
         }

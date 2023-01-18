@@ -91,6 +91,7 @@ public class TwitchSerivce : PlatformService, IPlatformSerivce
             video.Description = stream.GameName;
             video.Timestamps.ActualStartTime = stream.StartedAt;
             video.Timestamps.PublishedAt = stream.StartedAt;
+            video.Thumbnail = await DownloadThumbnailAsync(stream.ThumbnailUrl, video.id, cancellation);
 
             if (video.Status < VideoStatus.Recording
                 || video.Status == VideoStatus.Missing)
@@ -111,26 +112,22 @@ public class TwitchSerivce : PlatformService, IPlatformSerivce
         }
     }
 
+    /// <summary>
+    /// Download thumbnail.
+    /// </summary>
+    /// <param name="thumbnail">Url to download the thumbnail.</param>
+    /// <param name="videoId"></param>
+    /// <param name="cancellation"></param>
+    /// <returns>Thumbnail file name with extension.</returns>
+    protected new async Task<string?> DownloadThumbnailAsync(string thumbnail, string videoId, CancellationToken cancellation = default) 
+        => string.IsNullOrEmpty(thumbnail)
+            ? null
+            : (await DownloadImageAndUploadToBlobStorage(thumbnail, $"thumbnails/{videoId}", cancellation))?.Replace("thumbnails/", "");
+
     public override async Task UpdateVideoDataAsync(Video video, CancellationToken cancellation = default)
     {
-        if (string.IsNullOrEmpty(video.Thumbnail))
-        {
-            video.Thumbnail = await DownloadThumbnailAsync($"https://www.twitch.tv/videos/{video.id}", video.id, cancellation);
-        }
-
-        if (await GetTwitchIsPublishAsync(video, cancellation))
-        {
-            video.SourceStatus = VideoStatus.Exist;
-            //video.Status = VideoStatus.WaitingToDownload;
-        }
-        else
-        {
-            video.SourceStatus = VideoStatus.Deleted;
-            video.Status = VideoStatus.Missing;
-        }
-
-        if (_aBSService.GetBlobByVideo(video, cancellation)
-                       .Exists(cancellation))
+        if (await _aBSService.GetBlobByVideo(video)
+                             .ExistsAsync(cancellation))
         {
             video.Status = VideoStatus.Archived;
         }
@@ -143,9 +140,4 @@ public class TwitchSerivce : PlatformService, IPlatformSerivce
         _videoRepository.Update(video);
         _unitOfWork.Commit();
     }
-
-    // TODO: Detect if Twitch VOD has been deleted.
-    private Task<bool> GetTwitchIsPublishAsync(Video video, CancellationToken cancellation)
-        => Task.FromResult(false);
-    //=> throw new NotImplementedException();
 }

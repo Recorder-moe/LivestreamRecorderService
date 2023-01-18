@@ -5,8 +5,8 @@ namespace LivestreamRecorderService.Interfaces
 {
     public interface IABSService
     {
-        BlobClient GetBlobByVideo(Video video, CancellationToken cancellation = default);
+        BlobClient GetBlobByVideo(Video video);
 
-        BlobClient GetBlobByName(string name, CancellationToken cancellation = default);
+        BlobClient GetBlobByName(string name);
     }
 }

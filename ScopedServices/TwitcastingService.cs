@@ -234,8 +234,8 @@ public class TwitcastingService : PlatformService, IPlatformSerivce
             video.Status = VideoStatus.Missing;
         }
 
-        if (_aBSService.GetBlobByVideo(video, cancellation)
-                       .Exists(cancellation))
+        if (await _aBSService.GetBlobByVideo(video)
+                             .ExistsAsync(cancellation))
         {
             video.Status = VideoStatus.Archived;
         }
@@ -244,7 +244,6 @@ public class TwitcastingService : PlatformService, IPlatformSerivce
             video.Status = VideoStatus.Expired;
             _logger.LogInformation("Can not found archived, change video status to {status}", Enum.GetName(typeof(VideoStatus), VideoStatus.Expired));
         }
-
 
         _videoRepository.Update(video);
         _unitOfWork.Commit();
