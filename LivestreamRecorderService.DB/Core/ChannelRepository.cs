@@ -14,6 +14,9 @@ public class ChannelRepository : CosmosDbRepository<Channel>, IChannelRepository
         UnitOfWork.Context.Entry(entity)
                           .Collection(channel => channel.Videos)
                           .Load();
+        UnitOfWork.Context.Entry(entity)
+                          .Reference(channel => channel.LatestVideo)
+                          .Load();
         return entity;
     }
 
