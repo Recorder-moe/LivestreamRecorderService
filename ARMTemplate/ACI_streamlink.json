@@ -31,7 +31,7 @@
                     {
                         "name": "[parameters('containerName')]",
                         "properties": {
-                            "image": "rayou/streamlink:5.1.2",
+                            "image": "ghcr.io/jim60105/docker-streamlink:5.1.2",
                             "resources": {
                                 "requests": {
                                     "cpu": "1",
