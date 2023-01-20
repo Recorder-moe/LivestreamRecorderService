@@ -103,6 +103,8 @@ public class VideoService
     public void UpdateChannelLatestVideo(Video video)
     {
         var channel = _channelRepository.GetById(video.ChannelId);
+        _unitOfWork.Context.Entry(channel).Reload();
+        _channelRepository.LoadRelatedData(channel);
         channel.LatestVideoId = video.id;
         _channelRepository.Update(channel);
         _unitOfWork.Commit();

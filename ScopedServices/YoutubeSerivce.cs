@@ -272,25 +272,28 @@ public class YoutubeSerivce : PlatformService, IPlatformSerivce
 
     internal async Task UpdateChannelData(Channel channel, CancellationToken cancellation)
     {
+        var avatarBlobUrl = channel.Avatar;
+        var bannerBlobUrl = channel.Banner;
         var info = await GetChannelInfoByYtdlpAsync(channel.id, cancellation);
-        if (channel.ChannelName != info.Uploader)
-        {
-            channel.ChannelName = info.Uploader;
-        }
 
         var thumbnails = info.Thumbnails.OrderByDescending(p => p.Preference).ToList();
         var avatarUrl = thumbnails.FirstOrDefault()?.Url;
         if (!string.IsNullOrEmpty(avatarUrl))
         {
-            channel.Avatar = (await DownloadImageAndUploadToBlobStorage(avatarUrl, $"avatar/{channel.id}", cancellation))?.Replace("avatar/", "");
+            avatarBlobUrl = await DownloadImageAndUploadToBlobStorage(avatarUrl, $"avatar/{channel.id}", cancellation);
         }
 
         var bannerUrl = thumbnails.Skip(1).FirstOrDefault()?.Url;
         if (!string.IsNullOrEmpty(bannerUrl))
         {
-            channel.Banner = (await DownloadImageAndUploadToBlobStorage(bannerUrl, $"banner/{channel.id}", cancellation))?.Replace("banner/", "");
+            bannerBlobUrl = (await DownloadImageAndUploadToBlobStorage(bannerUrl, $"banner/{channel.id}", cancellation));
         }
 
+        _unitOfWork.Context.Entry(channel).Reload();
+        channel = _channelRepository.LoadRelatedData(channel);
+        channel.ChannelName = info.Uploader;
+        channel.Avatar = avatarBlobUrl?.Replace("avatar/", "");
+        channel.Banner = bannerBlobUrl?.Replace("banner/", "");
         _channelRepository.Update(channel);
         _unitOfWork.Commit();
     }

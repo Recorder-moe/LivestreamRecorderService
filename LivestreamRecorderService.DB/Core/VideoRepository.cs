@@ -9,13 +9,5 @@ public class VideoRepository : CosmosDbRepository<Video>, IVideoRepository
     {
     }
 
-    public override Video LoadRelatedData(Video entity)
-    {
-        UnitOfWork.Context.Entry(entity)
-                          .Reference(video => video.Channel)
-                          .Load();
-        return entity;
-    }
-
     public override string CollectionName { get; } = "Videos";
 }

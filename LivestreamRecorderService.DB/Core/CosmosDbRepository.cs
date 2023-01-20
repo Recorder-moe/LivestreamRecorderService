@@ -76,5 +76,10 @@ public abstract class CosmosDbRepository<T> : ICosmosDbRepository<T> where T : E
         return ObjectSet.Remove(entityToDelete);
     }
 
-    public abstract T LoadRelatedData(T entity);
+    public T LoadRelatedData(T entity)
+    {
+        EntityEntry<T> entityEntry = UnitOfWork.Context.Entry(entity);
+        entityEntry.Navigations.ToList().ForEach(p => p.Load());
+        return entityEntry.Entity;
+    }
 }
