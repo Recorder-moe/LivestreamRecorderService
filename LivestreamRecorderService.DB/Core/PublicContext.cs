@@ -29,6 +29,11 @@ public class PublicContext : DbContext
 
         modelBuilder.Entity<Video>()
             .UseETagConcurrency();
+
+        modelBuilder.Entity<Video>()
+            .HasOne(o => o.Channel)
+            .WithMany(o => o.Videos)
+            .HasForeignKey(o => o.ChannelId);
         #endregion
 
         #region Channels
@@ -46,11 +51,6 @@ public class PublicContext : DbContext
 
         modelBuilder.Entity<Channel>()
             .UseETagConcurrency();
-
-        modelBuilder.Entity<Channel>()
-            .HasOne(p=>p.LatestVideo)
-            .WithOne(p=>p.Channel)
-            .HasForeignKey<Channel>(p => p.LatestVideoId);
         #endregion
 
 
