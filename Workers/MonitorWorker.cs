@@ -1,4 +1,5 @@
-﻿using LivestreamRecorderService.Interfaces;
+﻿using LivestreamRecorderService.DB.Enum;
+using LivestreamRecorderService.Interfaces;
 using LivestreamRecorderService.Models.Options;
 using LivestreamRecorderService.ScopedServices;
 using Microsoft.Extensions.Options;
@@ -36,11 +37,12 @@ public class MonitorWorker : BackgroundService
                 var youtubeSerivce = scope.ServiceProvider.GetRequiredService<YoutubeSerivce>();
                 var twitcastingService = scope.ServiceProvider.GetRequiredService<TwitcastingService>();
                 var twitchService = scope.ServiceProvider.GetRequiredService<TwitchSerivce>();
+                var videoService = scope.ServiceProvider.GetRequiredService<VideoService>();
                 #endregion
 
-                await MonitorPlatform(youtubeSerivce, stoppingToken);
-                await MonitorPlatform(twitcastingService, stoppingToken);
-                await MonitorPlatform(twitchService, stoppingToken);
+                await MonitorPlatform(youtubeSerivce, videoService, stoppingToken);
+                await MonitorPlatform(twitcastingService, videoService, stoppingToken);
+                await MonitorPlatform(twitchService, videoService, stoppingToken);
             }
 
             _logger.LogTrace("{Worker} ends. Sleep {interval} seconds.", nameof(MonitorWorker), _interval);
@@ -48,7 +50,7 @@ public class MonitorWorker : BackgroundService
         }
     }
 
-    private async Task MonitorPlatform(IPlatformSerivce PlatformService, CancellationToken cancellation = default)
+    private async Task MonitorPlatform(IPlatformSerivce PlatformService, VideoService videoService, CancellationToken cancellation = default)
     {
         if (!PlatformService.StepInterval(_interval)) return;
 
@@ -57,6 +59,21 @@ public class MonitorWorker : BackgroundService
         foreach (var channel in channels)
         {
             await PlatformService.UpdateVideosDataAsync(channel, cancellation);
+        }
+
+        var videos = videoService.GetVideosByStatus(VideoStatus.Scheduled)
+                                 .Where(p => p.Source == PlatformService.PlatformName)
+                                 .ToList();
+        if (videos.Count == 0)
+        {
+            _logger.LogDebug("No Scheduled videos for {platform}", PlatformService.PlatformName);
+            return;
+        }
+
+        _logger.LogDebug("Get {videoCount} scheduled videos for {platform}", videos.Count, PlatformService.PlatformName);
+        foreach (var video in videos)
+        {
+            await PlatformService.UpdateVideoDataAsync(video, cancellation);
         }
     }
 }

@@ -48,7 +48,7 @@ public class UpdateVideoStatusWorker : BackgroundService
                 videos = videoRepository.Where(p => p.Status != VideoStatus.Reject
                                                     && p.Status != VideoStatus.Expired
                                                     && p.SourceStatus != VideoStatus.Deleted)
-                                        .OrderBy(p => p.Timestamps.PublishedAt)
+                                        .OrderByDescending(p => p.Timestamps.PublishedAt)
                                         .ToList();
 
                 // Iterate over all elements, regardless of whether their content has changed.
@@ -64,8 +64,6 @@ public class UpdateVideoStatusWorker : BackgroundService
                 {
                     case "Youtube":
                         await youtubeSerivce.UpdateVideoDataAsync(video, stoppingToken);
-                        videoRepository.Update(video);
-                        unitOfWork.Commit();
                         break;
                     case "Twitcasting":
                         await twitcastingService.UpdateVideoDataAsync(video, stoppingToken);

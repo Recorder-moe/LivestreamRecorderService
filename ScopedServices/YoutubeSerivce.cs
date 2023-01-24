@@ -115,12 +115,19 @@ public class YoutubeSerivce : PlatformService, IPlatformSerivce
             _videoRepository.LoadRelatedData(video);
         }
 
-        await UpdateVideoDataAsync(video!, cancellation);
+        await UpdateVideoDataWithoutCommitAsync(video!, cancellation);
 
         if (isNewVideo)
             _videoRepository.Add(video);
         else
             _videoRepository.Update(video);
+    }
+
+    public override async Task UpdateVideoDataAsync(Video video, CancellationToken cancellation = default)
+    {
+        await UpdateVideoDataWithoutCommitAsync(video, cancellation);
+        _videoRepository.Update(video);
+        _unitOfWork.Commit();
     }
 
     /// <summary>
@@ -130,7 +137,7 @@ public class YoutubeSerivce : PlatformService, IPlatformSerivce
     /// <param name="video"></param>
     /// <param name="cancellation"></param>
     /// <returns></returns>
-    public override async Task UpdateVideoDataAsync(Video video, CancellationToken cancellation = default)
+    public async Task UpdateVideoDataWithoutCommitAsync(Video video, CancellationToken cancellation = default)
     {
         YtdlpVideoData videoData = await GetVideoInfoByYtdlpAsync($"https://youtu.be/{video.id}", cancellation);
 
