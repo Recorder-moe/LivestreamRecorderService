@@ -3,7 +3,7 @@ using LivestreamRecorderService.ScopedServices;
 using Microsoft.Extensions.Options;
 using Serilog.Context;
 
-namespace LivestreamRecorderService;
+namespace LivestreamRecorderService.Workers;
 
 public class UpdateChannelInfoWorker : BackgroundService
 {

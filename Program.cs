@@ -1,12 +1,12 @@
 using Azure.Identity;
 using Azure.ResourceManager;
-using LivestreamRecorderService;
 using LivestreamRecorderService.DB.Core;
 using LivestreamRecorderService.DB.Interfaces;
 using LivestreamRecorderService.Interfaces;
 using LivestreamRecorderService.Models.Options;
 using LivestreamRecorderService.ScopedServices;
 using LivestreamRecorderService.SingletonServices;
+using LivestreamRecorderService.Workers;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Azure;
 using Microsoft.Extensions.Options;

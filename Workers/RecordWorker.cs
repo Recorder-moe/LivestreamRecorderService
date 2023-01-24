@@ -8,7 +8,7 @@ using LivestreamRecorderService.SingletonServices;
 using Microsoft.Extensions.Options;
 using Serilog.Context;
 
-namespace LivestreamRecorderService;
+namespace LivestreamRecorderService.Workers;
 
 public class RecordWorker : BackgroundService
 {
