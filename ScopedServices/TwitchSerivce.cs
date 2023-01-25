@@ -69,6 +69,7 @@ public class TwitchSerivce : PlatformService, IPlatformSerivce
                         }
                         break;
                     case VideoStatus.Reject:
+                    case VideoStatus.Skipped:
                         _logger.LogTrace("{videoId} is rejected for recording.", video.id);
                         return;
                 }

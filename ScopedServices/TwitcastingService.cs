@@ -70,6 +70,7 @@ public class TwitcastingService : PlatformService, IPlatformSerivce
                         _logger.LogTrace("{channelId} is already recording.", channel.id);
                         return;
                     case VideoStatus.Reject:
+                    case VideoStatus.Skipped:
                         _logger.LogTrace("{videoId} is rejected for recording.", video.id);
                         return;
                 }
@@ -115,7 +116,7 @@ public class TwitcastingService : PlatformService, IPlatformSerivce
             }
             else
             {
-                video.Status = VideoStatus.Reject;
+                video.Status = VideoStatus.Skipped;
                 video.SourceStatus = VideoStatus.Reject;
                 _logger.LogWarning("This video is not public! Skip {videoId}", videoId);
             }

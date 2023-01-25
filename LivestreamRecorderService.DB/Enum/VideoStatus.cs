@@ -19,9 +19,10 @@ public enum VideoStatus
     PermanentArchived = 41,
 
     Expired = 50,
-    Reject = 51,
+    Skipped = 51,
     Missing = 52,
     Error = 53,
+    Reject = 54,
 
     Exist = 60,
     Edited = 61,

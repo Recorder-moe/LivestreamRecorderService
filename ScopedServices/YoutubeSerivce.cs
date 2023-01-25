@@ -207,7 +207,7 @@ public class YoutubeSerivce : PlatformService, IPlatformSerivce
                 // Don't download uploaded videos.
                 if (video.Status == VideoStatus.Unknown)
                 {
-                    video.Status = VideoStatus.Reject;
+                    video.Status = VideoStatus.Skipped;
                     _logger.LogInformation("Change video {videoId} status to {videoStatus}", video.id, Enum.GetName(typeof(VideoStatus), video.Status));
                 }
 
@@ -267,9 +267,9 @@ public class YoutubeSerivce : PlatformService, IPlatformSerivce
             case "subscriber_only":
             // Copyright Notice
             case "needs_auth":
-                video.Status = VideoStatus.Reject;
+                video.Status = VideoStatus.Skipped;
                 video.SourceStatus = VideoStatus.Reject;
-                _logger.LogInformation("Video is detected member_only or needs_auth, change video status to {status}", Enum.GetName(typeof(VideoStatus), VideoStatus.Reject));
+                _logger.LogInformation("Video is detected member_only or needs_auth, change video status to {status}", Enum.GetName(typeof(VideoStatus), VideoStatus.Skipped));
                 break;
         }
 
