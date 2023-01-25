@@ -59,7 +59,8 @@ public class TwitchSerivce : PlatformService, IPlatformSerivce
                 if ((video.Status == VideoStatus.Recording
                      || video.Status == VideoStatus.WaitingToRecord)
                     && video.Title == stream.Title
-                    && video.Description == stream.GameName)
+                    && video.Description == stream.GameName
+                    && null != video.Thumbnail)
                 {
                     _logger.LogTrace("{channelId} is already recording.", channel.id);
                     return;
