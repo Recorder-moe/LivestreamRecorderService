@@ -1,4 +1,5 @@
-﻿using LivestreamRecorderService.DB.Enum;
+﻿using Azure.Storage.Blobs.Models;
+using LivestreamRecorderService.DB.Enum;
 using LivestreamRecorderService.DB.Interfaces;
 using LivestreamRecorderService.DB.Models;
 using LivestreamRecorderService.Interfaces;
@@ -12,14 +13,17 @@ namespace LivestreamRecorderService.Workers;
 public class UpdateVideoStatusWorker : BackgroundService
 {
     private readonly ILogger<UpdateVideoStatusWorker> _logger;
+    private readonly IABSService _aBSService;
     private readonly IServiceProvider _serviceProvider;
 
     public UpdateVideoStatusWorker(
         ILogger<UpdateVideoStatusWorker> logger,
+        IABSService aBSService,
         IOptions<AzureOption> options,
         IServiceProvider serviceProvider)
     {
         _logger = logger;
+        _aBSService = aBSService;
         _serviceProvider = serviceProvider;
     }
 
@@ -30,6 +34,7 @@ public class UpdateVideoStatusWorker : BackgroundService
 
         var i = 0;
         var videos = new List<Video>();
+        var expireDate = DateTime.Today;
         while (!stoppingToken.IsCancellationRequested)
         {
             using var __ = LogContext.PushProperty("WorkerRunId", $"{nameof(UpdateVideoStatusWorker)}_{DateTime.Now:yyyyMMddHHmmssfff}");
@@ -74,10 +79,39 @@ public class UpdateVideoStatusWorker : BackgroundService
                     default:
                         break;
                 }
+
+                if (DateTime.Now > expireDate)
+                {
+                    expireDate = expireDate.AddDays(1);
+                    await ExpireVideosAsync(videoService, stoppingToken);
+                }
             }
 
             _logger.LogTrace("{Worker} ends. Sleep 10 minutes.", nameof(UpdateVideoStatusWorker));
             await Task.Delay(TimeSpan.FromMinutes(10), stoppingToken);
+        }
+    }
+
+    private async Task ExpireVideosAsync(VideoService videoService, CancellationToken cancellation)
+    {
+        _logger.LogInformation("Start to expire videos.");
+        var videos = videoService.GetVideosByStatus(VideoStatus.Archived)
+                                 .Where(p => DateTime.Today - (p.ArchivedTime ?? DateTime.Today) > TimeSpan.FromDays(31))
+                                 .ToList();
+        _logger.LogInformation("Get {count} videos to expire.", videos.Count);
+        foreach (var video in videos)
+        {
+            var blob = _aBSService.GetBlobByVideo(video);
+            if (await blob.DeleteIfExistsAsync(DeleteSnapshotsOption.IncludeSnapshots, cancellationToken: cancellation))
+            {
+                _logger.LogInformation("Delete blob {path}", blob.Name);
+                videoService.UpdateVideoStatus(video, VideoStatus.Expired);
+            }
+            else
+            {
+                _logger.LogError("FAILED to Delete blob {path}", blob.Name);
+                videoService.UpdateVideoStatus(video, VideoStatus.Error);
+            }
         }
     }
 }
