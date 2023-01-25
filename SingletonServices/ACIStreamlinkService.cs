@@ -1,4 +1,5 @@
 ﻿using Azure.ResourceManager;
+using Azure.ResourceManager.ContainerInstance;
 using Azure.ResourceManager.Resources;
 using LivestreamRecorderService.Interfaces;
 using LivestreamRecorderService.Models.Options;
@@ -10,6 +11,7 @@ public class ACIStreamlinkService : ACIService, IACIService
 {
     private readonly AzureOption _azureOption;
     private readonly ILogger<ACIStreamlinkService> _logger;
+    private readonly ArmClient _armClient;
 
     public override string DownloaderName => "streamlink";
 
@@ -20,6 +22,7 @@ public class ACIStreamlinkService : ACIService, IACIService
     {
         _azureOption = options.Value;
         _logger = logger;
+        _armClient = armClient;
     }
 
     public async Task<dynamic> StartInstanceAsync(string channelId, string videoId = "", CancellationToken cancellation = default)
@@ -36,7 +39,7 @@ public class ACIStreamlinkService : ACIService, IACIService
             return instance.Data.ProvisioningState switch
             {
                 // 啟動舊的預設Instance
-                "Succeeded" or "Failed" or "Stopped" => await instance.UpdateAsync(Azure.WaitUntil.Started, instance.Data, cancellation),
+                "Succeeded" or "Failed" or "Stopped" => await _armClient.GetContainerGroupResource(instance.Id).StartAsync(Azure.WaitUntil.Started, cancellation),
                 // 啟動新的Instance
                 _ => await CreateNewInstance(channelId, instanceNameVideoId, cancellation),
             };
