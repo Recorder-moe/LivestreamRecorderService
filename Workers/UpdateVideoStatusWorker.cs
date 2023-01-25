@@ -95,9 +95,10 @@ public class UpdateVideoStatusWorker : BackgroundService
 
     private async Task ExpireVideosAsync(VideoService videoService, CancellationToken cancellation)
     {
+        const int expireDays = 31;
         _logger.LogInformation("Start to expire videos.");
         var videos = videoService.GetVideosByStatus(VideoStatus.Archived)
-                                 .Where(p => DateTime.Today - (p.ArchivedTime ?? DateTime.Today) > TimeSpan.FromDays(31))
+                                 .Where(p => DateTime.Today - (p.ArchivedTime ?? DateTime.Today) > TimeSpan.FromDays(expireDays))
                                  .ToList();
         _logger.LogInformation("Get {count} videos to expire.", videos.Count);
         foreach (var video in videos)
@@ -107,11 +108,13 @@ public class UpdateVideoStatusWorker : BackgroundService
             {
                 _logger.LogInformation("Delete blob {path}", blob.Name);
                 videoService.UpdateVideoStatus(video, VideoStatus.Expired);
+                videoService.UpdateVideoNote(video, $"Video expired after {expireDays} days.");
             }
             else
             {
                 _logger.LogError("FAILED to Delete blob {path}", blob.Name);
                 videoService.UpdateVideoStatus(video, VideoStatus.Error);
+                videoService.UpdateVideoNote(video, $"Failed to delete blob after {expireDays} days. Please contact admin if you see this message.");
             }
         }
     }

@@ -78,6 +78,7 @@ public class RecordWorker : BackgroundService
                     catch (Exception)
                     {
                         videoService.UpdateVideoStatus(video, VideoStatus.Error);
+                        videoService.UpdateVideoNote(video, $"This recording FAILED! Please contact admin if you see this message.");
                     }
 
                     videoService.UpdateChannelLatestVideo(video);

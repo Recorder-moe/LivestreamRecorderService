@@ -118,6 +118,7 @@ public class TwitcastingService : PlatformService, IPlatformSerivce
             {
                 video.Status = VideoStatus.Skipped;
                 video.SourceStatus = VideoStatus.Reject;
+                video.Note = "Video skipped because it is detected not public.";
                 _logger.LogWarning("This video is not public! Skip {videoId}", videoId);
             }
 
@@ -239,16 +240,19 @@ public class TwitcastingService : PlatformService, IPlatformSerivce
             _logger.LogInformation("Twitcasting video {videoId} is not published.", video.id);
             video.SourceStatus = VideoStatus.Deleted;
             video.Status = VideoStatus.Missing;
+            video.Note = "Video is not published.";
         }
 
         if (await _aBSService.GetBlobByVideo(video)
                              .ExistsAsync(cancellation))
         {
             video.Status = VideoStatus.Archived;
+            video.Note = null;
         }
         else if (video.Status == VideoStatus.Archived)
         {
             video.Status = VideoStatus.Expired;
+            video.Note = $"Video expired because archived not found.";
             _logger.LogInformation("Can not found archived, change video status to {status}", Enum.GetName(typeof(VideoStatus), VideoStatus.Expired));
         }
 

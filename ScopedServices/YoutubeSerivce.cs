@@ -172,6 +172,7 @@ public class YoutubeSerivce : PlatformService, IPlatformSerivce
                     // Will fall in here when adding a new channel.
                     case VideoStatus.Unknown:
                         video.Status = VideoStatus.Expired;
+                        video.Note = $"Video expired because it is an old live stream.";
                         _logger.LogInformation("Change video {videoId} status to {videoStatus}", video.id, Enum.GetName(typeof(VideoStatus), video.Status));
                         video.Thumbnail = await DownloadThumbnailAsync(videoData.Thumbnail, video.id, cancellation);
                         break;
@@ -208,6 +209,7 @@ public class YoutubeSerivce : PlatformService, IPlatformSerivce
                 if (video.Status == VideoStatus.Unknown)
                 {
                     video.Status = VideoStatus.Skipped;
+                    video.Note = $"Video skipped because it is not live stream.";
                     _logger.LogInformation("Change video {videoId} status to {videoStatus}", video.id, Enum.GetName(typeof(VideoStatus), video.Status));
                 }
 
@@ -244,16 +246,19 @@ public class YoutubeSerivce : PlatformService, IPlatformSerivce
                              .ExistsAsync(cancellation))
         {
             video.Status = VideoStatus.Archived;
+            video.Note = null;
         }
         else if (video.SourceStatus == VideoStatus.Deleted
                  && video.Status < VideoStatus.Uploading)
         {
             video.Status = VideoStatus.Missing;
+            video.Note = "This video archive is missing. If you would like to provide it, please contact admin.";
             _logger.LogInformation("Source removed and not archived, change video status to {status}", Enum.GetName(typeof(VideoStatus), VideoStatus.Missing));
         }
         else if (video.Status == VideoStatus.Archived)
         {
             video.Status = VideoStatus.Expired;
+            video.Note = $"Video expired because archived not found.";
             _logger.LogInformation("Can not found archived, change video status to {status}", Enum.GetName(typeof(VideoStatus), VideoStatus.Expired));
         }
 
@@ -269,6 +274,7 @@ public class YoutubeSerivce : PlatformService, IPlatformSerivce
             case "needs_auth":
                 video.Status = VideoStatus.Skipped;
                 video.SourceStatus = VideoStatus.Reject;
+                video.Note = "Video skipped because it is detected member only or copyright notice.";
                 _logger.LogInformation("Video is detected member_only or needs_auth, change video status to {status}", Enum.GetName(typeof(VideoStatus), VideoStatus.Skipped));
                 break;
         }

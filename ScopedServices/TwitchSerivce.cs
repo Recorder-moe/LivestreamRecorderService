@@ -132,10 +132,12 @@ public class TwitchSerivce : PlatformService, IPlatformSerivce
                              .ExistsAsync(cancellation))
         {
             video.Status = VideoStatus.Archived;
+            video.Note = null;
         }
         else if (video.Status == VideoStatus.Archived)
         {
             video.Status = VideoStatus.Expired;
+            video.Note = $"Video expired because archived not found.";
             _logger.LogInformation("Can not found archived, change video status to {status}", Enum.GetName(typeof(VideoStatus), VideoStatus.Expired));
         }
 

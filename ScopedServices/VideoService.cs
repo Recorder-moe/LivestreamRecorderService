@@ -45,6 +45,15 @@ public class VideoService
         _logger.LogDebug("Update Video {videoId} Status to {videostatus}", video.id, status);
     }
 
+    public void UpdateVideoNote(Video video, string? Note)
+    {
+        _unitOfWork.ReloadEntityFromDB(video);
+        video.Note = Note;
+        _videoRepository.Update(video);
+        _unitOfWork.Commit();
+        _logger.LogDebug("Update Video {videoId} note", video.id);
+    }
+
     public void AddFilePropertiesToVideo(Video video, List<ShareFileItem> sharefileItems)
     {
         video = _videoRepository.GetById(video.id);
@@ -89,6 +98,7 @@ public class VideoService
         catch (Exception e)
         {
             UpdateVideoStatus(video, VideoStatus.Error);
+            UpdateVideoNote(video, $"Exception happened when calling Azure Function to transfer files to blob storage. Please contact admin if you see this message.");
             _logger.LogError("Exception happened when calling Azure Function to transfer files to blob storage: {videoId}, {error}, {message}", video.id, e, e.Message);
         }
     }

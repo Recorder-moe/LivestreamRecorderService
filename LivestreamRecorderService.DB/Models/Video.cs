@@ -33,6 +33,8 @@ public class Video : Entity
 
     public VideoStatus? SourceStatus { get; set; } = VideoStatus.Unknown;
 
+    public string? Note { get; set; }
+
     public required string ChannelId { get; set; }
 
     public required Channel Channel { get; set; }
