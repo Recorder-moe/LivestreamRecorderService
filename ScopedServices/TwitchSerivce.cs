@@ -96,7 +96,7 @@ public class TwitchSerivce : PlatformService, IPlatformSerivce
             if (video.Status < VideoStatus.Recording
                 || video.Status == VideoStatus.Missing)
             {
-                await _aCIStreamlinkService.StartInstanceAsync(userid: video.ChannelId,
+                await _aCIStreamlinkService.StartInstanceAsync(channelId: video.ChannelId,
                                                                videoId: video.id,
                                                                cancellation: cancellation);
                 video.Status = VideoStatus.Recording;
