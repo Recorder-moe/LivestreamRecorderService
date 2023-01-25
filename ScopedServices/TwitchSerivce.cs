@@ -56,14 +56,21 @@ public class TwitchSerivce : PlatformService, IPlatformSerivce
             if (_videoRepository.Exists(stream.Id))
             {
                 video = _videoRepository.GetById(stream.Id);
-                if ((video.Status == VideoStatus.Recording
-                     || video.Status == VideoStatus.WaitingToRecord)
-                    && video.Title == stream.Title
-                    && video.Description == stream.GameName
-                    && null != video.Thumbnail)
+                switch (video.Status)
                 {
-                    _logger.LogTrace("{channelId} is already recording.", channel.id);
-                    return;
+                    case VideoStatus.WaitingToRecord:
+                    case VideoStatus.Recording:
+                        if (video.Title == stream.Title
+                            && video.Description == stream.GameName
+                            && null != video.Thumbnail)
+                        {
+                            _logger.LogTrace("{channelId} is already recording.", channel.id);
+                            return;
+                        }
+                        break;
+                    case VideoStatus.Reject:
+                        _logger.LogTrace("{videoId} is rejected for recording.", video.id);
+                        return;
                 }
             }
             else
