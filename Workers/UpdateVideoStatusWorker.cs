@@ -50,10 +50,8 @@ public class UpdateVideoStatusWorker : BackgroundService
                 IPlatformSerivce twitchService = scope.ServiceProvider.GetRequiredService<TwitchSerivce>();
                 #endregion
 
-                videos = videoRepository.Where(p => p.Status != VideoStatus.Skipped
-                                                    && p.Status != VideoStatus.Reject
-                                                    && p.Status != VideoStatus.Expired
-                                                    && p.SourceStatus != VideoStatus.Deleted)
+                videos = videoRepository.Where(p => p.Status>=VideoStatus.Archived
+                                                    && p.Status < VideoStatus.Expired)
                                         .OrderByDescending(p => p.Timestamps.PublishedAt)
                                         .ToList();
 
