@@ -39,7 +39,7 @@ public class ACITwitcastingRecorderService : ACIService, IACIService
             return instance.Data.ProvisioningState switch
             {
                 // 啟動舊的預設Instance
-                "Succeeded" or "Failed" or "Stopped" => await _armClient.GetContainerGroupResource(instance.Id).StartAsync(Azure.WaitUntil.Started, cancellation),
+                "Succeeded" or "Failed" or "Stopped" => await StartOldACI(instance),
                 // 啟動新的Instance
                 _ => await CreateNewInstance(channelId, instanceNameVideoId, cancellation),
             };
@@ -49,6 +49,26 @@ public class ACITwitcastingRecorderService : ACIService, IACIService
             _logger.LogWarning("Can not get ACI instance for {videoId} {name}", videoId, instanceNameChannelId);
             // 啟動新的預設Instance
             return await CreateNewInstance(channelId, instanceNameChannelId, cancellation);
+        }
+
+        async Task<dynamic> StartOldACI(GenericResource instance, int retry = 0)
+        {
+            _logger.LogInformation("Detect ACI {ACIName} ProvisioningState as {ProvisioningState}", instance.Id, instance.Data.ProvisioningState);
+            if (retry > 3)
+            {
+                _logger.LogError("Retry too many times for {videoId} {ACIName}, create new instance.", videoId, instance.Id);
+                return await CreateNewInstance(channelId, instanceNameChannelId, cancellation);
+            }
+
+            try
+            {
+                return await _armClient.GetContainerGroupResource(instance.Id).StartAsync(Azure.WaitUntil.Started, cancellation);
+            }
+            catch (Azure.RequestFailedException e)
+            {
+                _logger.LogWarning(e, "Start ACI {ACIName} failed, retry {retry}", instance.Id, ++retry);
+                return await StartOldACI(instance, retry);
+            }
         }
     }
 
