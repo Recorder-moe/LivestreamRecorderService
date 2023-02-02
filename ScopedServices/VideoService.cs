@@ -2,8 +2,6 @@
 using LivestreamRecorderService.DB.Enum;
 using LivestreamRecorderService.DB.Interfaces;
 using LivestreamRecorderService.DB.Models;
-using LivestreamRecorderService.Models.Options;
-using Microsoft.Extensions.Options;
 using System.Web;
 
 namespace LivestreamRecorderService.ScopedServices;
@@ -13,21 +11,17 @@ public class VideoService
     private readonly ILogger<VideoService> _logger;
     private readonly IUnitOfWork _unitOfWork;
     private readonly IVideoRepository _videoRepository;
-    private readonly IChannelRepository _channelRepository;
     private readonly IHttpClientFactory _httpFactory;
 
     public VideoService(
         ILogger<VideoService> logger,
         IUnitOfWork unitOfWork,
         IVideoRepository videoRepository,
-        IChannelRepository channelRepository,
-        IHttpClientFactory httpFactory,
-        IOptions<AzureOption> options)
+        IHttpClientFactory httpFactory)
     {
         _logger = logger;
         _unitOfWork = unitOfWork;
         _videoRepository = videoRepository;
-        _channelRepository = channelRepository;
         _httpFactory = httpFactory;
     }
 
@@ -109,14 +103,4 @@ public class VideoService
                         && p.ArchivedTime.Value.AddMinutes(15) < DateTime.UtcNow)
             .ToList()
             .ForEach(p => UpdateVideoStatus(p, VideoStatus.Recording));
-
-    public void UpdateChannelLatestVideo(Video video)
-    {
-        var channel = _channelRepository.GetById(video.ChannelId);
-        _unitOfWork.Context.Entry(channel).Reload();
-        _channelRepository.LoadRelatedData(channel);
-        channel.LatestVideoId = video.id;
-        _channelRepository.Update(channel);
-        _unitOfWork.Commit();
-    }
 }

@@ -121,6 +121,7 @@ try
         services.AddScoped<IChannelRepository, ChannelRepository>();
 
         services.AddScoped<VideoService>();
+        services.AddScoped<ChannelService>();
         services.AddScoped<RSSService>();
         services.AddScoped<YoutubeSerivce>();
         services.AddScoped<TwitcastingService>();

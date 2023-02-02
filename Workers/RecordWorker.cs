@@ -57,6 +57,7 @@ public class RecordWorker : BackgroundService
             using (var scope = _serviceProvider.CreateScope())
             {
                 var videoService = scope.ServiceProvider.GetRequiredService<VideoService>();
+                var channelService = scope.ServiceProvider.GetRequiredService<ChannelService>();
                 #endregion
 
                 await CreateACIStartRecordAsync(videoService, stoppingToken);
@@ -81,9 +82,11 @@ public class RecordWorker : BackgroundService
                         videoService.UpdateVideoNote(video, $"This recording FAILED! Please contact admin if you see this message.");
                     }
 
-                    videoService.UpdateChannelLatestVideo(video);
+                    channelService.UpdateChannelLatestVideo(video);
 
                     videoService.AddFilePropertiesToVideo(video, files);
+                    channelService.ConsumeSupportToken(video);
+
                     tasks.Add(videoService.TransferVideoToBlobStorageAsync(video, stoppingToken));
 
                     // Avoid concurrency requests
