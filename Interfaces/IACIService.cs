@@ -12,6 +12,7 @@ public interface IACIService
     Task<ArmOperation<ArmDeploymentResource>> CreateAzureContainerInstanceAsync(string template, dynamic parameters, string deploymentName, CancellationToken cancellation = default);
     Task<GenericResource?> GetInstanceByVideoIdAsync(string videoId, CancellationToken cancellation = default);
     Task<ResourceGroupResource> GetResourceGroupAsync(CancellationToken cancellation = default);
+    Task<bool> IsACIFailedAsync(Video video, CancellationToken cancellation);
 
     /// <summary>
     /// RemoveCompletedInstanceContainer

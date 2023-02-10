@@ -101,4 +101,28 @@ public class ACIService : IACIService
                                    .ToLower()
                                    .Replace("_", "")
                                    .Replace(":", "");
+
+    public async Task<bool> IsACIFailedAsync(Video video,CancellationToken cancellation)
+    {
+        var instance = (await GetInstanceByVideoIdAsync(video.id, cancellation));
+        if (null == instance || !instance.HasData)
+        {
+            instance = (await GetInstanceByVideoIdAsync(video.Channel.ChannelName, cancellation));
+            if (null == instance || !instance.HasData)
+            {
+                _logger.LogError("Can not get ACI instance for {videoId} when checking ACI IsFailed", video.id);
+                return true;
+            }
+        }
+
+        if (instance.Data.ProvisioningState == "Failed")
+        {
+            _logger.LogError("ACI status FAILED! {videoId} {aciname}", video.id, instance.Data.Name);
+            return true;
+        }
+        else
+        {
+            return false;
+        }
+    }
 }

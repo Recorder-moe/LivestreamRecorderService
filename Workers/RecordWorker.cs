@@ -60,6 +60,8 @@ public class RecordWorker : BackgroundService
                 var channelService = scope.ServiceProvider.GetRequiredService<ChannelService>();
                 #endregion
 
+                await HandledFailedACIsAsync(videoService, stoppingToken);
+
                 await CreateACIStartRecordAsync(videoService, stoppingToken);
                 await CreateACIStartDownloadAsync(videoService, stoppingToken);
 
@@ -97,6 +99,37 @@ public class RecordWorker : BackgroundService
 
             _logger.LogTrace("{Worker} ends. Sleep 5 minutes.", nameof(RecordWorker));
             await Task.Delay(TimeSpan.FromMinutes(5), stoppingToken);
+        }
+    }
+
+    private async Task HandledFailedACIsAsync(VideoService videoService, CancellationToken stoppingToken)
+    {
+        var videos = videoService.GetVideosByStatus(VideoStatus.Recording)
+             .Concat(videoService.GetVideosByStatus(VideoStatus.Downloading))
+             .ToList();
+
+        if (videos.Count > 0)
+            _logger.LogInformation("Get {count} videos recording/downloading: {videoIds}", videos.Count, string.Join(", ", videos.Select(p => p.id).ToList()));
+        else
+            _logger.LogDebug("Get {count} videos recording/downloading", videos.Count);
+
+        foreach (var video in videos)
+        {
+            if (await _aCIService.IsACIFailedAsync(video, stoppingToken))
+            {
+                switch (video.Source)
+                {
+                    case "Youtube":
+                        videoService.UpdateVideoStatus(video, VideoStatus.Scheduled);
+                        _logger.LogWarning("{videoId} is failed. Set status to Scheduled", video.id);
+                        break;
+                    default:
+                        videoService.UpdateVideoStatus(video, VideoStatus.Error);
+                        videoService.UpdateVideoNote(video, $"This recording FAILED! Please contact admin if you see this message.");
+                        _logger.LogWarning("{videoId} is failed.", video.id);
+                        break;
+                }
+            }
         }
     }
 
