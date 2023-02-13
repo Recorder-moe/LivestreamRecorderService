@@ -62,6 +62,7 @@ public class MonitorWorker : BackgroundService
         }
 
         var videos = videoService.GetVideosByStatus(VideoStatus.Scheduled)
+                                 .Concat(videoService.GetVideosByStatus(VideoStatus.Pending))
                                  .Where(p => p.Source == PlatformService.PlatformName)
                                  .ToList();
         if (videos.Count == 0)
@@ -70,7 +71,7 @@ public class MonitorWorker : BackgroundService
             return;
         }
 
-        _logger.LogDebug("Get {videoCount} scheduled videos for {platform}", videos.Count, PlatformService.PlatformName);
+        _logger.LogDebug("Get {videoCount} Scheduled/Pending videos for {platform}", videos.Count, PlatformService.PlatformName);
         foreach (var video in videos)
         {
             await PlatformService.UpdateVideoDataAsync(video, cancellation);
