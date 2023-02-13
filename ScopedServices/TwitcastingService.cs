@@ -131,14 +131,22 @@ public class TwitcastingService : PlatformService, IPlatformSerivce
     // https://github.com/kkent030315/twitcasting-py/blob/main/src/twitcasting.py
     private async Task<(bool Live, string? Id)> GetTwitcastingLiveStatusAsync(Channel channel, CancellationToken cancellation = default)
     {
-        using var client = _httpFactory.CreateClient();
-        var response = await client.GetAsync($@"{_streamServerApi}?target={channel.id}&mode=client", cancellation);
-        response.EnsureSuccessStatusCode();
-        var data = await response.Content.ReadFromJsonAsync<TwitcastingStreamData>(cancellationToken: cancellation);
+        try
+        {
+            using var client = _httpFactory.CreateClient();
+            var response = await client.GetAsync($@"{_streamServerApi}?target={channel.id}&mode=client", cancellation);
+            response.EnsureSuccessStatusCode();
+            var data = await response.Content.ReadFromJsonAsync<TwitcastingStreamData>(cancellationToken: cancellation);
 
-        return null == data
-                ? (false, null)
-                : (data.Movie.Live ?? false, data.Movie.Id.ToString());
+            return null == data
+                    ? (false, null)
+                    : (data.Movie.Live ?? false, data.Movie.Id.ToString());
+        }
+        catch (Exception)
+        {
+            _logger.LogError("Get twitcasting live status failed. {channelId} Be careful if this happens repeatedly.", channel.id);
+            return (false, null);
+        }
     }
 
     private async Task<(string? title, string? telop)> GetTwitcastingStreamTitleAsync(string videoId, CancellationToken cancellation = default)
