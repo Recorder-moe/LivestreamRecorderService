@@ -107,7 +107,7 @@ public class ACIService : IACIService
         var instance = (await GetInstanceByVideoIdAsync(video.id, cancellation));
         if (null == instance || !instance.HasData)
         {
-            instance = (await GetInstanceByVideoIdAsync(video.Channel.ChannelName, cancellation));
+            instance = (await GetInstanceByVideoIdAsync(video.Channel.id, cancellation));
             if (null == instance || !instance.HasData)
             {
                 _logger.LogError("Can not get ACI instance for {videoId} when checking ACI IsFailed", video.id);
