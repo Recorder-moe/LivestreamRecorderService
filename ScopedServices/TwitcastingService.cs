@@ -32,7 +32,7 @@ public class TwitcastingService : PlatformService, IPlatformSerivce
         IVideoRepository videoRepository,
         ACITwitcastingRecorderService aCITwitcastingRecorderService,
         IABSService aBSService,
-        IChannelRepository channelRepository) : base(channelRepository, aBSService, httpClientFactory)
+        IChannelRepository channelRepository) : base(channelRepository, aBSService, httpClientFactory, logger)
     {
         _logger = logger;
         _httpFactory = httpClientFactory;

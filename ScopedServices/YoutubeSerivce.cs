@@ -28,7 +28,7 @@ public class YoutubeSerivce : PlatformService, IPlatformSerivce
         IChannelRepository channelRepository,
         RSSService rSSService,
         IABSService aBSService,
-        IHttpClientFactory httpClientFactory) : base(channelRepository, aBSService, httpClientFactory)
+        IHttpClientFactory httpClientFactory) : base(channelRepository, aBSService, httpClientFactory, logger)
     {
         _logger = logger;
         _unitOfWork = unitOfWork;
@@ -64,7 +64,7 @@ public class YoutubeSerivce : PlatformService, IPlatformSerivce
         _unitOfWork.Commit();
     }
 
-    private Task<YtdlpVideoData> GetChannelInfoByYtdlpAsync(string ChannelId, CancellationToken cancellation = default)
+    private Task<YtdlpVideoData?> GetChannelInfoByYtdlpAsync(string ChannelId, CancellationToken cancellation = default)
         => GetVideoInfoByYtdlpAsync($"https://www.youtube.com/channel/{ChannelId}/about", cancellation);
 
     /// <summary>
@@ -139,7 +139,15 @@ public class YoutubeSerivce : PlatformService, IPlatformSerivce
     /// <returns></returns>
     public async Task UpdateVideoDataWithoutCommitAsync(Video video, CancellationToken cancellation = default)
     {
-        YtdlpVideoData videoData = await GetVideoInfoByYtdlpAsync($"https://youtu.be/{video.id}", cancellation);
+        YtdlpVideoData? videoData = await GetVideoInfoByYtdlpAsync($"https://youtu.be/{video.id}", cancellation);
+
+        if (null == videoData)
+        {
+            _logger.LogWarning("Failed to get video info for {videoId}", video.id);
+            video.Status = VideoStatus.Unknown;
+            video.Note = "An exception occurred while getting video info. Please contact admin if you see this message.";
+            return;
+        }
 
         switch (videoData.LiveStatus)
         {
@@ -288,6 +296,11 @@ public class YoutubeSerivce : PlatformService, IPlatformSerivce
         var avatarBlobUrl = channel.Avatar;
         var bannerBlobUrl = channel.Banner;
         var info = await GetChannelInfoByYtdlpAsync(channel.id, cancellation);
+        if (null == info)
+        {
+            _logger.LogWarning("Failed to get channel info for {channelId}", channel.id);
+            return;
+        }
 
         var thumbnails = info.Thumbnails.OrderByDescending(p => p.Preference).ToList();
         var avatarUrl = thumbnails.FirstOrDefault()?.Url;

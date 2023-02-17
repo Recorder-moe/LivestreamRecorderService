@@ -16,7 +16,7 @@ public interface IPlatformSerivce
     /// <param name="elapsedTime"></param>
     /// <returns>Should trigger</returns>
     public bool StepInterval(int elapsedTime);
-    Task<YtdlpVideoData> GetVideoInfoByYtdlpAsync(string url, CancellationToken cancellation = default);
+    Task<YtdlpVideoData?> GetVideoInfoByYtdlpAsync(string url, CancellationToken cancellation = default);
 
     /// <summary>
     /// 每幾秒執行一次

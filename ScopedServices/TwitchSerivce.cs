@@ -29,7 +29,7 @@ public class TwitchSerivce : PlatformService, IPlatformSerivce
         ACIStreamlinkService aCIStreamlinkService,
         ITwitchAPI twitchAPI,
         IABSService aBSService,
-        IHttpClientFactory httpClientFactory) : base(channelRepository, aBSService, httpClientFactory)
+        IHttpClientFactory httpClientFactory) : base(channelRepository, aBSService, httpClientFactory, logger)
     {
         _logger = logger;
         _unitOfWork = unitOfWork;

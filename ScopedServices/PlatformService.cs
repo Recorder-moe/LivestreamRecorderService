@@ -15,6 +15,7 @@ namespace LivestreamRecorderService.ScopedServices
         private readonly IChannelRepository _channelRepository;
         private readonly IABSService _aBSService;
         private readonly IHttpClientFactory _httpFactory;
+        private readonly ILogger<PlatformService> _logger;
 
         public abstract string PlatformName { get; }
         public abstract int Interval { get; }
@@ -27,11 +28,13 @@ namespace LivestreamRecorderService.ScopedServices
         public PlatformService(
             IChannelRepository channelRepository,
             IABSService aBSService,
-            IHttpClientFactory httpClientFactory)
+            IHttpClientFactory httpClientFactory,
+            ILogger<PlatformService> logger)
         {
             _channelRepository = channelRepository;
             _aBSService = aBSService;
             _httpFactory = httpClientFactory;
+            _logger = logger;
             if (!_elapsedTime.ContainsKey(PlatformName))
             {
                 _elapsedTime.Add(PlatformName, 0);
@@ -63,7 +66,7 @@ namespace LivestreamRecorderService.ScopedServices
             return false;
         }
 
-        public async Task<YtdlpVideoData> GetVideoInfoByYtdlpAsync(string url, CancellationToken cancellation = default)
+        public async Task<YtdlpVideoData?> GetVideoInfoByYtdlpAsync(string url, CancellationToken cancellation = default)
         {
             if (!File.Exists(_ytdlPath) || !File.Exists(_ffmpegPath))
             {
@@ -80,9 +83,22 @@ namespace LivestreamRecorderService.ScopedServices
             OptionSet optionSet = new();
             optionSet.AddCustomOption("--ignore-no-formats-error", true);
 
-            var res = await ytdl.RunVideoDataFetch_Alt(url, overrideOptions: optionSet, ct: cancellation);
-            YtdlpVideoData videoData = res.Data;
-            return videoData;
+            try
+            {
+                var res = await ytdl.RunVideoDataFetch_Alt(url, overrideOptions: optionSet, ct: cancellation);
+                if (!res.Success)
+                {
+                    throw new Exception(string.Join(' ', res.ErrorOutput));
+                }
+
+                YtdlpVideoData videoData = res.Data;
+                return videoData;
+            }
+            catch (Exception e)
+            {
+                _logger.LogError(e, "An exception occurred while getting video info by yt-dlp: {url}", url);
+                return null;
+            }
         }
 
         /// <summary>
