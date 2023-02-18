@@ -90,7 +90,7 @@ public class ACIService : IACIService
         }
         else
         {
-            _logger.LogWarning("Can not get ACI instance for {videoId} {name}", video.id, GetInstanceName(video.id));
+            _logger.LogWarning("Failed to get ACI instance for {videoId} {name}. Please check if the ACI exists.", video.id, GetInstanceName(video.id));
         }
     }
 
@@ -104,20 +104,23 @@ public class ACIService : IACIService
 
     public async Task<bool> IsACIFailedAsync(Video video,CancellationToken cancellation)
     {
-        var instance = (await GetInstanceByVideoIdAsync(video.id, cancellation));
+        string ACIName = video.id;
+        var instance = (await GetInstanceByVideoIdAsync(ACIName, cancellation));
         if (null == instance || !instance.HasData)
         {
-            instance = (await GetInstanceByVideoIdAsync(video.Channel.id, cancellation));
+            ACIName = video.ChannelId;
+            instance = (await GetInstanceByVideoIdAsync(ACIName, cancellation));
             if (null == instance || !instance.HasData)
             {
-                _logger.LogError("Can not get ACI instance for {videoId} when checking ACI IsFailed", video.id);
+                _logger.LogError("Failed to get ACI instance for {videoId} {name} when checking ACI IsFailed. Please check if the ACI exists.", video.id, ACIName);
                 return true;
             }
         }
 
+        ACIName = instance.Data.Name;
         if (instance.Data.ProvisioningState == "Failed")
         {
-            _logger.LogError("ACI status FAILED! {videoId} {aciname}", video.id, instance.Data.Name);
+            _logger.LogError("ACI status FAILED! {videoId} {aciname}", video.id, ACIName);
             return true;
         }
         else

@@ -46,7 +46,7 @@ public class ACITwitcastingRecorderService : ACIService, IACIService
         }
         else
         {
-            _logger.LogWarning("Can not get ACI instance for {videoId} {name}", videoId, instanceNameChannelId);
+            _logger.LogWarning("Failed to get ACI instance for {videoId} {name}. A new instance will now be created.", videoId, instanceNameChannelId);
             // 啟動新的預設Instance
             return await CreateNewInstance(channelId, instanceNameChannelId, cancellation);
         }
