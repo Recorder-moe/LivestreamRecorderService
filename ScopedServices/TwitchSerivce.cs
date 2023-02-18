@@ -123,6 +123,7 @@ public class TwitchSerivce : PlatformService, IPlatformSerivce
 
     public override async Task UpdateVideoDataAsync(Video video, CancellationToken cancellation = default)
     {
+        _unitOfWork.ReloadEntityFromDB(video);
         if (null == video.Timestamps.ActualStartTime)
         {
             video.Timestamps.ActualStartTime = video.Timestamps.PublishedAt;

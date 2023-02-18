@@ -125,6 +125,7 @@ public class YoutubeSerivce : PlatformService, IPlatformSerivce
 
     public override async Task UpdateVideoDataAsync(Video video, CancellationToken cancellation = default)
     {
+        _unitOfWork.ReloadEntityFromDB(video);
         await UpdateVideoDataWithoutCommitAsync(video, cancellation);
         _videoRepository.Update(video);
         _unitOfWork.Commit();
