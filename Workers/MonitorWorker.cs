@@ -61,20 +61,24 @@ public class MonitorWorker : BackgroundService
             await PlatformService.UpdateVideosDataAsync(channel, cancellation);
         }
 
-        var videos = videoService.GetVideosByStatus(VideoStatus.Scheduled)
-                                 .Concat(videoService.GetVideosByStatus(VideoStatus.Pending))
-                                 .Where(p => p.Source == PlatformService.PlatformName)
-                                 .ToList();
-        if (videos.Count == 0)
+        // Only Youtube has scheduled videos
+        if (PlatformService.PlatformName == "Youtube")
         {
-            _logger.LogDebug("No Scheduled videos for {platform}", PlatformService.PlatformName);
-            return;
-        }
+            var videos = videoService.GetVideosByStatus(VideoStatus.Scheduled)
+                                     .Concat(videoService.GetVideosByStatus(VideoStatus.Pending))
+                                     .Where(p => p.Source == PlatformService.PlatformName)
+                                     .ToList();
+            if (videos.Count == 0)
+            {
+                _logger.LogDebug("No Scheduled videos for {platform}", PlatformService.PlatformName);
+                return;
+            }
 
-        _logger.LogDebug("Get {videoCount} Scheduled/Pending videos for {platform}", videos.Count, PlatformService.PlatformName);
-        foreach (var video in videos)
-        {
-            await PlatformService.UpdateVideoDataAsync(video, cancellation);
+            _logger.LogDebug("Get {videoCount} Scheduled/Pending videos for {platform}", videos.Count, PlatformService.PlatformName);
+            foreach (var video in videos)
+            {
+                await PlatformService.UpdateVideoDataAsync(video, cancellation);
+            }
         }
     }
 }
