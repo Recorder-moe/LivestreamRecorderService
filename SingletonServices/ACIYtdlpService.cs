@@ -32,16 +32,8 @@ public class ACIYtdlpService : ACIService, IACIService
                 {
                     value = new string[] {
                         "dumb-init", "--",
-                        "yt-dlp", "--ignore-config",
-                                  "--retries", "30",
-                                  "--concurrent-fragments", "16",
-                                  "--merge-output-format", "mp4",
-                                  "-S", "+codec:h264" ,
-                                  "--embed-thumbnail",
-                                  "--embed-metadata",
-                                  "--no-part",
-                                  "-o", "%(id)s.%(ext)s",
-                                  url,
+                        "sh", "-c",
+                        $"yt-dlp --ignore-config --retries 30 --concurrent-fragments 16 --merge-output-format mp4 -S '+codec:h264' --embed-thumbnail --embed-metadata --no-part -o '%(id)s.%(ext)s' '{url}' && mv *.mp4 /fileshare/"
                     }
                 },
                 storageAccountName = new

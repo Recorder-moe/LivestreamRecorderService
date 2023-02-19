@@ -68,7 +68,9 @@ public class ACIStreamlinkService : ACIService, IACIService
                                                      "-o", "/downloads/{id}.mp4",
                                                      "-f",
                                                      "twitch.tv/" + channelId,
-                                                     "best"
+                                                     "best",
+                        "&&",
+                        "mv", "*.mp4", "/fileshare/"
                     }
                 },
                 storageAccountName = new

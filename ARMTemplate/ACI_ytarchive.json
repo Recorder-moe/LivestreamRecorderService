@@ -47,8 +47,8 @@
                             ],
                             "volumeMounts": [
                                 {
-                                    "name": "download",
-                                    "mountPath": "/download"
+                                    "name": "fileshare",
+                                    "mountPath": "/fileshare"
                                 }
                             ]
                         }
@@ -67,7 +67,7 @@
                 },
                 "volumes": [
                     {
-                        "name": "download",
+                        "name": "fileshare",
                         "azureFile": {
                             "shareName": "[parameters('fileshareVolumeName')]",
                             "storageAccountName": "[parameters('storageAccountName')]",

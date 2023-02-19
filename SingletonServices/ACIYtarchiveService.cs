@@ -33,13 +33,8 @@ public class ACIYtarchiveService : ACIService, IACIService
                 {
                     value = new string[] {
                         "/usr/bin/dumb-init", "--",
-                        "/ytarchive", "--add-metadata",
-                                      "--merge",
-                                      "--retry-frags", "30",
-                                      "--thumbnail",
-                                      "-o", "%(id)s",
-                                      url,
-                                      "best"
+                        "sh", "-c",
+                        $"/ytarchive --add-metadata --merge --retry-frags 30 --thumbnail -o '%(id)s' '{url}' best && mv *.mp4 /fileshare/"
                     }
                 },
                 storageAccountName = new

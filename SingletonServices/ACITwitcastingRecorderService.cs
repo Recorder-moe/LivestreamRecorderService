@@ -85,9 +85,8 @@ public class ACITwitcastingRecorderService : ACIService, IACIService
                 {
                     value = new string[] {
                         "/usr/bin/dumb-init", "--",
-                        "/bin/bash", "record_twitcast.sh",
-                                     channelId,
-                                     "once"
+                        "bash", "-c",
+                        $"record_twitcast.sh {channelId} once && mv *.mp4 /fileshare/"
                     }
                 },
                 storageAccountName = new
