@@ -15,8 +15,8 @@ variables:
 steps:
 - task: Docker@2
   inputs:
-    containerRegistry: 'Github Container Registry'
-    repository : 'jim60105/LivestreamRecorderService'
+    containerRegistry: 'Github Container Registry_Recorder-moe'
+    repository : 'Recorder-moe/LivestreamRecorderService'
     command: 'buildAndPush'
     tags: "latest"
     Dockerfile: '**/Dockerfile'

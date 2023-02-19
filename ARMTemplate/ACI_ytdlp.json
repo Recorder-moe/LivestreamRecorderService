@@ -31,7 +31,7 @@
                     {
                         "name": "[parameters('containerName')]",
                         "properties": {
-                            "image": "ghcr.io/jauderho/yt-dlp:2023.02.17@sha256:375049ddbf2ef95a219b87049b3f96749acba728c13d9fcebd31bbdd06c50b66",
+                            "image": "ghcr.io/recorder-moe/yt-dlp:2023.02.17",
                             "resources": {
                                 "requests": {
                                     "cpu": "1",
