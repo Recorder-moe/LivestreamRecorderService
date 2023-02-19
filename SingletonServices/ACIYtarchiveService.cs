@@ -34,7 +34,9 @@ public class ACIYtarchiveService : ACIService, IACIService
                     value = new string[] {
                         "/usr/bin/dumb-init", "--",
                         "sh", "-c",
-                        $"/ytarchive --add-metadata --merge --retry-frags 30 --thumbnail -o '%(id)s' '{url}' best && mv *.mp4 /fileshare/"
+                        // It is possible for Youtube to use "-" at the beginning of an id, which can cause errors when using the id as a file name.
+                        // Therefore, we add "_" before the file name to avoid such issues.
+                        $"/ytarchive --add-metadata --merge --retry-frags 30 --thumbnail -o '_%(id)s' '{url}' best && mv *.mp4 /fileshare/"
                     }
                 },
                 storageAccountName = new

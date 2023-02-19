@@ -83,7 +83,14 @@ public class VideoService
 
             _logger.LogInformation("Call Azure Function to transfer video to blob storage: {videoId}", video.id);
             using var client = _httpFactory.CreateClient("AzureFileShares2BlobContainers");
-            var response = await client.PostAsync("AzureFileShares2BlobContainers?videoId=" + HttpUtility.UrlEncode(video.id), null, cancellation);
+
+            // It is possible for Youtube to use "-" at the beginning of an id, which can cause errors when using the id as a file name.
+            // Therefore, we add "_" before the file name to avoid such issues.
+            var videoId = video.Source == "Youtube"
+                          ? "_" + video.id
+                          : video.id;
+
+            var response = await client.PostAsync("AzureFileShares2BlobContainers?videoId=" + HttpUtility.UrlEncode(videoId), null, cancellation);
             response.EnsureSuccessStatusCode();
 
             _logger.LogInformation("Video {videoId} is uploaded to Azure Storage.", video.id);

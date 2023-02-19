@@ -33,7 +33,9 @@ public class ACIYtdlpService : ACIService, IACIService
                     value = new string[] {
                         "dumb-init", "--",
                         "sh", "-c",
-                        $"yt-dlp --ignore-config --retries 30 --concurrent-fragments 16 --merge-output-format mp4 -S '+codec:h264' --embed-thumbnail --embed-metadata --no-part -o '%(id)s.%(ext)s' '{url}' && mv *.mp4 /fileshare/"
+                        // It is possible for Youtube to use "-" at the beginning of an id, which can cause errors when using the id as a file name.
+                        // Therefore, we add "_" before the file name to avoid such issues.
+                        $"yt-dlp --ignore-config --retries 30 --concurrent-fragments 16 --merge-output-format mp4 -S '+codec:h264' --embed-thumbnail --embed-metadata --no-part -o '_%(id)s.%(ext)s' '{url}' && mv *.mp4 /fileshare/"
                     }
                 },
                 storageAccountName = new
