@@ -281,10 +281,14 @@ public class YoutubeSerivce : PlatformService, IPlatformSerivce
             case "subscriber_only":
             // Copyright Notice
             case "needs_auth":
-                video.Status = VideoStatus.Skipped;
                 video.SourceStatus = VideoStatus.Reject;
-                video.Note = "Video skipped because it is detected member only or copyright notice.";
-                _logger.LogInformation("Video is detected member_only or needs_auth, change video status to {status}", Enum.GetName(typeof(VideoStatus), VideoStatus.Skipped));
+
+                if (video.Status < VideoStatus.Archived)
+                {
+                    video.Status = VideoStatus.Skipped;
+                    video.Note = "Video skipped because it is detected member only or copyright notice.";
+                    _logger.LogInformation("Video is detected member_only or needs_auth, change video status to {status}", Enum.GetName(typeof(VideoStatus), VideoStatus.Skipped));
+                }
                 break;
         }
 
