@@ -65,7 +65,7 @@ public class ACIStreamlinkService : ACIService, IACIService
                 {
                     value = new string[] {
                         "/bin/sh", "-c",
-                        $"/usr/local/bin/streamlink --twitch-disable-ads -o '/downloads/{{id}}.mp4' -f 'twitch.tv/{channelId}' best && mv /downloads/*.mp4 /fileshare/"
+                        $"/usr/local/bin/streamlink --twitch-disable-ads -o '/downloads/{{id}}.mp4' -f 'twitch.tv/{channelId}' best && cd /downloads && for file in *.mp4; do ffmpeg -i \"$file\" -map 0:v:0 -map 0:a:0 -c copy -movflags +faststart 'temp.mp4' && mv 'temp.mp4' \"/fileshare/$file\"; done"
                     }
                 },
                 storageAccountName = new
