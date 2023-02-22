@@ -64,13 +64,8 @@ public class ACIStreamlinkService : ACIService, IACIService
                 commandOverrideArray = new
                 {
                     value = new string[] {
-                        "/usr/local/bin/streamlink", "--twitch-disable-ads",
-                                                     "-o", "/downloads/{id}.mp4",
-                                                     "-f",
-                                                     "twitch.tv/" + channelId,
-                                                     "best",
-                        "&&",
-                        "mv", "*.mp4", "/fileshare/"
+                        "/bin/sh", "-c",
+                        $"/usr/local/bin/streamlink --twitch-disable-ads -o '/downloads/{{id}}.mp4' -f 'twitch.tv/{channelId}' best && mv /downloads/*.mp4 /fileshare/"
                     }
                 },
                 storageAccountName = new
