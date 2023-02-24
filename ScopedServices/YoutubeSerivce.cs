@@ -163,7 +163,9 @@ public class YoutubeSerivce : PlatformService, IPlatformSerivce
                 break;
             case "is_live":
                 // Stream started
-                if (video.Status != VideoStatus.Recording)
+                if (video.Status != VideoStatus.Recording
+                    // Filter premiere videos
+                    && (videoData.IsLive ?? true))
                 {
                     video.Status = VideoStatus.WaitingToRecord;
                     video.Thumbnail = await DownloadThumbnailAsync(videoData.Thumbnail, video.id, cancellation);
