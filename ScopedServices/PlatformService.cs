@@ -140,7 +140,7 @@ namespace LivestreamRecorderService.ScopedServices
                 var contentType = response.Content.Headers.ContentType?.MediaType;
                 var extension = MimeUtility.GetExtensions(contentType)?.FirstOrDefault();
                 extension = extension == "jpeg" ? "jpg" : extension;
-                var blobClient = _aBSService.GetBlobByName($"{path}.{extension}");
+                var blobClient = _aBSService.GetPublicBlob($"{path}.{extension}");
                 _ = await blobClient.UploadAsync(
                      content: await response.Content.ReadAsStreamAsync(cancellation),
                      httpHeaders: new BlobHttpHeaders { ContentType = contentType },

@@ -9,30 +9,30 @@ namespace LivestreamRecorderService.SingletonServices;
 public class ABSService : IABSService
 {
     private readonly BlobContainerClient _blobContainerClient;
+    private readonly BlobContainerClient _blobContainerClient_public;
 
     public ABSService(
         BlobServiceClient blobServiceClient,
         IOptions<AzureOption> options)
     {
         _blobContainerClient = blobServiceClient.GetBlobContainerClient(options.Value.BlobContainerName);
+        _blobContainerClient_public = blobServiceClient.GetBlobContainerClient(options.Value.BlobContainerNamePublic);
     }
 
     /// <summary>
     /// Get the video BlobClient with videoId in the blob container.
     /// </summary>
     /// <param name="video"></param>
-    /// <param name="cancellation"></param>
     /// <returns></returns>
-    public BlobClient GetBlobByVideo(Video video)
-        => GetBlobByName($"videos/{video.Filename}");
+    public BlobClient GetVideoBlob(Video video)
+        => _blobContainerClient.GetBlobClient($"videos/{video.Filename}");
 
     /// <summary>
-    /// Get the BlobClient with videoId in the blob container.
+    /// Get the BlobClient by name in the blob container.
     /// </summary>
     /// <param name="name"></param>
-    /// <param name="cancellation"></param>
     /// <returns></returns>
-    public BlobClient GetBlobByName(string name)
-        => _blobContainerClient.GetBlobClient(name);
+    public BlobClient GetPublicBlob(string name)
+        => _blobContainerClient_public.GetBlobClient(name);
 
 }

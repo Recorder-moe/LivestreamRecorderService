@@ -252,7 +252,7 @@ public class TwitcastingService : PlatformService, IPlatformSerivce
             video.Note = "Video is not published.";
         }
 
-        if (await _aBSService.GetBlobByVideo(video)
+        if (await _aBSService.GetVideoBlob(video)
                              .ExistsAsync(cancellation))
         {
             video.Status = VideoStatus.Archived;

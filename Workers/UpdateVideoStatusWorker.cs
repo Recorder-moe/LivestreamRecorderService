@@ -101,7 +101,7 @@ public class UpdateVideoStatusWorker : BackgroundService
         _logger.LogInformation("Get {count} videos to expire.", videos.Count);
         foreach (var video in videos)
         {
-            var blob = _aBSService.GetBlobByVideo(video);
+            var blob = _aBSService.GetVideoBlob(video);
             if (await blob.DeleteIfExistsAsync(DeleteSnapshotsOption.IncludeSnapshots, cancellationToken: cancellation))
             {
                 _logger.LogInformation("Delete blob {path}", blob.Name);

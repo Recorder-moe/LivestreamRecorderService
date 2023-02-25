@@ -129,7 +129,7 @@ public class TwitchSerivce : PlatformService, IPlatformSerivce
             video.Timestamps.ActualStartTime = video.Timestamps.PublishedAt;
         }
 
-        if (await _aBSService.GetBlobByVideo(video)
+        if (await _aBSService.GetVideoBlob(video)
                              .ExistsAsync(cancellation))
         {
             video.Status = VideoStatus.Archived;
