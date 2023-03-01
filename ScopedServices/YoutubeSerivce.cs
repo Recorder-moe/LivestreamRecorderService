@@ -4,6 +4,7 @@ using LivestreamRecorderService.DB.Interfaces;
 using LivestreamRecorderService.DB.Models;
 using LivestreamRecorderService.Interfaces;
 using LivestreamRecorderService.Models;
+using LivestreamRecorderService.SingletonServices;
 using Serilog.Context;
 
 namespace LivestreamRecorderService.ScopedServices;
@@ -16,6 +17,7 @@ public class YoutubeSerivce : PlatformService, IPlatformSerivce
     private readonly IChannelRepository _channelRepository;
     private readonly RSSService _rSSService;
     private readonly IABSService _aBSService;
+    private readonly ACIYtarchiveService _aCIYtarchiveService;
 
     public override string PlatformName => "Youtube";
 
@@ -28,6 +30,7 @@ public class YoutubeSerivce : PlatformService, IPlatformSerivce
         IChannelRepository channelRepository,
         RSSService rSSService,
         IABSService aBSService,
+        ACIYtarchiveService aCIYtarchiveService,
         IHttpClientFactory httpClientFactory) : base(channelRepository, aBSService, httpClientFactory, logger)
     {
         _logger = logger;
@@ -36,6 +39,7 @@ public class YoutubeSerivce : PlatformService, IPlatformSerivce
         _channelRepository = channelRepository;
         _rSSService = rSSService;
         _aBSService = aBSService;
+        _aCIYtarchiveService = aCIYtarchiveService;
     }
 
     public static string GetRSSFeed(Channel channel)
@@ -288,10 +292,19 @@ public class YoutubeSerivce : PlatformService, IPlatformSerivce
                 if (video.Status < VideoStatus.Archived)
                 {
                     video.Status = VideoStatus.Skipped;
-                    video.Note = "Video skipped because it is detected member only or copyright notice.";
-                    _logger.LogInformation("Video is detected member_only or needs_auth, change video status to {status}", Enum.GetName(typeof(VideoStatus), VideoStatus.Skipped));
+                    video.Note = "Video skipped because it is detected access required or copyright notice.";
+                    _logger.LogInformation("Video is detected subscriber_only or needs_auth, change video status to {status}", Enum.GetName(typeof(VideoStatus), VideoStatus.Skipped));
                 }
                 break;
+        }
+
+        if(video.Status == VideoStatus.WaitingToRecord)
+        {
+            await _aCIYtarchiveService.StartInstanceAsync(videoId: video.id,
+                                                          cancellation: cancellation);
+
+            video.Status = VideoStatus.Recording;
+            _logger.LogInformation("{videoId} is now lived! Start recording.", video.id);
         }
 
         if (video.Status < 0)

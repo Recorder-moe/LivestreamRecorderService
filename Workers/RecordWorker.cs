@@ -145,10 +145,12 @@ public class RecordWorker : BackgroundService
         _logger.LogDebug("Getting videos to record");
         var videos = videoService.GetVideosByStatus(VideoStatus.WaitingToRecord);
 
+        // Livestream will start recording immediately when detected goes live.
+        // So in fact these cases will only be executed when HandledFailedACIsAsync() occured.
         if (videos.Count > 0)
             _logger.LogInformation("Get {count} videos to record: {videoIds}", videos.Count, string.Join(", ", videos.Select(p => p.id).ToList()));
         else
-            _logger.LogDebug("Get {count} videos to record", videos.Count);
+            _logger.LogTrace("Get {count} videos to record", videos.Count);
 
         foreach (var video in videos)
         {
@@ -157,24 +159,18 @@ public class RecordWorker : BackgroundService
             switch (video.Channel.Source)
             {
                 case "Youtube":
-                    await _aCIYtarchiveService.StartInstanceAsync(
-                        video.id,
-                        stoppingToken);
+                    await _aCIYtarchiveService.StartInstanceAsync(videoId: video.id,
+                                                                  cancellation: stoppingToken);
                     break;
-
-                // Twitch and Twitcasting will start recording immediately when detected goes live.
-                // So in fact these cases will not be executed.
                 case "Twitcasting":
-                    await _aCITwitcastingRecorderService.StartInstanceAsync(
-                        video.ChannelId,
-                        video.id,
-                        stoppingToken);
+                    await _aCITwitcastingRecorderService.StartInstanceAsync(channelId: video.ChannelId,
+                                                                            videoId: video.id,
+                                                                            cancellation: stoppingToken);
                     break;
                 case "Twitch":
-                    await _aCIStreamlinkService.StartInstanceAsync(
-                        video.ChannelId,
-                        video.id,
-                        stoppingToken);
+                    await _aCIStreamlinkService.StartInstanceAsync(channelId: video.ChannelId,
+                                                                   videoId: video.id,
+                                                                   cancellation: stoppingToken);
                     break;
 
                 default:
