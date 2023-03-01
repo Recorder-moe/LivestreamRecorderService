@@ -157,6 +157,10 @@ public class YoutubeSerivce : PlatformService, IPlatformSerivce
         switch (videoData.LiveStatus)
         {
             case "is_upcoming":
+                // Premiere video
+                if (null != videoData.Duration)
+                    goto case "not_live";
+
                 // New stream published
                 if (video.Status == VideoStatus.Unknown)
                     video.Thumbnail = await DownloadThumbnailAsync(videoData.Thumbnail, video.id, cancellation);
@@ -166,10 +170,12 @@ public class YoutubeSerivce : PlatformService, IPlatformSerivce
                     DateTimeOffset.FromUnixTimeSeconds(videoData.ReleaseTimestamp ?? 0).UtcDateTime;
                 break;
             case "is_live":
+                // Premiere video
+                if (null != videoData.Duration)
+                    goto case "not_live";
+
                 // Stream started
-                if (video.Status != VideoStatus.Recording
-                    // Filter premiere videos
-                    && (videoData.IsLive ?? true))
+                if (video.Status != VideoStatus.Recording)
                 {
                     video.Status = VideoStatus.WaitingToRecord;
                     video.Thumbnail = await DownloadThumbnailAsync(videoData.Thumbnail, video.id, cancellation);
@@ -298,7 +304,7 @@ public class YoutubeSerivce : PlatformService, IPlatformSerivce
                 break;
         }
 
-        if(video.Status == VideoStatus.WaitingToRecord)
+        if (video.Status == VideoStatus.WaitingToRecord)
         {
             await _aCIYtarchiveService.StartInstanceAsync(videoId: video.id,
                                                           cancellation: cancellation);
