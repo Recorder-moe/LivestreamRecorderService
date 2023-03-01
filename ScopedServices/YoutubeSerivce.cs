@@ -154,6 +154,12 @@ public class YoutubeSerivce : PlatformService, IPlatformSerivce
             return;
         }
 
+        // Download thumbnail for new videos
+        if (video.Status == VideoStatus.Unknown)
+        {
+            video.Thumbnail = await DownloadThumbnailAsync(videoData.Thumbnail, video.id, cancellation);
+        }
+
         switch (videoData.LiveStatus)
         {
             case "is_upcoming":
@@ -162,9 +168,6 @@ public class YoutubeSerivce : PlatformService, IPlatformSerivce
                     goto case "not_live";
 
                 // New stream published
-                if (video.Status == VideoStatus.Unknown)
-                    video.Thumbnail = await DownloadThumbnailAsync(videoData.Thumbnail, video.id, cancellation);
-
                 video.Status = VideoStatus.Scheduled;
                 video.Timestamps.ScheduledStartTime =
                     DateTimeOffset.FromUnixTimeSeconds(videoData.ReleaseTimestamp ?? 0).UtcDateTime;
