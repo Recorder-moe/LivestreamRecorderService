@@ -158,7 +158,7 @@ public class RecordWorker : BackgroundService
             {
                 case "Youtube":
                     await _aCIYtarchiveService.StartInstanceAsync(
-                        $"https://youtu.be/{video.id}",
+                        video.id,
                         stoppingToken);
                     break;
 
