@@ -111,7 +111,7 @@ public class RecordWorker : BackgroundService
         if (videos.Count > 0)
             _logger.LogInformation("Get {count} videos recording/downloading: {videoIds}", videos.Count, string.Join(", ", videos.Select(p => p.id).ToList()));
         else
-            _logger.LogDebug("Get {count} videos recording/downloading", videos.Count);
+            _logger.LogTrace("No videos recording/downloading");
 
         foreach (var video in videos)
         {
@@ -150,7 +150,7 @@ public class RecordWorker : BackgroundService
         if (videos.Count > 0)
             _logger.LogInformation("Get {count} videos to record: {videoIds}", videos.Count, string.Join(", ", videos.Select(p => p.id).ToList()));
         else
-            _logger.LogTrace("Get {count} videos to record", videos.Count);
+            _logger.LogTrace("No videos waiting to record");
 
         foreach (var video in videos)
         {
@@ -191,7 +191,7 @@ public class RecordWorker : BackgroundService
         if (videos.Count > 0)
             _logger.LogInformation("Get {count} videos to download: {videoIds}", videos.Count, string.Join(", ", videos.Select(p => p.id).ToList()));
         else
-            _logger.LogDebug("Get {count} videos to download", videos.Count);
+            _logger.LogTrace("No videos waiting to download", videos.Count);
 
         foreach (var video in videos)
         {

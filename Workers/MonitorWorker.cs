@@ -55,7 +55,7 @@ public class MonitorWorker : BackgroundService
         if (!PlatformService.StepInterval(_interval)) return;
 
         var channels = PlatformService.GetMonitoringChannels();
-        _logger.LogDebug("Get {channelCount} channels for {platform}", channels.Count, PlatformService.PlatformName);
+        _logger.LogTrace("Get {channelCount} channels for {platform}", channels.Count, PlatformService.PlatformName);
         foreach (var channel in channels)
         {
             await PlatformService.UpdateVideosDataAsync(channel, cancellation);
@@ -70,11 +70,14 @@ public class MonitorWorker : BackgroundService
                                      .ToList();
             if (videos.Count == 0)
             {
-                _logger.LogDebug("No Scheduled videos for {platform}", PlatformService.PlatformName);
+                _logger.LogTrace("No Scheduled videos for {platform}", PlatformService.PlatformName);
                 return;
             }
+            else
+            {
+                _logger.LogDebug("Get {videoCount} Scheduled/Pending videos for {platform}", videos.Count, PlatformService.PlatformName);
+            }
 
-            _logger.LogDebug("Get {videoCount} Scheduled/Pending videos for {platform}", videos.Count, PlatformService.PlatformName);
             foreach (var video in videos)
             {
                 await PlatformService.UpdateVideoDataAsync(video, cancellation);
