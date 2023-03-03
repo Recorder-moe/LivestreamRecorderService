@@ -1,14 +1,14 @@
 ﻿using Azure.ResourceManager;
-using LivestreamRecorderService.Interfaces;
+using Azure.ResourceManager.Resources;
 using LivestreamRecorderService.Models.Options;
 using Microsoft.Extensions.Options;
 
 namespace LivestreamRecorderService.SingletonServices;
 
-public class ACIYtarchiveService : ACIService, IACIService
+public class ACIYtarchiveService : ACIService
 {
-    private readonly AzureOption _azureOption;
     private readonly ILogger<ACIYtarchiveService> _logger;
+    private readonly AzureOption _azureOption;
 
     public override string DownloaderName => "ytarchive";
 
@@ -17,11 +17,14 @@ public class ACIYtarchiveService : ACIService, IACIService
         ArmClient armClient,
         IOptions<AzureOption> options) : base(logger, armClient, options)
     {
-        _azureOption = options.Value;
         _logger = logger;
+        _azureOption = options.Value;
     }
 
-    public async Task<dynamic> StartInstanceAsync(string videoId, CancellationToken cancellation = default)
+    public Task<dynamic> StartInstanceAsync(string videoId, CancellationToken cancellation = default)
+        => StartInstanceAsync(videoId, "", cancellation);
+
+    public override async Task<dynamic> StartInstanceAsync(string videoId, string channelId = "", CancellationToken cancellation = default)
     {
         if (null != await GetInstanceByVideoIdAsync(videoId, cancellation))
         {
@@ -31,39 +34,42 @@ public class ACIYtarchiveService : ACIService, IACIService
         else
         {
             var url = $"https://youtu.be/{videoId}";
-            return CreateAzureContainerInstanceAsync(
-                    template: "ACI_ytarchive.json",
-                    parameters: new
-                    {
-                        containerName = new
-                        {
-                            value = GetInstanceName(url)
-                        },
-                        commandOverrideArray = new
-                        {
-                            value = new string[] {
-                                "/usr/bin/dumb-init", "--",
-                                "sh", "-c",
-                                // It is possible for Youtube to use "-" at the beginning of an id, which can cause errors when using the id as a file name.
-                                // Therefore, we add "_" before the file name to avoid such issues.
-                                $"/ytarchive --add-metadata --merge --retry-frags 30 --thumbnail -o '_%(id)s' '{url}' best && mv *.mp4 /fileshare/"
-                            }
-                        },
-                        storageAccountName = new
-                        {
-                            value = _azureOption.StorageAccountName
-                        },
-                        storageAccountKey = new
-                        {
-                            value = _azureOption.StorageAccountKey
-                        },
-                        fileshareVolumeName = new
-                        {
-                            value = "livestream-recorder"
-                        }
-                    },
-                    deploymentName: GetInstanceName(url),
-                    cancellation: cancellation);
+            return CreateNewInstance(url, GetInstanceName(url), cancellation);
         }
     }
+
+    protected override Task<ArmOperation<ArmDeploymentResource>> CreateNewInstance(string url, string instanceName, CancellationToken cancellation)
+        => CreateAzureContainerInstanceAsync(
+            template: "ACI_ytarchive.json",
+            parameters: new
+            {
+                containerName = new
+                {
+                    value = instanceName
+                },
+                commandOverrideArray = new
+                {
+                    value = new string[] {
+                        "/usr/bin/dumb-init", "--",
+                        "sh", "-c",
+                        // It is possible for Youtube to use "-" at the beginning of an id, which can cause errors when using the id as a file name.
+                        // Therefore, we add "_" before the file name to avoid such issues.
+                        $"/ytarchive --add-metadata --merge --retry-frags 30 --thumbnail -o '_%(id)s' '{url}' best && mv *.mp4 /fileshare/"
+                    }
+                },
+                storageAccountName = new
+                {
+                    value = _azureOption.StorageAccountName
+                },
+                storageAccountKey = new
+                {
+                    value = _azureOption.StorageAccountKey
+                },
+                fileshareVolumeName = new
+                {
+                    value = "livestream-recorder"
+                }
+            },
+            deploymentName: instanceName,
+            cancellation: cancellation);
 }

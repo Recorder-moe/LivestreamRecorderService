@@ -1,12 +1,11 @@
 ﻿using Azure.ResourceManager;
 using Azure.ResourceManager.Resources;
-using LivestreamRecorderService.Interfaces;
 using LivestreamRecorderService.Models.Options;
 using Microsoft.Extensions.Options;
 
 namespace LivestreamRecorderService.SingletonServices;
 
-public class ACIYtdlpService : ACIService, IACIService
+public class ACIYtdlpService : ACIService
 {
     private readonly AzureOption _azureOption;
     public override string DownloaderName => "ytdlp";
@@ -19,14 +18,22 @@ public class ACIYtdlpService : ACIService, IACIService
         _azureOption = options.Value;
     }
 
-    public Task<ArmOperation<ArmDeploymentResource>> StartInstanceAsync(string url, CancellationToken cancellation = default) 
+    public override Task<dynamic> StartInstanceAsync(string videoId, string _ = "", CancellationToken cancellation = default)
+        => StartInstanceAsync($"https://youtu.be/{videoId}", cancellation);
+
+    public async Task<dynamic> StartInstanceAsync(string url, CancellationToken cancellation = default)
+        => await CreateNewInstance(url: url,
+                                   instanceName: GetInstanceName(url),
+                                   cancellation: cancellation);
+
+    protected override Task<ArmOperation<ArmDeploymentResource>> CreateNewInstance(string url, string instanceName, CancellationToken cancellation)
         => CreateAzureContainerInstanceAsync(
             template: "ACI_ytdlp.json",
             parameters: new
             {
                 containerName = new
                 {
-                    value = GetInstanceName(url)
+                    value = instanceName
                 },
                 commandOverrideArray = new
                 {
@@ -51,6 +58,6 @@ public class ACIYtdlpService : ACIService, IACIService
                     value = "livestream-recorder"
                 }
             },
-            deploymentName: GetInstanceName(url),
+            deploymentName: instanceName,
             cancellation: cancellation);
 }

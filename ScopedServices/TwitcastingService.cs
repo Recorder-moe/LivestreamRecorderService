@@ -107,8 +107,8 @@ public class TwitcastingService : PlatformService, IPlatformSerivce
                 if (isLive && (video.Status < VideoStatus.Recording
                                || video.Status == VideoStatus.Missing))
                 {
-                    await _aCITwitcastingRecorderService.StartInstanceAsync(channelId: video.ChannelId,
-                                                                            videoId: videoId,
+                    await _aCITwitcastingRecorderService.StartInstanceAsync(videoId: videoId,
+                                                                            channelId: video.ChannelId,
                                                                             cancellation: cancellation);
                     video.Status = VideoStatus.Recording;
                     _logger.LogInformation("{channelId} is now lived! Start recording.", channel.id);

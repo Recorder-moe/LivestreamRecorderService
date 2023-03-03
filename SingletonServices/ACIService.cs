@@ -1,20 +1,19 @@
 ﻿using Azure;
 using Azure.ResourceManager;
+using Azure.ResourceManager.ContainerInstance;
 using Azure.ResourceManager.Resources;
 using Azure.ResourceManager.Resources.Models;
 using LivestreamRecorderService.DB.Models;
-using LivestreamRecorderService.Interfaces;
 using LivestreamRecorderService.Models.Options;
 using Microsoft.Extensions.Options;
 
 namespace LivestreamRecorderService.SingletonServices;
 
-public class ACIService : IACIService
+public class ACIService
 {
     private readonly ILogger<ACIService> _logger;
-
-    public ArmClient ArmClient { get; }
-    public string ResourceGroupName { get; }
+    private readonly ArmClient _armClient;
+    private readonly string _resourceGroupName;
 
     /// <summary>
     /// [a-z0-9]([-a-z0-9]*[a-z0-9])?
@@ -28,14 +27,14 @@ public class ACIService : IACIService
     )
     {
         _logger = logger;
-        ArmClient = armClient;
-        ResourceGroupName = options.Value.ResourceGroupName;
+        _armClient = armClient;
+        _resourceGroupName = options.Value.ResourceGroupName;
     }
 
     public async Task<ResourceGroupResource> GetResourceGroupAsync(CancellationToken cancellation = default)
     {
-        var subscriptionResource = await ArmClient.GetDefaultSubscriptionAsync(cancellation);
-        return await subscriptionResource.GetResourceGroupAsync(ResourceGroupName, cancellation);
+        var subscriptionResource = await _armClient.GetDefaultSubscriptionAsync(cancellation);
+        return await subscriptionResource.GetResourceGroupAsync(_resourceGroupName, cancellation);
     }
 
     public async Task<ArmOperation<ArmDeploymentResource>> CreateAzureContainerInstanceAsync(
@@ -69,6 +68,12 @@ public class ACIService : IACIService
                                     .FirstOrDefault();
     }
 
+    /// <summary>
+    /// RemoveCompletedInstanceContainer
+    /// </summary>
+    /// <param name="video"></param>
+    /// <returns></returns>
+    /// <exception cref="Exception">ACI status is FAILED</exception>
     public async Task RemoveCompletedInstanceContainerAsync(Video video, CancellationToken cancellation = default)
     {
         var instance = (await GetInstanceByVideoIdAsync(video.id, cancellation));
@@ -102,7 +107,7 @@ public class ACIService : IACIService
                                    .Replace("_", "")
                                    .Replace(":", "");
 
-    public async Task<bool> IsACIFailedAsync(Video video,CancellationToken cancellation)
+    public async Task<bool> IsACIFailedAsync(Video video, CancellationToken cancellation)
     {
         string ACIName = video.id;
         var instance = (await GetInstanceByVideoIdAsync(ACIName, cancellation));
@@ -128,4 +133,60 @@ public class ACIService : IACIService
             return false;
         }
     }
+
+    public virtual async Task<dynamic> StartInstanceAsync(string videoId, string channelId, CancellationToken cancellation = default)
+    {
+        // ACI部署上需要時間，啟動已存在的Instance較省時
+        // 同時需注意 BUG#97 的狀況，在「已啟動」的時候部署新的Instance，在「已停止」時直接啟動舊的Instance
+        // 使用的ChannelId來做為預設InstanceName
+        var instanceNameChannelId = GetInstanceName(channelId);
+        var instanceNameVideoId = GetInstanceName(videoId);
+
+        var instance = await GetInstanceByVideoIdAsync(channelId, cancellation);
+        if (null != instance && instance.HasData)
+        {
+            return instance.Data.ProvisioningState switch
+            {
+                // 啟動舊的預設Instance
+                "Succeeded" or "Failed" or "Stopped" => await StartOldACI(instance: instance,
+                                                                          channelId: channelId,
+                                                                          videoId: videoId,
+                                                                          cancellation: cancellation),
+                // 啟動新的Instance
+                _ => await CreateNewInstance(channelId, instanceNameVideoId, cancellation),
+            };
+        }
+        else
+        {
+            _logger.LogWarning("Failed to get ACI instance for {videoId} {name}. A new instance will now be created.", videoId, instanceNameChannelId);
+            // 啟動新的預設Instance
+            return await CreateNewInstance(channelId, instanceNameChannelId, cancellation);
+        }
+    }
+
+    protected async Task<dynamic> StartOldACI(GenericResource instance, string channelId, string videoId, string? newInstanceName = null, int retry = 0, CancellationToken cancellation = default)
+    {
+        newInstanceName ??= GetInstanceName(channelId);
+
+        if (retry > 3)
+        {
+            _logger.LogError("Retry too many times for {videoId} {ACIName}, create new instance.", videoId, instance.Id);
+            return await CreateNewInstance(channelId, newInstanceName, cancellation);
+        }
+
+        try
+        {
+            _logger.LogInformation("Detect ACI {ACIName} ProvisioningState as {ProvisioningState}", instance.Id, instance.Data.ProvisioningState);
+            return await _armClient.GetContainerGroupResource(instance.Id).StartAsync(Azure.WaitUntil.Started, cancellation);
+        }
+        catch (Azure.RequestFailedException e)
+        {
+            _logger.LogWarning(e, "Start ACI {ACIName} failed, retry {retry}", instance.Id, ++retry);
+            return await StartOldACI(instance, channelId, videoId, newInstanceName, retry, cancellation);
+        }
+    }
+
+    // Must be override.
+    protected virtual Task<ArmOperation<ArmDeploymentResource>> CreateNewInstance(string id, string instanceName, CancellationToken cancellation)
+        => throw new NotImplementedException();
 }

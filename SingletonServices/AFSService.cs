@@ -8,11 +8,11 @@ namespace LivestreamRecorderService.SingletonServices;
 
 public class AFSService : IAFSService
 {
-    private readonly ILogger<ACIService> _logger;
+    private readonly ILogger<AFSService> _logger;
     private readonly ShareClient _shareClient;
 
     public AFSService(
-        ILogger<ACIService> logger,
+        ILogger<AFSService> logger,
         ShareServiceClient shareServiceClient,
         IOptions<AzureOption> options)
     {

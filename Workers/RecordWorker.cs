@@ -13,7 +13,7 @@ namespace LivestreamRecorderService.Workers;
 public class RecordWorker : BackgroundService
 {
     private readonly ILogger<RecordWorker> _logger;
-    private readonly IACIService _aCIService;
+    private readonly ACIService _aCIService;
     private readonly ACIYtarchiveService _aCIYtarchiveService;
     private readonly ACIYtdlpService _aCIYtdlpService;
     private readonly ACITwitcastingRecorderService _aCITwitcastingRecorderService;
@@ -23,7 +23,7 @@ public class RecordWorker : BackgroundService
 
     public RecordWorker(
         ILogger<RecordWorker> logger,
-        IACIService aCIService,
+        ACIService aCIService,
         ACIYtarchiveService aCIYtarchiveService,
         ACIYtdlpService aCIYtdlpService,
         ACITwitcastingRecorderService aCITwitcastingRecorderService,
@@ -163,13 +163,13 @@ public class RecordWorker : BackgroundService
                                                                   cancellation: stoppingToken);
                     break;
                 case "Twitcasting":
-                    await _aCITwitcastingRecorderService.StartInstanceAsync(channelId: video.ChannelId,
-                                                                            videoId: video.id,
+                    await _aCITwitcastingRecorderService.StartInstanceAsync(videoId: video.id,
+                                                                            channelId: video.ChannelId,
                                                                             cancellation: stoppingToken);
                     break;
                 case "Twitch":
-                    await _aCIStreamlinkService.StartInstanceAsync(channelId: video.ChannelId,
-                                                                   videoId: video.id,
+                    await _aCIStreamlinkService.StartInstanceAsync(videoId: video.id,
+                                                                   channelId: video.ChannelId,
                                                                    cancellation: stoppingToken);
                     break;
 

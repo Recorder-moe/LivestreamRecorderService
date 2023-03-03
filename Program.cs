@@ -93,7 +93,7 @@ try
         });
         services.AddSingleton<IAFSService, AFSService>();
         services.AddSingleton<IABSService, ABSService>();
-        services.AddSingleton<IACIService, ACIService>();
+        services.AddSingleton<ACIService>();
         services.AddSingleton<ACIYtarchiveService>();
         services.AddSingleton<ACIYtdlpService>();
         services.AddSingleton<ACITwitcastingRecorderService>();
