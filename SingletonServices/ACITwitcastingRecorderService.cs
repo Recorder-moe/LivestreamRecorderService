@@ -57,7 +57,7 @@ public class ACITwitcastingRecorderService : ACIService, IACIService
             if (retry > 3)
             {
                 _logger.LogError("Retry too many times for {videoId} {ACIName}, create new instance.", videoId, instance.Id);
-                return await CreateNewInstance(channelId, instanceNameChannelId, cancellation);
+                return await CreateNewInstance(channelId, instanceNameVideoId, cancellation);
             }
 
             try
