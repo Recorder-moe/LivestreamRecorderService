@@ -2,6 +2,9 @@
 using LivestreamRecorderService.DB.Enum;
 using LivestreamRecorderService.DB.Interfaces;
 using LivestreamRecorderService.DB.Models;
+using LivestreamRecorderService.Models;
+using Newtonsoft.Json;
+using System.Net;
 using System.Web;
 
 namespace LivestreamRecorderService.ScopedServices;
@@ -90,8 +93,24 @@ public class VideoService
                           ? "_" + video.id
                           : video.id;
 
-            var response = await client.PostAsync("AzureFileShares2BlobContainers?videoId=" + HttpUtility.UrlEncode(videoId), null, cancellation);
-            response.EnsureSuccessStatusCode();
+            // https://learn.microsoft.com/zh-tw/azure/azure-functions/durable/durable-functions-overview?tabs=csharp-inproc#async-http
+            // https://learn.microsoft.com/en-us/azure/azure-functions/durable/durable-functions-http-api#start-orchestration
+            var startResponse = await client.PostAsync("api/AzureFileShares2BlobContainers?videoId=" + HttpUtility.UrlEncode(videoId), null, cancellation);
+            startResponse.EnsureSuccessStatusCode();
+            var responseContent = await startResponse.Content.ReadAsStringAsync(cancellation);
+            var deserializedResponse = JsonConvert.DeserializeObject<AcceptedResponse>(responseContent);
+
+            if (null == deserializedResponse) throw new Exception("Failed to serialize response from Durable Function start.");
+
+            var statusUri = deserializedResponse.StatusQueryGetUri + "&returnInternalServerErrorOnFailure=true";
+            var statusResponse = await client.GetAsync(statusUri, cancellation);
+
+            while (statusResponse.StatusCode == HttpStatusCode.Accepted)
+            {
+                await Task.Delay(TimeSpan.FromSeconds(10), cancellation);
+                statusResponse = await client.GetAsync(statusUri, cancellation);
+            }
+            statusResponse.EnsureSuccessStatusCode();
 
             _logger.LogInformation("Video {videoId} is uploaded to Azure Storage.", video.id);
             UpdateVideoStatus(video, VideoStatus.Archived);

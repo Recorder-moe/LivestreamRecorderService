@@ -77,7 +77,7 @@ try
 
         services.AddHttpClient("AzureFileShares2BlobContainers", client =>
         {
-            client.BaseAddress = new Uri("https://azurefileshares2blobcontainers.azurewebsites.net/api/");
+            client.BaseAddress = new Uri("https://azurefileshares2blobcontainers.azurewebsites.net/");
             // Set this bigger than Azure Function timeout (10min)
             client.Timeout = TimeSpan.FromMinutes(11);
         });
