@@ -30,7 +30,7 @@ public class RSSService
         }
         catch (Exception e)
         {
-            _logger.LogError(e, "Failed to get feed: {feed}", url);
+            _logger.LogWarning(e, "Failed to get feed: {feed}", url);
         }
         return feed;
     }
