@@ -72,7 +72,8 @@ try
             options
                 //.EnableSensitiveDataLogging()
                 .UseCosmos(connectionString: configuration.GetConnectionString("Public")!,
-                           databaseName: cosmosDbOptions.DatabaseName);
+                           databaseName: cosmosDbOptions.DatabaseName,
+                           cosmosOptionsAction: option => option.GatewayModeMaxConnectionLimit(380));
         });
 
         services.AddHttpClient("AzureFileShares2BlobContainers", client =>
