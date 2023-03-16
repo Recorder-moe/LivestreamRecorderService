@@ -309,8 +309,8 @@ public class YoutubeSerivce : PlatformService, IPlatformSerivce
 
         if (video.Status == VideoStatus.WaitingToRecord)
         {
-            await _aCIYtarchiveService.StartInstanceAsync(videoId: video.id,
-                                                          cancellation: cancellation);
+            _ = _aCIYtarchiveService.StartInstanceAsync(videoId: video.id,
+                                                        cancellation: cancellation);
 
             video.Status = VideoStatus.Recording;
             _logger.LogInformation("{videoId} is now lived! Start recording.", video.id);

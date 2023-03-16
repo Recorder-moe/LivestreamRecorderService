@@ -51,7 +51,7 @@ public class ACIService
             Template = BinaryData.FromString(templateContent),
             Parameters = BinaryData.FromObjectAsJson(parameters),
         });
-        return await armDeploymentCollection.CreateOrUpdateAsync(waitUntil: WaitUntil.Started,
+        return await armDeploymentCollection.CreateOrUpdateAsync(waitUntil: WaitUntil.Completed,
                                                                  deploymentName: $"{deploymentName}",
                                                                  content: deploymentContent,
                                                                  cancellationToken: cancellation);

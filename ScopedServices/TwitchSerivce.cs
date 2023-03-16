@@ -41,7 +41,7 @@ public class TwitchSerivce : PlatformService, IPlatformSerivce
 
     public override async Task UpdateVideosDataAsync(Channel channel, CancellationToken cancellation = default)
     {
-        using var _ = LogContext.PushProperty("Platform", PlatformName);
+        using var ____ = LogContext.PushProperty("Platform", PlatformName);
         using var __ = LogContext.PushProperty("channelId", channel.id);
 
         _logger.LogTrace("Start to get Twitch stream: {channelId}", channel.id);
@@ -105,9 +105,10 @@ public class TwitchSerivce : PlatformService, IPlatformSerivce
             if (video.Status < VideoStatus.Recording
                 || video.Status == VideoStatus.Missing)
             {
-                await _aCIStreamlinkService.StartInstanceAsync(videoId: video.id,
-                                                               channelId: video.ChannelId,
-                                                               cancellation: cancellation);
+                _ = _aCIStreamlinkService.StartInstanceAsync(videoId: video.id,
+                                                             channelId: video.ChannelId,
+                                                             cancellation: cancellation);
+
                 video.Status = VideoStatus.Recording;
                 _logger.LogInformation("{channelId} is now lived! Start recording.", channel.id);
             }

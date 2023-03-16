@@ -39,37 +39,57 @@ public class ACIYtarchiveService : ACIService
     }
 
     protected override Task<ArmOperation<ArmDeploymentResource>> CreateNewInstance(string url, string instanceName, CancellationToken cancellation)
-        => CreateAzureContainerInstanceAsync(
-            template: "ACI_ytarchive.json",
-            parameters: new
-            {
-                containerName = new
-                {
-                    value = instanceName
-                },
-                commandOverrideArray = new
-                {
-                    value = new string[] {
-                        "/usr/bin/dumb-init", "--",
-                        "sh", "-c",
-                        // It is possible for Youtube to use "-" at the beginning of an id, which can cause errors when using the id as a file name.
-                        // Therefore, we add "_" before the file name to avoid such issues.
-                        $"/ytarchive --add-metadata --merge --retry-frags 30 --thumbnail -o '_%(id)s' '{url}' best && mv *.mp4 /fileshare/"
-                    }
-                },
-                storageAccountName = new
-                {
-                    value = _azureOption.StorageAccountName
-                },
-                storageAccountKey = new
-                {
-                    value = _azureOption.StorageAccountKey
-                },
-                fileshareVolumeName = new
-                {
-                    value = "livestream-recorder"
-                }
-            },
-            deploymentName: instanceName,
-            cancellation: cancellation);
+    {
+        try
+        {
+            return doWithImage("ghcr.io/recorder-moe/ytarchive:v0.3.2");
+        }
+        catch (Exception)
+        {
+            // Use DockerHub as fallback
+            _logger.LogWarning("Failed once, try docker hub as fallback.");
+            return doWithImage("recordermoe/ytarchive:v0.3.2");
+        }
+
+        Task<ArmOperation<ArmDeploymentResource>> doWithImage(string imageName)
+        {
+            return CreateAzureContainerInstanceAsync(
+                    template: "ACI.json",
+                    parameters: new
+                    {
+                        dockerImageName = new
+                        {
+                            value = imageName
+                        },
+                        containerName = new
+                        {
+                            value = instanceName
+                        },
+                        commandOverrideArray = new
+                        {
+                            value = new string[] {
+                                "/usr/bin/dumb-init", "--",
+                                "sh", "-c",
+                                // It is possible for Youtube to use "-" at the beginning of an id, which can cause errors when using the id as a file name.
+                                // Therefore, we add "_" before the file name to avoid such issues.
+                                $"/ytarchive --add-metadata --merge --retry-frags 30 --thumbnail -o '_%(id)s' '{url}' best && mv *.mp4 /fileshare/"
+                            }
+                        },
+                        storageAccountName = new
+                        {
+                            value = _azureOption.StorageAccountName
+                        },
+                        storageAccountKey = new
+                        {
+                            value = _azureOption.StorageAccountKey
+                        },
+                        fileshareVolumeName = new
+                        {
+                            value = "livestream-recorder"
+                        }
+                    },
+                    deploymentName: instanceName,
+                    cancellation: cancellation);
+        }
+    }
 }

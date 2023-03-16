@@ -44,7 +44,7 @@ public class TwitcastingService : PlatformService, IPlatformSerivce
 
     public override async Task UpdateVideosDataAsync(Channel channel, CancellationToken cancellation = default)
     {
-        using var _ = LogContext.PushProperty("Platform", PlatformName);
+        using var ____ = LogContext.PushProperty("Platform", PlatformName);
         using var __ = LogContext.PushProperty("channelId", channel.id);
 
         var (isLive, videoId) = await GetTwitcastingLiveStatusAsync(channel, cancellation);
@@ -107,9 +107,10 @@ public class TwitcastingService : PlatformService, IPlatformSerivce
                 if (isLive && (video.Status < VideoStatus.Recording
                                || video.Status == VideoStatus.Missing))
                 {
-                    await _aCITwitcastingRecorderService.StartInstanceAsync(videoId: videoId,
-                                                                            channelId: video.ChannelId,
-                                                                            cancellation: cancellation);
+                    _ = _aCITwitcastingRecorderService.StartInstanceAsync(videoId: videoId,
+                                                                          channelId: video.ChannelId,
+                                                                          cancellation: cancellation);
+
                     video.Status = VideoStatus.Recording;
                     _logger.LogInformation("{channelId} is now lived! Start recording.", channel.id);
                 }
