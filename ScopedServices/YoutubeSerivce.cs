@@ -144,6 +144,7 @@ public class YoutubeSerivce : PlatformService, IPlatformSerivce
     /// <returns></returns>
     public async Task UpdateVideoDataWithoutCommitAsync(Video video, CancellationToken cancellation = default)
     {
+        using var __ = LogContext.PushProperty("videoId", video.id);
         YtdlpVideoData? videoData = await GetVideoInfoByYtdlpAsync($"https://youtu.be/{video.id}", cancellation);
 
         if (null == videoData)
@@ -297,13 +298,16 @@ public class YoutubeSerivce : PlatformService, IPlatformSerivce
             // Copyright Notice
             case "needs_auth":
                 video.SourceStatus = VideoStatus.Reject;
+                _logger.LogInformation("Video is detected subscriber_only or needs_auth, change video source status to {status}", Enum.GetName(typeof(VideoStatus), video.SourceStatus));
 
+                // Not archived
                 if (video.Status < VideoStatus.Archived)
                 {
                     video.Status = VideoStatus.Skipped;
-                    video.Note = "Video skipped because it is detected access required or copyright notice.";
-                    _logger.LogInformation("Video is detected subscriber_only or needs_auth, change video status to {status}", Enum.GetName(typeof(VideoStatus), VideoStatus.Skipped));
+                    video.Note = $"Video ${Enum.GetName(typeof(VideoStatus), video.Status)} because it is detected access required or copyright notice.";
+                    _logger.LogInformation("Video {status} because it is detected access required or copyright notice.", Enum.GetName(typeof(VideoStatus), video.Status));
                 }
+
                 break;
         }
 
