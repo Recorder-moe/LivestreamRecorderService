@@ -1,5 +1,6 @@
 ﻿using LivestreamRecorderService.DB.Interfaces;
 using LivestreamRecorderService.DB.Models;
+using LivestreamRecorderService.SingletonServices;
 
 namespace LivestreamRecorderService.ScopedServices;
 
@@ -8,15 +9,18 @@ public class ChannelService
     private readonly ILogger<ChannelService> _logger;
     private readonly IUnitOfWork _unitOfWork;
     private readonly IChannelRepository _channelRepository;
+    private readonly DiscordService _discordService;
 
     public ChannelService(
         ILogger<ChannelService> logger,
         IUnitOfWork unitOfWork,
-        IChannelRepository channelRepository)
+        IChannelRepository channelRepository,
+        DiscordService discordService)
     {
         _logger = logger;
         _unitOfWork = unitOfWork;
         _channelRepository = channelRepository;
+        _discordService = discordService;
     }
 
     public void UpdateChannelLatestVideo(Video video)
@@ -28,7 +32,7 @@ public class ChannelService
         _unitOfWork.Commit();
     }
 
-    public void ConsumeSupportToken(Video video)
+    public async Task ConsumeSupportTokenAsync(Video video)
     {
         var channel = _channelRepository.GetById(video.ChannelId);
         _unitOfWork.Context.Entry(channel).Reload();
@@ -43,6 +47,15 @@ public class ChannelService
         _channelRepository.Update(channel);
         _unitOfWork.Commit();
         _logger.LogDebug("Consume Channel {channelId} {amount} SupportToken ", channel.id, amount);
+
+        if (channel.SupportToken == 0)
+        {
+            await _discordService.SendChannelSupportTokenZeroMessage(channel);
+        }
+        else if (channel.SupportToken <= 10)
+        {
+            await _discordService.SendChannelSupportTokenAlertMessage(channel);
+        }
     }
 
     private static decimal CalculateConsumeSupportToken(long? size)

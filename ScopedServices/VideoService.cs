@@ -3,6 +3,7 @@ using LivestreamRecorderService.DB.Enum;
 using LivestreamRecorderService.DB.Interfaces;
 using LivestreamRecorderService.DB.Models;
 using LivestreamRecorderService.Models;
+using LivestreamRecorderService.SingletonServices;
 using Newtonsoft.Json;
 using System.Net;
 using System.Web;
@@ -14,17 +15,20 @@ public class VideoService
     private readonly ILogger<VideoService> _logger;
     private readonly IUnitOfWork _unitOfWork;
     private readonly IVideoRepository _videoRepository;
+    private readonly DiscordService _discordService;
     private readonly IHttpClientFactory _httpFactory;
 
     public VideoService(
         ILogger<VideoService> logger,
         IUnitOfWork unitOfWork,
         IVideoRepository videoRepository,
+        DiscordService discordService,
         IHttpClientFactory httpFactory)
     {
         _logger = logger;
         _unitOfWork = unitOfWork;
         _videoRepository = videoRepository;
+        _discordService = discordService;
         _httpFactory = httpFactory;
     }
 
@@ -114,6 +118,7 @@ public class VideoService
 
             _logger.LogInformation("Video {videoId} is uploaded to Azure Storage.", video.id);
             UpdateVideoStatus(video, VideoStatus.Archived);
+            await _discordService.SendArchivedMessage(video);
         }
         catch (Exception e)
         {

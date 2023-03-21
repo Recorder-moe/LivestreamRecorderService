@@ -1,8 +1,10 @@
 using Azure.Identity;
 using Azure.ResourceManager;
+using Discord.Webhook;
 using LivestreamRecorderService.DB.Core;
 using LivestreamRecorderService.DB.Interfaces;
 using LivestreamRecorderService.Interfaces;
+using LivestreamRecorderService.Models.OptionDiscords;
 using LivestreamRecorderService.Models.Options;
 using LivestreamRecorderService.ScopedServices;
 using LivestreamRecorderService.SingletonServices;
@@ -62,9 +64,15 @@ try
                 .ValidateDataAnnotations()
                 .ValidateOnStart();
 
+        services.AddOptions<DiscordOption>()
+                .Bind(configuration.GetSection(DiscordOption.ConfigurationSectionName))
+                .ValidateDataAnnotations()
+                .ValidateOnStart();
+
         var azureOptions = services.BuildServiceProvider().GetRequiredService<IOptions<AzureOption>>().Value;
         var cosmosDbOptions = services.BuildServiceProvider().GetRequiredService<IOptions<CosmosDbOptions>>().Value;
         var twitchOptions = services.BuildServiceProvider().GetRequiredService<IOptions<TwitchOption>>().Value;
+        var discordOptions = services.BuildServiceProvider().GetRequiredService<IOptions<DiscordOption>>().Value;
 
         // Add CosmosDb
         services.AddDbContext<PublicContext>((options) =>
@@ -99,6 +107,9 @@ try
         services.AddSingleton<ACIYtdlpService>();
         services.AddSingleton<ACITwitcastingRecorderService>();
         services.AddSingleton<ACIStreamlinkService>();
+
+        services.AddSingleton((service) => new DiscordWebhookClient(discordOptions.Webhook));
+        services.AddSingleton<DiscordService>();
 
         services.AddSingleton<ITwitchAPI, TwitchAPI>(s =>
         {

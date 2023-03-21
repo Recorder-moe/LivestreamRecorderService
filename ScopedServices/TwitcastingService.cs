@@ -17,6 +17,7 @@ public class TwitcastingService : PlatformService, IPlatformSerivce
     private readonly IVideoRepository _videoRepository;
     private readonly ACITwitcastingRecorderService _aCITwitcastingRecorderService;
     private readonly IABSService _aBSService;
+    private readonly DiscordService _discordService;
 
     public override string PlatformName => "Twitcasting";
     public override int Interval => 10;
@@ -32,6 +33,7 @@ public class TwitcastingService : PlatformService, IPlatformSerivce
         IVideoRepository videoRepository,
         ACITwitcastingRecorderService aCITwitcastingRecorderService,
         IABSService aBSService,
+        DiscordService discordService,
         IChannelRepository channelRepository) : base(channelRepository, aBSService, httpClientFactory, logger)
     {
         _logger = logger;
@@ -40,6 +42,7 @@ public class TwitcastingService : PlatformService, IPlatformSerivce
         _videoRepository = videoRepository;
         _aCITwitcastingRecorderService = aCITwitcastingRecorderService;
         _aBSService = aBSService;
+        _discordService = discordService;
     }
 
     public override async Task UpdateVideosDataAsync(Channel channel, CancellationToken cancellation = default)
@@ -113,6 +116,7 @@ public class TwitcastingService : PlatformService, IPlatformSerivce
 
                     video.Status = VideoStatus.Recording;
                     _logger.LogInformation("{channelId} is now lived! Start recording.", channel.id);
+                    await _discordService.SendStartRecordingMessage(video);
                 }
             }
             else
@@ -247,10 +251,17 @@ public class TwitcastingService : PlatformService, IPlatformSerivce
         }
         else
         {
-            _logger.LogInformation("Twitcasting video {videoId} is not published.", video.id);
+            if(video.SourceStatus != VideoStatus.Deleted
+               && video.Status == VideoStatus.Archived)
+            {
+                // First detected
+                video.SourceStatus = VideoStatus.Deleted;
+                await _discordService.SendDeletedMessage(video);
+            }
             video.SourceStatus = VideoStatus.Deleted;
             video.Status = VideoStatus.Missing;
             video.Note = "Video is not published.";
+            _logger.LogInformation("Twitcasting video {videoId} is not published.", video.id);
         }
 
         if (await _aBSService.GetVideoBlob(video)

@@ -18,6 +18,7 @@ public class YoutubeSerivce : PlatformService, IPlatformSerivce
     private readonly RSSService _rSSService;
     private readonly IABSService _aBSService;
     private readonly ACIYtarchiveService _aCIYtarchiveService;
+    private readonly DiscordService _discordService;
 
     public override string PlatformName => "Youtube";
 
@@ -31,6 +32,7 @@ public class YoutubeSerivce : PlatformService, IPlatformSerivce
         RSSService rSSService,
         IABSService aBSService,
         ACIYtarchiveService aCIYtarchiveService,
+        DiscordService discordService,
         IHttpClientFactory httpClientFactory) : base(channelRepository, aBSService, httpClientFactory, logger)
     {
         _logger = logger;
@@ -40,6 +42,7 @@ public class YoutubeSerivce : PlatformService, IPlatformSerivce
         _rSSService = rSSService;
         _aBSService = aBSService;
         _aCIYtarchiveService = aCIYtarchiveService;
+        _discordService = discordService;
     }
 
     public static string GetRSSFeed(Channel channel)
@@ -250,6 +253,14 @@ public class YoutubeSerivce : PlatformService, IPlatformSerivce
                    && videoData.Formats?.Count == 0
                    && string.IsNullOrEmpty(videoData.Fulltitle))
                 {
+                    if(video.SourceStatus != VideoStatus.Deleted
+                       && video.Status == VideoStatus.Archived)
+                    {
+                        // First detected
+                        video.SourceStatus = VideoStatus.Deleted;
+                        await _discordService.SendDeletedMessage(video);
+                    }
+
                     video.SourceStatus = VideoStatus.Deleted;
                     _logger.LogInformation("Failed to fetch video data, maybe it is deleted! {videoId}", video.id);
                 }
@@ -297,9 +308,6 @@ public class YoutubeSerivce : PlatformService, IPlatformSerivce
             case "subscriber_only":
             // Copyright Notice
             case "needs_auth":
-                video.SourceStatus = VideoStatus.Reject;
-                _logger.LogInformation("Video is detected subscriber_only or needs_auth, change video source status to {status}", Enum.GetName(typeof(VideoStatus), video.SourceStatus));
-
                 // Not archived
                 if (video.Status < VideoStatus.Archived)
                 {
@@ -307,6 +315,16 @@ public class YoutubeSerivce : PlatformService, IPlatformSerivce
                     video.Note = $"Video ${Enum.GetName(typeof(VideoStatus), video.Status)} because it is detected access required or copyright notice.";
                     _logger.LogInformation("Video {status} because it is detected access required or copyright notice.", Enum.GetName(typeof(VideoStatus), video.Status));
                 }
+                else
+                {
+                    video.SourceStatus = VideoStatus.Reject;
+                    // First detected
+                    if(video.SourceStatus != VideoStatus.Reject)
+                        await _discordService.SendDeletedMessage(video);
+                }
+
+                video.SourceStatus = VideoStatus.Reject;
+                _logger.LogInformation("Video is detected subscriber_only or needs_auth, change video source status to {status}", Enum.GetName(typeof(VideoStatus), video.SourceStatus));
 
                 break;
         }
@@ -318,6 +336,7 @@ public class YoutubeSerivce : PlatformService, IPlatformSerivce
 
             video.Status = VideoStatus.Recording;
             _logger.LogInformation("{videoId} is now lived! Start recording.", video.id);
+            await _discordService.SendStartRecordingMessage(video);
         }
 
         if (video.Status < 0)

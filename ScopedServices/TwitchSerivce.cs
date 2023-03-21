@@ -16,6 +16,7 @@ public class TwitchSerivce : PlatformService, IPlatformSerivce
     private readonly ACIStreamlinkService _aCIStreamlinkService;
     private readonly ITwitchAPI _twitchAPI;
     private readonly IABSService _aBSService;
+    private readonly DiscordService _discordService;
 
     public override string PlatformName => "Twitch";
 
@@ -29,6 +30,7 @@ public class TwitchSerivce : PlatformService, IPlatformSerivce
         ACIStreamlinkService aCIStreamlinkService,
         ITwitchAPI twitchAPI,
         IABSService aBSService,
+        DiscordService discordService,
         IHttpClientFactory httpClientFactory) : base(channelRepository, aBSService, httpClientFactory, logger)
     {
         _logger = logger;
@@ -37,6 +39,7 @@ public class TwitchSerivce : PlatformService, IPlatformSerivce
         _aCIStreamlinkService = aCIStreamlinkService;
         _twitchAPI = twitchAPI;
         _aBSService = aBSService;
+        _discordService = discordService;
     }
 
     public override async Task UpdateVideosDataAsync(Channel channel, CancellationToken cancellation = default)
@@ -111,6 +114,7 @@ public class TwitchSerivce : PlatformService, IPlatformSerivce
 
                 video.Status = VideoStatus.Recording;
                 _logger.LogInformation("{channelId} is now lived! Start recording.", channel.id);
+                await _discordService.SendStartRecordingMessage(video);
             }
 
             _videoRepository.AddOrUpdate(video);
