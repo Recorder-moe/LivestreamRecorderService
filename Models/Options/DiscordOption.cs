@@ -9,13 +9,21 @@ public class DiscordOption
     public required string Webhook { get; set; }
     public required string FrontEndHost { get; set; }
     public required Emotes Emotes { get; set; }
+    public required Mention Mention { get; set; }
 }
 
 public class Emotes
 {
+    public required string RecorderMoe { get; set; }
     public required string Youtube { get; set; }
     public required string Twitch { get; set; }
     public required string Twitcasting { get; set; }
-    public required string RecorderMoe { get; set; }
+}
+
+public class Mention
+{
+    public string? All { get; set; }
+    public string? Deleted { get; set; }
+    public string? Channel { get; set; }
 }
 

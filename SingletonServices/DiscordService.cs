@@ -5,10 +5,11 @@ using LivestreamRecorderService.DB.Models;
 using LivestreamRecorderService.Models.OptionDiscords;
 using LivestreamRecorderService.Models.Options;
 using Microsoft.Extensions.Options;
+using System.Text.RegularExpressions;
 
 namespace LivestreamRecorderService.SingletonServices;
 
-public class DiscordService
+public partial class DiscordService
 {
     private readonly DiscordWebhookClient _discordWebhookClient;
     private readonly ILogger<DiscordService> _logger;
@@ -23,11 +24,12 @@ public class DiscordService
     {
         _discordWebhookClient = discordWebhookClient;
         _logger = logger;
-        _discordWebhookClient.Log += this.DiscordWebhookClient_Log;
+        _discordWebhookClient.Log += DiscordWebhookClient_Log;
         _discordOption = options.Value;
         _azureOption = azureOptions.Value;
     }
 
+    #region Log mapping
     /// <summary>
     /// 把.NET Core logger對應到Discord內建的logger上面
     /// </summary>
@@ -59,12 +61,14 @@ public class DiscordService
                        break;
                }
            });
+    #endregion
 
     public Task SendStartRecordingMessage(Video video)
     {
         var embedBuilder = GetEmbedBuilder(video);
         embedBuilder.WithTitle("Start Recording");
         embedBuilder.WithColor(Color.Orange);
+        embedBuilder.AddField("Notify", _discordOption.Mention.All);
 
         var componentBuilder = GetComponentBuilder(video);
 
@@ -76,6 +80,7 @@ public class DiscordService
         var embedBuilder = GetEmbedBuilder(video);
         embedBuilder.WithTitle("Video archived");
         embedBuilder.WithColor(Color.Green);
+        embedBuilder.AddField("Notify", _discordOption.Mention.All);
 
         var componentBuilder = GetComponentBuilder(video);
 
@@ -87,6 +92,7 @@ public class DiscordService
         var embedBuilder = GetEmbedBuilder(video);
         embedBuilder.WithTitle("Source " + Enum.GetName(typeof(VideoStatus), video.SourceStatus ?? VideoStatus.Unknown));
         embedBuilder.WithColor(Color.DarkGrey);
+        embedBuilder.AddField("Notify", $"{_discordOption.Mention.All} {_discordOption.Mention.Deleted}");
 
         var componentBuilder = GetComponentBuilder(video);
 
@@ -98,6 +104,7 @@ public class DiscordService
         var embedBuilder = GetEmbedBuilder(channel);
         embedBuilder.WithTitle("The support token is about to run out.");
         embedBuilder.WithColor(Color.Gold);
+        embedBuilder.AddField("Notify", $"{_discordOption.Mention.All} {_discordOption.Mention.Channel}");
 
         var componentBuilder = GetComponentBuilder(channel);
 
@@ -109,6 +116,7 @@ public class DiscordService
         var embedBuilder = GetEmbedBuilder(channel);
         embedBuilder.WithTitle("The support token has been exhausted.");
         embedBuilder.WithColor(Color.Red);
+        embedBuilder.AddField("Notify", $"{_discordOption.Mention.All} {_discordOption.Mention.Channel}");
 
         var componentBuilder = GetComponentBuilder(channel);
 
@@ -208,10 +216,25 @@ public class DiscordService
 
     async Task SendMessage(Embed embed, MessageComponent component)
     {
+        AllowedMentions allowedMentions = new(AllowedMentionTypes.Roles)
+        {
+            RoleIds = new List<string?>()
+            {
+                _discordOption.Mention.All,
+                _discordOption.Mention.Deleted,
+                _discordOption.Mention.Channel
+            }.Where(p => !string.IsNullOrEmpty(p))
+             .Select(input => ulong.Parse(RegexNumbers().Match(input!).Value))
+             .ToList()
+        };
         ulong messageId = await _discordWebhookClient.SendMessageAsync(embeds: new Embed[] { embed },
                                                                        username: "Recorder.moe Notifier",
                                                                        avatarUrl: $"https://{_discordOption.FrontEndHost}/assets/img/logos/logo-color-big.png",
+                                                                       allowedMentions: allowedMentions,
                                                                        components: component);
         _logger.LogDebug("Message sent to discord: {title}, {messageId}", embed.Title, messageId);
     }
+
+    [GeneratedRegex("\\d+")]
+    private static partial Regex RegexNumbers();
 }
