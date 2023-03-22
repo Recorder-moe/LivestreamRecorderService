@@ -152,9 +152,11 @@ public class DiscordService
     {
         ComponentBuilder componentBuilder = new();
         componentBuilder.WithButton(label: "Recorder.moe",
+                                    style: ButtonStyle.Link,
                                     url: $"https://{_discordOption.FrontEndHost}/channels/{video.ChannelId}/videos/{video.id}",
                                     emote: Emote.Parse(_discordOption.Emotes.RecorderMoe));
         componentBuilder.WithButton(label: video.Source,
+                                    style: ButtonStyle.Link,
                                     url: video.Source switch
                                     {
                                         "Youtube" => $"https://www.youtube.com/watch?v={video.id}",
@@ -180,6 +182,7 @@ public class DiscordService
                                     url: $"https://{_discordOption.FrontEndHost}/channels/{channel.id}",
                                     emote: Emote.Parse(_discordOption.Emotes.RecorderMoe));
         componentBuilder.WithButton(label: channel.Source,
+                                    style: ButtonStyle.Link,
                                     url: channel.Source switch
                                     {
                                         "Youtube" => $"https://www.youtube.com/channel/{channel.id}",
