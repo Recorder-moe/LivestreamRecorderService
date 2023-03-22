@@ -253,7 +253,7 @@ public class YoutubeSerivce : PlatformService, IPlatformSerivce
                    && videoData.Formats?.Count == 0
                    && string.IsNullOrEmpty(videoData.Fulltitle))
                 {
-                    if(video.SourceStatus != VideoStatus.Deleted
+                    if (video.SourceStatus != VideoStatus.Deleted
                        && video.Status == VideoStatus.Archived)
                     {
                         // First detected
@@ -319,7 +319,7 @@ public class YoutubeSerivce : PlatformService, IPlatformSerivce
                 {
                     video.SourceStatus = VideoStatus.Reject;
                     // First detected
-                    if(video.SourceStatus != VideoStatus.Reject)
+                    if (video.SourceStatus != VideoStatus.Reject)
                         await _discordService.SendDeletedMessage(video);
                 }
 
@@ -332,11 +332,11 @@ public class YoutubeSerivce : PlatformService, IPlatformSerivce
         if (video.Status == VideoStatus.WaitingToRecord)
         {
             _ = _aCIYtarchiveService.StartInstanceAsync(videoId: video.id,
-                                                        cancellation: cancellation)
-                                    .ContinueWith((_)=> _discordService.SendStartRecordingMessage(video));
+                                                        cancellation: cancellation);
 
             video.Status = VideoStatus.Recording;
             _logger.LogInformation("{videoId} is now lived! Start recording.", video.id);
+            await _discordService.SendStartRecordingMessage(video);
         }
 
         if (video.Status < 0)

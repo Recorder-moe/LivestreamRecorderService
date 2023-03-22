@@ -112,11 +112,11 @@ public class TwitcastingService : PlatformService, IPlatformSerivce
                 {
                     _ = _aCITwitcastingRecorderService.StartInstanceAsync(videoId: videoId,
                                                                           channelId: video.ChannelId,
-                                                                          cancellation: cancellation)
-                                          .ContinueWith((_) => _discordService.SendStartRecordingMessage(video));
+                                                                          cancellation: cancellation);
 
                     video.Status = VideoStatus.Recording;
                     _logger.LogInformation("{channelId} is now lived! Start recording.", channel.id);
+                    await _discordService.SendStartRecordingMessage(video);
                 }
             }
             else
@@ -251,7 +251,7 @@ public class TwitcastingService : PlatformService, IPlatformSerivce
         }
         else
         {
-            if (video.SourceStatus != VideoStatus.Deleted
+            if(video.SourceStatus != VideoStatus.Deleted
                && video.Status == VideoStatus.Archived)
             {
                 // First detected

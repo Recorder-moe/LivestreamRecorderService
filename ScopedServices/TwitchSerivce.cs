@@ -110,11 +110,11 @@ public class TwitchSerivce : PlatformService, IPlatformSerivce
             {
                 _ = _aCIStreamlinkService.StartInstanceAsync(videoId: video.id,
                                                              channelId: video.ChannelId,
-                                                             cancellation: cancellation)
-                                         .ContinueWith((_)=> _discordService.SendStartRecordingMessage(video));
+                                                             cancellation: cancellation);
 
                 video.Status = VideoStatus.Recording;
                 _logger.LogInformation("{channelId} is now lived! Start recording.", channel.id);
+                await _discordService.SendStartRecordingMessage(video);
             }
 
             _videoRepository.AddOrUpdate(video);
