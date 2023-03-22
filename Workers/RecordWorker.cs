@@ -106,6 +106,10 @@ public class RecordWorker : BackgroundService
     {
         var videos = videoService.GetVideosByStatus(VideoStatus.Recording)
              .Concat(videoService.GetVideosByStatus(VideoStatus.Downloading))
+             // Only check videos that started recording/download more than 3 minutes ago
+             // to avoid checking videos that are not finished deployment yet.
+             .Where(p => null != p.Timestamps.ActualStartTime
+                         && DateTime.Now.Subtract(p.Timestamps.ActualStartTime.Value).TotalMinutes >= 3)
              .ToList();
 
         if (videos.Count > 0)

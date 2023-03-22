@@ -332,11 +332,11 @@ public class YoutubeSerivce : PlatformService, IPlatformSerivce
         if (video.Status == VideoStatus.WaitingToRecord)
         {
             _ = _aCIYtarchiveService.StartInstanceAsync(videoId: video.id,
-                                                        cancellation: cancellation);
+                                                        cancellation: cancellation)
+                                    .ContinueWith((_)=> _discordService.SendStartRecordingMessage(video));
 
             video.Status = VideoStatus.Recording;
             _logger.LogInformation("{videoId} is now lived! Start recording.", video.id);
-            await _discordService.SendStartRecordingMessage(video);
         }
 
         if (video.Status < 0)
