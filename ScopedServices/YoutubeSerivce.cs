@@ -302,7 +302,19 @@ public class YoutubeSerivce : PlatformService, IPlatformSerivce
         {
             case "public":
             case "unlisted":
-                video.SourceStatus = VideoStatus.Exist;
+                // The source status has been restored from rejection or deletion
+                if ((video.SourceStatus == VideoStatus.Reject
+                    || video.SourceStatus == VideoStatus.Deleted)
+                    // According to observation, the LiveChat of edited videos will be removed.
+                    // (But LiveChat can also be manually removed, so it should to be determined after the source status.)
+                    && (null == videoData.Subtitles.LiveChat
+                        || videoData.Subtitles.LiveChat.Count == 0)){
+                    video.SourceStatus = VideoStatus.Edited;
+                }
+                else if (video.SourceStatus != VideoStatus.Edited)
+                {
+                    video.SourceStatus = VideoStatus.Exist;
+                }
                 break;
             // Member only
             case "subscriber_only":
