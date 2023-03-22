@@ -68,11 +68,10 @@ public partial class DiscordService
         var embedBuilder = GetEmbedBuilder(video);
         embedBuilder.WithTitle("Start Recording");
         embedBuilder.WithColor(Color.Orange);
-        embedBuilder.AddField("Notify", _discordOption.Mention.All);
 
         var componentBuilder = GetComponentBuilder(video);
 
-        return SendMessage(embedBuilder.Build(), componentBuilder.Build());
+        return SendMessage(_discordOption.Mention.All, embedBuilder.Build(), componentBuilder.Build());
     }
 
     public Task SendArchivedMessage(Video video)
@@ -80,11 +79,10 @@ public partial class DiscordService
         var embedBuilder = GetEmbedBuilder(video);
         embedBuilder.WithTitle("Video archived");
         embedBuilder.WithColor(Color.Green);
-        embedBuilder.AddField("Notify", _discordOption.Mention.All);
 
         var componentBuilder = GetComponentBuilder(video);
 
-        return SendMessage(embedBuilder.Build(), componentBuilder.Build());
+        return SendMessage(_discordOption.Mention.All, embedBuilder.Build(), componentBuilder.Build());
     }
 
     public Task SendDeletedMessage(Video video)
@@ -92,11 +90,10 @@ public partial class DiscordService
         var embedBuilder = GetEmbedBuilder(video);
         embedBuilder.WithTitle("Source " + Enum.GetName(typeof(VideoStatus), video.SourceStatus ?? VideoStatus.Unknown));
         embedBuilder.WithColor(Color.DarkGrey);
-        embedBuilder.AddField("Notify", $"{_discordOption.Mention.All} {_discordOption.Mention.Deleted}");
 
         var componentBuilder = GetComponentBuilder(video);
 
-        return SendMessage(embedBuilder.Build(), componentBuilder.Build());
+        return SendMessage($"{_discordOption.Mention.All} {_discordOption.Mention.Deleted}", embedBuilder.Build(), componentBuilder.Build());
     }
 
     public Task SendChannelSupportTokenAlertMessage(Channel channel)
@@ -104,11 +101,10 @@ public partial class DiscordService
         var embedBuilder = GetEmbedBuilder(channel);
         embedBuilder.WithTitle("The support token is about to run out.");
         embedBuilder.WithColor(Color.Gold);
-        embedBuilder.AddField("Notify", $"{_discordOption.Mention.All} {_discordOption.Mention.Channel}");
 
         var componentBuilder = GetComponentBuilder(channel);
 
-        return SendMessage(embedBuilder.Build(), componentBuilder.Build());
+        return SendMessage($"{_discordOption.Mention.All} {_discordOption.Mention.Channel}", embedBuilder.Build(), componentBuilder.Build());
     }
 
     public Task SendChannelSupportTokenZeroMessage(Channel channel)
@@ -116,11 +112,10 @@ public partial class DiscordService
         var embedBuilder = GetEmbedBuilder(channel);
         embedBuilder.WithTitle("The support token has been exhausted.");
         embedBuilder.WithColor(Color.Red);
-        embedBuilder.AddField("Notify", $"{_discordOption.Mention.All} {_discordOption.Mention.Channel}");
 
         var componentBuilder = GetComponentBuilder(channel);
 
-        return SendMessage(embedBuilder.Build(), componentBuilder.Build());
+        return SendMessage($"{_discordOption.Mention.All} {_discordOption.Mention.Channel}", embedBuilder.Build(), componentBuilder.Build());
     }
 
     private EmbedBuilder GetEmbedBuilder(Video video)
@@ -214,7 +209,7 @@ public partial class DiscordService
     }
     #endregion
 
-    async Task SendMessage(Embed embed, MessageComponent component)
+    async Task SendMessage(string? text, Embed embed, MessageComponent component)
     {
         AllowedMentions allowedMentions = new()
         {
@@ -227,7 +222,8 @@ public partial class DiscordService
              .Select(input => ulong.Parse(RegexNumbers().Match(input!).Value))
              .ToList()
         };
-        ulong messageId = await _discordWebhookClient.SendMessageAsync(embeds: new Embed[] { embed },
+        ulong messageId = await _discordWebhookClient.SendMessageAsync(text: text,
+                                                                       embeds: new Embed[] { embed },
                                                                        username: "Recorder.moe Notifier",
                                                                        avatarUrl: $"https://{_discordOption.FrontEndHost}/assets/img/logos/logo-color-big.png",
                                                                        allowedMentions: allowedMentions,
