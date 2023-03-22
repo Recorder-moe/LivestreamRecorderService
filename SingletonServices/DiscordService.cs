@@ -121,7 +121,11 @@ public partial class DiscordService
     private EmbedBuilder GetEmbedBuilder(Video video)
     {
         EmbedBuilder embedBuilder = new();
-        embedBuilder.WithImageUrl($"https://{_azureOption.StorageAccountName}.blob.core.windows.net/{_azureOption.BlobContainerNamePublic}/thumbnails/{video.Thumbnail}");
+        if(null != video.Thumbnail)
+            embedBuilder.WithImageUrl($"https://{_azureOption.StorageAccountName}.blob.core.windows.net/{_azureOption.BlobContainerNamePublic}/thumbnails/{video.Thumbnail}");
+        else
+            embedBuilder.WithImageUrl($"https://{_azureOption.StorageAccountName}.blob.core.windows.net/{_azureOption.BlobContainerNamePublic}/banner/{video.Channel.Banner}");
+
         embedBuilder.WithDescription(video.Title);
         embedBuilder.WithUrl($"https://{_discordOption.FrontEndHost}/channels/{video.ChannelId}/videos/{video.id}");
         embedBuilder.AddField("Video ID", video.id, false);
