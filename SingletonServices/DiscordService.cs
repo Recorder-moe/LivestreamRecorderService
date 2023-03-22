@@ -216,7 +216,7 @@ public partial class DiscordService
 
     async Task SendMessage(Embed embed, MessageComponent component)
     {
-        AllowedMentions allowedMentions = new(AllowedMentionTypes.Roles)
+        AllowedMentions allowedMentions = new()
         {
             RoleIds = new List<string?>()
             {
