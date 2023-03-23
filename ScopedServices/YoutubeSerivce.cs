@@ -310,6 +310,8 @@ public class YoutubeSerivce : PlatformService, IPlatformSerivce
                     && (null == videoData.Subtitles.LiveChat
                         || videoData.Subtitles.LiveChat.Count == 0)){
                     video.SourceStatus = VideoStatus.Edited;
+                    video.Note = $"Video source is {Enum.GetName(typeof(VideoStatus), video.SourceStatus)} because it has been restored from rejection or deletion.";
+                    _logger.LogInformation("Video source is {status} because it has been restored from rejection or deletion.", Enum.GetName(typeof(VideoStatus), video.Status));
                 }
                 else if (video.SourceStatus != VideoStatus.Edited)
                 {
@@ -324,8 +326,8 @@ public class YoutubeSerivce : PlatformService, IPlatformSerivce
                 if (video.Status < VideoStatus.Archived)
                 {
                     video.Status = VideoStatus.Skipped;
-                    video.Note = $"Video ${Enum.GetName(typeof(VideoStatus), video.Status)} because it is detected access required or copyright notice.";
-                    _logger.LogInformation("Video {status} because it is detected access required or copyright notice.", Enum.GetName(typeof(VideoStatus), video.Status));
+                    video.Note = $"Video is {Enum.GetName(typeof(VideoStatus), video.Status)} because it is detected access required or copyright notice.";
+                    _logger.LogInformation("Video is {status} because it is detected access required or copyright notice.", Enum.GetName(typeof(VideoStatus), video.Status));
                 }
                 else
                 {
