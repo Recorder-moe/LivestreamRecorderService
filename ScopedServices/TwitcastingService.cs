@@ -246,12 +246,14 @@ public class TwitcastingService : PlatformService, IPlatformSerivce
 
         if (await GetTwitcastingIsPublishAsync(video, cancellation))
         {
+            var (title, telop) = await GetTwitcastingStreamTitleAsync(video.id, cancellation);
+            video.Title = title ?? video.Title;
+            video.Description = telop ?? video.Description;
             video.SourceStatus = VideoStatus.Exist;
-            //video.Status = VideoStatus.WaitingToDownload;
         }
         else
         {
-            if(video.SourceStatus != VideoStatus.Deleted
+            if (video.SourceStatus != VideoStatus.Deleted
                && video.Status == VideoStatus.Archived)
             {
                 // First detected
