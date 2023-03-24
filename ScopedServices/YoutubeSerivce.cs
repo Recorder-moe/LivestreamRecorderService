@@ -329,12 +329,11 @@ public class YoutubeSerivce : PlatformService, IPlatformSerivce
                     video.Note = $"Video is {Enum.GetName(typeof(VideoStatus), video.Status)} because it is detected access required or copyright notice.";
                     _logger.LogInformation("Video is {status} because it is detected access required or copyright notice.", Enum.GetName(typeof(VideoStatus), video.Status));
                 }
-                else
+                // First detected
+                else if (video.SourceStatus != VideoStatus.Reject)
                 {
                     video.SourceStatus = VideoStatus.Reject;
-                    // First detected
-                    if (video.SourceStatus != VideoStatus.Reject)
-                        await _discordService.SendDeletedMessage(video);
+                    await _discordService.SendDeletedMessage(video);
                 }
 
                 video.SourceStatus = VideoStatus.Reject;
