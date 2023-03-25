@@ -87,6 +87,17 @@ public partial class DiscordService
         return SendMessage(embedBuilder.Build(), componentBuilder.Build());
     }
 
+    public Task SendSkippedMessage(Video video)
+    {
+        var embedBuilder = GetEmbedBuilder(video);
+        embedBuilder.WithTitle("Video skipped");
+        embedBuilder.WithColor(Color.LightGrey);
+
+        var componentBuilder = GetComponentBuilder(video);
+
+        return SendMessage(embedBuilder.Build(), componentBuilder.Build(), video.Note ?? "");
+    }
+
     public Task SendDeletedMessage(Video video)
     {
         var embedBuilder = GetEmbedBuilder(video);
@@ -95,29 +106,29 @@ public partial class DiscordService
 
         var componentBuilder = GetComponentBuilder(video);
 
-        return SendMessageWarning($"{_discordOption.Mention.Deleted}", embedBuilder.Build(), componentBuilder.Build());
+        return SendMessageWarning(embedBuilder.Build(), componentBuilder.Build(), $"{_discordOption.Mention.Deleted} {video.Note}");
     }
 
     public Task SendChannelSupportTokenAlertMessage(Channel channel)
     {
         var embedBuilder = GetEmbedBuilder(channel);
-        embedBuilder.WithTitle("The support token is about to run out.");
+        embedBuilder.WithTitle($"{channel.ChannelName} has {channel.SupportToken} ST.");
         embedBuilder.WithColor(Color.Gold);
 
         var componentBuilder = GetComponentBuilder(channel);
 
-        return SendMessageWarning($"{_discordOption.Mention.Channel}", embedBuilder.Build(), componentBuilder.Build());
+        return SendMessageWarning(embedBuilder.Build(), componentBuilder.Build(), $"{_discordOption.Mention.Channel} The support token is about to run out.");
     }
 
     public Task SendChannelSupportTokenZeroMessage(Channel channel)
     {
         var embedBuilder = GetEmbedBuilder(channel);
-        embedBuilder.WithTitle("The support token has been exhausted.");
+        embedBuilder.WithTitle($"{channel.ChannelName} has {channel.SupportToken} ST.");
         embedBuilder.WithColor(Color.Red);
 
         var componentBuilder = GetComponentBuilder(channel);
 
-        return SendMessageWarning($"{_discordOption.Mention.Channel}", embedBuilder.Build(), componentBuilder.Build());
+        return SendMessageWarning(embedBuilder.Build(), componentBuilder.Build(), $"{_discordOption.Mention.Channel} The support token has been exhausted.");
     }
 
     private EmbedBuilder GetEmbedBuilder(Video video)
@@ -215,9 +226,10 @@ public partial class DiscordService
     }
     #endregion
 
-    async Task SendMessage(Embed embed, MessageComponent component)
+    async Task SendMessage(Embed embed, MessageComponent component, string text = "")
     {
         ulong messageId = await _discordWebhookClient.SendMessageAsync(
+            text: text,
             embeds: new Embed[] { embed },
             username: "Recorder.moe Notifier",
             avatarUrl: $"https://{_discordOption.FrontEndHost}/assets/img/logos/logo-color-big.png",
@@ -225,7 +237,7 @@ public partial class DiscordService
         _logger.LogDebug("Message sent to discord: {title}, {messageId}", embed.Title, messageId);
     }
 
-    async Task SendMessageWarning(string? text, Embed embed, MessageComponent component)
+    async Task SendMessageWarning(Embed embed, MessageComponent component,string? text)
     {
         AllowedMentions allowedMentions = new()
         {

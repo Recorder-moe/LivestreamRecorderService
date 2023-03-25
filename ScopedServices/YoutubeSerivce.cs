@@ -236,8 +236,13 @@ public class YoutubeSerivce : PlatformService, IPlatformSerivce
                 // Don't download uploaded videos.
                 if (video.Status == VideoStatus.Unknown)
                 {
-                    video.Status = VideoStatus.Skipped;
                     video.Note = $"Video skipped because it is not live stream.";
+                    // First detected
+                    if (video.Status != VideoStatus.Skipped)
+                    {
+                        await _discordService.SendSkippedMessage(video);
+                    }
+                    video.Status = VideoStatus.Skipped;
                     _logger.LogInformation("Change video {videoId} status to {videoStatus}", video.id, Enum.GetName(typeof(VideoStatus), video.Status));
                 }
 
@@ -287,8 +292,13 @@ public class YoutubeSerivce : PlatformService, IPlatformSerivce
         else if (video.SourceStatus == VideoStatus.Deleted
                  && video.Status < VideoStatus.Uploading)
         {
-            video.Status = VideoStatus.Missing;
             video.Note = "This video archive is missing. If you would like to provide it, please contact admin.";
+            if(video.Status != VideoStatus.Missing)
+            {
+                video.SourceStatus = VideoStatus.Missing;
+                await _discordService.SendSkippedMessage(video);
+            }
+            video.Status = VideoStatus.Missing;
             _logger.LogInformation("Source removed and not archived, change video status to {status}", Enum.GetName(typeof(VideoStatus), VideoStatus.Missing));
         }
         else if (video.Status == VideoStatus.Archived)
@@ -308,9 +318,15 @@ public class YoutubeSerivce : PlatformService, IPlatformSerivce
                     // According to observation, the LiveChat of edited videos will be removed.
                     // (But LiveChat can also be manually removed, so it should to be determined after the source status.)
                     && (null == videoData.Subtitles.LiveChat
-                        || videoData.Subtitles.LiveChat.Count == 0)){
+                        || videoData.Subtitles.LiveChat.Count == 0))
+                {
+                    video.Note = $"Video source is Edited because it has been restored from rejection or deletion.";
+                    if(video.SourceStatus != VideoStatus.Edited)
+                    {
+                        video.SourceStatus = VideoStatus.Edited;
+                        await _discordService.SendDeletedMessage(video);
+                    }
                     video.SourceStatus = VideoStatus.Edited;
-                    video.Note = $"Video source is {Enum.GetName(typeof(VideoStatus), video.SourceStatus)} because it has been restored from rejection or deletion.";
                     _logger.LogInformation("Video source is {status} because it has been restored from rejection or deletion.", Enum.GetName(typeof(VideoStatus), video.Status));
                 }
                 else if (video.SourceStatus != VideoStatus.Edited)
@@ -325,8 +341,13 @@ public class YoutubeSerivce : PlatformService, IPlatformSerivce
                 // Not archived
                 if (video.Status < VideoStatus.Archived)
                 {
+                    video.Note = $"Video is Skipped because it is detected access required or copyright notice.";
+                    // First detected
+                    if (video.Status != VideoStatus.Skipped)
+                    {
+                        await _discordService.SendSkippedMessage(video);
+                    }
                     video.Status = VideoStatus.Skipped;
-                    video.Note = $"Video is {Enum.GetName(typeof(VideoStatus), video.Status)} because it is detected access required or copyright notice.";
                     _logger.LogInformation("Video is {status} because it is detected access required or copyright notice.", Enum.GetName(typeof(VideoStatus), video.Status));
                 }
                 // First detected
@@ -337,7 +358,7 @@ public class YoutubeSerivce : PlatformService, IPlatformSerivce
                 }
 
                 video.SourceStatus = VideoStatus.Reject;
-                _logger.LogInformation("Video is detected subscriber_only or needs_auth, change video source status to {status}", Enum.GetName(typeof(VideoStatus), video.SourceStatus));
+                _logger.LogInformation("Video source is {status} because it is detected access required or copyright notice.", Enum.GetName(typeof(VideoStatus), video.SourceStatus));
 
                 break;
         }

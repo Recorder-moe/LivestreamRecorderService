@@ -1,5 +1,8 @@
 ﻿using Newtonsoft.Json;
 #nullable disable
+#pragma warning disable CA1507 // 使用 nameof 表示符號名稱
+#pragma warning disable CS8632 // 可為 Null 的參考型別註釋應只用於 '#nullable' 註釋內容中的程式碼。
+#pragma warning disable IDE1006 // 命名樣式
 
 namespace LivestreamRecorderService.Models;
 

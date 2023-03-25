@@ -256,8 +256,8 @@ public class TwitcastingService : PlatformService, IPlatformSerivce
             if (video.SourceStatus != VideoStatus.Deleted
                && video.Status == VideoStatus.Archived)
             {
-                // First detected
                 video.SourceStatus = VideoStatus.Deleted;
+                // First detected
                 await _discordService.SendDeletedMessage(video);
             }
             video.SourceStatus = VideoStatus.Deleted;
