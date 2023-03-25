@@ -7,6 +7,7 @@ public class DiscordOption
 #pragma warning restore IDE1006 // 命名樣式
 
     public required string Webhook { get; set; }
+    public required string WebhookWarning { get; set; }
     public required string FrontEndHost { get; set; }
     public required Emotes Emotes { get; set; }
     public required Mention Mention { get; set; }
@@ -22,7 +23,6 @@ public class Emotes
 
 public class Mention
 {
-    public string? All { get; set; }
     public string? Deleted { get; set; }
     public string? Channel { get; set; }
 }

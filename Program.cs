@@ -108,7 +108,6 @@ try
         services.AddSingleton<ACITwitcastingRecorderService>();
         services.AddSingleton<ACIStreamlinkService>();
 
-        services.AddSingleton((service) => new DiscordWebhookClient(discordOptions.Webhook));
         services.AddSingleton<DiscordService>();
 
         services.AddSingleton<ITwitchAPI, TwitchAPI>(s =>

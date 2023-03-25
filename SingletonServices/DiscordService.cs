@@ -11,22 +11,24 @@ namespace LivestreamRecorderService.SingletonServices;
 
 public partial class DiscordService
 {
-    private readonly DiscordWebhookClient _discordWebhookClient;
     private readonly ILogger<DiscordService> _logger;
     private readonly DiscordOption _discordOption;
     private readonly AzureOption _azureOption;
+    private readonly DiscordWebhookClient _discordWebhookClient;
+    private readonly DiscordWebhookClient _discordWebhookClientWarning;
 
     public DiscordService(
-        DiscordWebhookClient discordWebhookClient,
         ILogger<DiscordService> logger,
         IOptions<DiscordOption> options,
         IOptions<AzureOption> azureOptions)
     {
-        _discordWebhookClient = discordWebhookClient;
         _logger = logger;
-        _discordWebhookClient.Log += DiscordWebhookClient_Log;
         _discordOption = options.Value;
         _azureOption = azureOptions.Value;
+        _discordWebhookClient = new DiscordWebhookClient(_discordOption.Webhook);
+        _discordWebhookClient.Log += DiscordWebhookClient_Log;
+        _discordWebhookClientWarning = new DiscordWebhookClient(_discordOption.WebhookWarning);
+        _discordWebhookClientWarning.Log += DiscordWebhookClient_Log;
     }
 
     #region Log mapping
@@ -71,7 +73,7 @@ public partial class DiscordService
 
         var componentBuilder = GetComponentBuilder(video);
 
-        return SendMessage(_discordOption.Mention.All, embedBuilder.Build(), componentBuilder.Build());
+        return SendMessage(embedBuilder.Build(), componentBuilder.Build());
     }
 
     public Task SendArchivedMessage(Video video)
@@ -82,7 +84,7 @@ public partial class DiscordService
 
         var componentBuilder = GetComponentBuilder(video);
 
-        return SendMessage(_discordOption.Mention.All, embedBuilder.Build(), componentBuilder.Build());
+        return SendMessage(embedBuilder.Build(), componentBuilder.Build());
     }
 
     public Task SendDeletedMessage(Video video)
@@ -93,7 +95,7 @@ public partial class DiscordService
 
         var componentBuilder = GetComponentBuilder(video);
 
-        return SendMessage($"{_discordOption.Mention.All} {_discordOption.Mention.Deleted}", embedBuilder.Build(), componentBuilder.Build());
+        return SendMessageWarning($"{_discordOption.Mention.Deleted}", embedBuilder.Build(), componentBuilder.Build());
     }
 
     public Task SendChannelSupportTokenAlertMessage(Channel channel)
@@ -104,7 +106,7 @@ public partial class DiscordService
 
         var componentBuilder = GetComponentBuilder(channel);
 
-        return SendMessage($"{_discordOption.Mention.All} {_discordOption.Mention.Channel}", embedBuilder.Build(), componentBuilder.Build());
+        return SendMessageWarning($"{_discordOption.Mention.Channel}", embedBuilder.Build(), componentBuilder.Build());
     }
 
     public Task SendChannelSupportTokenZeroMessage(Channel channel)
@@ -115,7 +117,7 @@ public partial class DiscordService
 
         var componentBuilder = GetComponentBuilder(channel);
 
-        return SendMessage($"{_discordOption.Mention.All} {_discordOption.Mention.Channel}", embedBuilder.Build(), componentBuilder.Build());
+        return SendMessageWarning($"{_discordOption.Mention.Channel}", embedBuilder.Build(), componentBuilder.Build());
     }
 
     private EmbedBuilder GetEmbedBuilder(Video video)
@@ -213,26 +215,36 @@ public partial class DiscordService
     }
     #endregion
 
-    async Task SendMessage(string? text, Embed embed, MessageComponent component)
+    async Task SendMessage(Embed embed, MessageComponent component)
+    {
+        ulong messageId = await _discordWebhookClient.SendMessageAsync(
+            embeds: new Embed[] { embed },
+            username: "Recorder.moe Notifier",
+            avatarUrl: $"https://{_discordOption.FrontEndHost}/assets/img/logos/logo-color-big.png",
+            components: component);
+        _logger.LogDebug("Message sent to discord: {title}, {messageId}", embed.Title, messageId);
+    }
+
+    async Task SendMessageWarning(string? text, Embed embed, MessageComponent component)
     {
         AllowedMentions allowedMentions = new()
         {
             RoleIds = new List<string?>()
             {
-                _discordOption.Mention.All,
                 _discordOption.Mention.Deleted,
                 _discordOption.Mention.Channel
             }.Where(p => !string.IsNullOrEmpty(p))
              .Select(input => ulong.Parse(RegexNumbers().Match(input!).Value))
              .ToList()
         };
-        ulong messageId = await _discordWebhookClient.SendMessageAsync(text: text,
-                                                                       embeds: new Embed[] { embed },
-                                                                       username: "Recorder.moe Notifier",
-                                                                       avatarUrl: $"https://{_discordOption.FrontEndHost}/assets/img/logos/logo-color-big.png",
-                                                                       allowedMentions: allowedMentions,
-                                                                       components: component);
-        _logger.LogDebug("Message sent to discord: {title}, {messageId}", embed.Title, messageId);
+        ulong messageId = await _discordWebhookClientWarning.SendMessageAsync(
+            text: text,
+            embeds: new Embed[] { embed },
+            username: "Recorder.moe Notifier",
+            avatarUrl: $"https://{_discordOption.FrontEndHost}/assets/img/logos/logo-color-big.png",
+            allowedMentions: allowedMentions,
+            components: component);
+        _logger.LogDebug("Message warning sent to discord: {title}, {messageId}", embed.Title, messageId);
     }
 
     [GeneratedRegex("\\d+")]
