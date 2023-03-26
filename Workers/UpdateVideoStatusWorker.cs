@@ -88,8 +88,8 @@ public class UpdateVideoStatusWorker : BackgroundService
                 }
             }
 
-            _logger.LogTrace("{Worker} ends. Sleep 10 minutes.", nameof(UpdateVideoStatusWorker));
-            await Task.Delay(TimeSpan.FromMinutes(10), stoppingToken);
+            _logger.LogTrace("{Worker} ends. Sleep 5 minutes.", nameof(UpdateVideoStatusWorker));
+            await Task.Delay(TimeSpan.FromMinutes(5), stoppingToken);
         }
     }
 
