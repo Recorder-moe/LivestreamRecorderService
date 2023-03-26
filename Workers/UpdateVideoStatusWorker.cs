@@ -64,6 +64,8 @@ public class UpdateVideoStatusWorker : BackgroundService
                 var video = videos[i];
                 _logger.LogInformation("Update video data: {videoId}", video.id);
 
+                video = videoRepository.LoadRelatedData(video);
+
                 switch (video.Source)
                 {
                     case "Youtube":
