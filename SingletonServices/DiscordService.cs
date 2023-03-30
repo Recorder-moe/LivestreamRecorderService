@@ -145,7 +145,7 @@ public partial class DiscordService
         embedBuilder.AddField("Channel", video.Channel.ChannelName, false);
         embedBuilder.AddField("Channel ID", video.ChannelId, true);
         embedBuilder.AddField("Source", video.Source, true);
-        embedBuilder.AddField("Is live stream", video.IsLiveStream, true);
+        embedBuilder.AddField("Is live stream", video.IsLiveStream?.ToString() ?? "Unknown", true);
         if (null != video.Timestamps.PublishedAt)
             embedBuilder.AddField("Published at", video.Timestamps.PublishedAt?.ToString("yyyy/MM/dd HH:mm:ss"), true);
         //if (null != video.Timestamps.ScheduledStartTime)
@@ -237,7 +237,7 @@ public partial class DiscordService
         _logger.LogDebug("Message sent to discord: {title}, {messageId}", embed.Title, messageId);
     }
 
-    async Task SendMessageWarning(Embed embed, MessageComponent component,string? text)
+    async Task SendMessageWarning(Embed embed, MessageComponent component, string? text)
     {
         AllowedMentions allowedMentions = new()
         {
