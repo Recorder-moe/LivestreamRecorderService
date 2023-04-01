@@ -33,6 +33,7 @@ IConfiguration configuration = new ConfigurationBuilder()
 
 Log.Logger = new LoggerConfiguration().ReadFrom.Configuration(configuration)
                                       .Enrich.WithMachineName()
+                                      .Enrich.FromLogContext()
                                       .CreateLogger();
 
 Log.Information("Starting up...");
