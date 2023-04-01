@@ -293,7 +293,7 @@ public class YoutubeSerivce : PlatformService, IPlatformSerivce
                  && video.Status < VideoStatus.Uploading)
         {
             video.Note = "This video archive is missing. If you would like to provide it, please contact admin.";
-            if(video.Status != VideoStatus.Missing)
+            if (video.Status != VideoStatus.Missing)
             {
                 video.SourceStatus = VideoStatus.Missing;
                 await _discordService.SendSkippedMessage(video);
@@ -321,7 +321,7 @@ public class YoutubeSerivce : PlatformService, IPlatformSerivce
                         || videoData.Subtitles.LiveChat.Count == 0))
                 {
                     video.Note = $"Video source is Edited because it has been restored from rejection or deletion.";
-                    if(video.SourceStatus != VideoStatus.Edited)
+                    if (video.SourceStatus != VideoStatus.Edited)
                     {
                         video.SourceStatus = VideoStatus.Edited;
                         await _discordService.SendDeletedMessage(video);

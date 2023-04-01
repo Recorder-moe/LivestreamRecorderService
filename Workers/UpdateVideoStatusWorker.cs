@@ -50,8 +50,10 @@ public class UpdateVideoStatusWorker : BackgroundService
                 IPlatformSerivce twitchService = scope.ServiceProvider.GetRequiredService<TwitchSerivce>();
                 #endregion
 
-                videos = videoRepository.Where(p => p.Status>=VideoStatus.Archived
+                videos = videoRepository.Where(p => p.Status >= VideoStatus.Archived
                                                     && p.Status < VideoStatus.Expired)
+                                        .ToList()
+                                        // Sort locally to reduce the CPU usage of CosmosDB
                                         .OrderByDescending(p => p.Timestamps.PublishedAt)
                                         .ToList();
 
