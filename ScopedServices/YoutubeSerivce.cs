@@ -152,9 +152,8 @@ public class YoutubeSerivce : PlatformService, IPlatformSerivce
 
         if (null == videoData)
         {
-            _logger.LogWarning("Failed to get video info for {videoId}", video.id);
+            _logger.LogWarning("Failed to get video data for {videoId}", video.id);
             video.Status = VideoStatus.Unknown;
-            video.Note = "An exception occurred while getting video info. Please contact admin if you see this message.";
             return;
         }
 
@@ -258,6 +257,7 @@ public class YoutubeSerivce : PlatformService, IPlatformSerivce
                    && videoData.Formats?.Count == 0
                    && string.IsNullOrEmpty(videoData.Fulltitle))
                 {
+                    video.Note = "Get empty video data, maybe it is deleted!";
                     if (video.SourceStatus != VideoStatus.Deleted
                        && video.Status == VideoStatus.Archived)
                     {
@@ -267,7 +267,7 @@ public class YoutubeSerivce : PlatformService, IPlatformSerivce
                     }
 
                     video.SourceStatus = VideoStatus.Deleted;
-                    _logger.LogInformation("Failed to fetch video data, maybe it is deleted! {videoId}", video.id);
+                    _logger.LogInformation("Get empty video data, maybe it is deleted! {videoId}", video.id);
                 }
                 else
                 {
