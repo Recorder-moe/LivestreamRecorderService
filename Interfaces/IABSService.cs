@@ -1,5 +1,5 @@
 ﻿using Azure.Storage.Blobs;
-using LivestreamRecorderService.DB.Models;
+using LivestreamRecorder.DB.Models;
 
 namespace LivestreamRecorderService.Interfaces
 {

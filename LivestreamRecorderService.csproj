@@ -11,10 +11,10 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <Compile Remove="LivestreamRecorderService.DB\**" />
-    <Content Remove="LivestreamRecorderService.DB\**" />
-    <EmbeddedResource Remove="LivestreamRecorderService.DB\**" />
-    <None Remove="LivestreamRecorderService.DB\**" />
+    <Compile Remove="LivestreamRecorder.DB\**" />
+    <Content Remove="LivestreamRecorder.DB\**" />
+    <EmbeddedResource Remove="LivestreamRecorder.DB\**" />
+    <None Remove="LivestreamRecorder.DB\**" />
   </ItemGroup>
 
   <ItemGroup>
@@ -50,7 +50,7 @@
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="LivestreamRecorderService.DB\LivestreamRecorderService.DB.csproj" />
+    <ProjectReference Include="LivestreamRecorder.DB\LivestreamRecorder.DB.csproj" />
   </ItemGroup>
 
   <ItemGroup>

@@ -1,7 +1,7 @@
 ﻿using Discord;
 using Discord.Webhook;
-using LivestreamRecorderService.DB.Enum;
-using LivestreamRecorderService.DB.Models;
+using LivestreamRecorder.DB.Enum;
+using LivestreamRecorder.DB.Models;
 using LivestreamRecorderService.Models.OptionDiscords;
 using LivestreamRecorderService.Models.Options;
 using Microsoft.Extensions.Options;

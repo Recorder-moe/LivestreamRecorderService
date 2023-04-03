@@ -1,6 +1,6 @@
 ﻿using Azure.Storage.Blobs.Models;
-using LivestreamRecorderService.DB.Interfaces;
-using LivestreamRecorderService.DB.Models;
+using LivestreamRecorder.DB.Interfaces;
+using LivestreamRecorder.DB.Models;
 using LivestreamRecorderService.Helper;
 using LivestreamRecorderService.Interfaces;
 using LivestreamRecorderService.Models;

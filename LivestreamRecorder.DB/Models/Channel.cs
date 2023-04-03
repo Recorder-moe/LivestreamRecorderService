@@ -1,10 +1,9 @@
-﻿using Microsoft.EntityFrameworkCore;
-using System.ComponentModel.DataAnnotations.Schema;
+﻿using System.ComponentModel.DataAnnotations.Schema;
 
-namespace LivestreamRecorderService.DB.Models;
+namespace LivestreamRecorder.DB.Models;
+#pragma warning disable CS8618 // 退出建構函式時，不可為 Null 的欄位必須包含非 Null 值。請考慮宣告為可為 Null。
 
 [Table("Channels")]
-[PrimaryKey("id")]
 public class Channel : Entity
 {
     public Channel()
@@ -12,11 +11,11 @@ public class Channel : Entity
         Videos = new HashSet<Video>();
     }
 
-    public override required string id { get; set; }
+    public override string id { get; set; }
 
-    public required string ChannelName { get; set; }
+    public string ChannelName { get; set; }
 
-    public required string Source { get; set; }
+    public string Source { get; set; }
 
     public bool Monitoring { get; set; } = false;
 

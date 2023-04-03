@@ -1,12 +1,12 @@
-﻿using LivestreamRecorderService.DB.Exceptions;
-using LivestreamRecorderService.DB.Interfaces;
-using LivestreamRecorderService.DB.Models;
+﻿using LivestreamRecorder.DB.Exceptions;
+using LivestreamRecorder.DB.Interfaces;
+using LivestreamRecorder.DB.Models;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.ChangeTracking;
 using Omu.ValueInjecter;
 using System.Linq.Expressions;
 
-namespace LivestreamRecorderService.DB.Core;
+namespace LivestreamRecorder.DB.Core;
 
 public abstract class CosmosDbRepository<T> : ICosmosDbRepository<T> where T : Entity
 {

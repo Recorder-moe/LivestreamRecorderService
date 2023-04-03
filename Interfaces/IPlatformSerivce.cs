@@ -1,4 +1,4 @@
-﻿using LivestreamRecorderService.DB.Models;
+﻿using LivestreamRecorder.DB.Models;
 using LivestreamRecorderService.Models;
 
 namespace LivestreamRecorderService.Interfaces;

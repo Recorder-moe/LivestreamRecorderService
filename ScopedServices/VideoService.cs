@@ -1,7 +1,7 @@
 ﻿using Azure.Storage.Files.Shares.Models;
-using LivestreamRecorderService.DB.Enum;
-using LivestreamRecorderService.DB.Interfaces;
-using LivestreamRecorderService.DB.Models;
+using LivestreamRecorder.DB.Enum;
+using LivestreamRecorder.DB.Interfaces;
+using LivestreamRecorder.DB.Models;
 using LivestreamRecorderService.Models;
 using LivestreamRecorderService.SingletonServices;
 using Newtonsoft.Json;

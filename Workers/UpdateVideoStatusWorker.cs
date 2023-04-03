@@ -1,7 +1,7 @@
 ﻿using Azure.Storage.Blobs.Models;
-using LivestreamRecorderService.DB.Enum;
-using LivestreamRecorderService.DB.Interfaces;
-using LivestreamRecorderService.DB.Models;
+using LivestreamRecorder.DB.Enum;
+using LivestreamRecorder.DB.Interfaces;
+using LivestreamRecorder.DB.Models;
 using LivestreamRecorderService.Interfaces;
 using LivestreamRecorderService.Models.Options;
 using LivestreamRecorderService.ScopedServices;

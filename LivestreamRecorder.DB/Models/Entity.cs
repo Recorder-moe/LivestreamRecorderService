@@ -1,8 +1,5 @@
-﻿using Microsoft.EntityFrameworkCore;
+﻿namespace LivestreamRecorder.DB.Models;
 
-namespace LivestreamRecorderService.DB.Models;
-
-[PrimaryKey(nameof(id))]
 public abstract class Entity
 {
     /// <summary>

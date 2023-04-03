@@ -1,4 +1,4 @@
-﻿using LivestreamRecorderService.DB.Enum;
+﻿using LivestreamRecorder.DB.Enum;
 using LivestreamRecorderService.Interfaces;
 using LivestreamRecorderService.Models.Options;
 using LivestreamRecorderService.ScopedServices;

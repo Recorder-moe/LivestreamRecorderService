@@ -3,7 +3,7 @@
 
 using System;
 
-namespace LivestreamRecorderService.DB.Exceptions
+namespace LivestreamRecorder.DB.Exceptions
 {
     public class EntityNotFoundException : Exception
     {

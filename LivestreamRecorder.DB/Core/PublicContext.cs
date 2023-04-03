@@ -1,12 +1,15 @@
-﻿using LivestreamRecorderService.DB.Models;
+﻿using LivestreamRecorder.DB.Models;
 using Microsoft.EntityFrameworkCore;
+#nullable disable warnings
 
-namespace LivestreamRecorderService.DB.Core;
+namespace LivestreamRecorder.DB.Core;
 
 public class PublicContext : DbContext
 {
     public DbSet<Video> Videos { get; set; }
     public DbSet<Channel> Channels { get; set; }
+
+    public PublicContext() { }
 
     public PublicContext(DbContextOptions options) : base(options)
     {

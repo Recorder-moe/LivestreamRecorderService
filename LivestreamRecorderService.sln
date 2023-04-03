@@ -5,7 +5,7 @@ VisualStudioVersion = 17.4.33122.133
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "LivestreamRecorderService", "LivestreamRecorderService.csproj", "{7A449A9F-D7D3-4ACC-9105-78AD89BF2240}"
 EndProject
-Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "LivestreamRecorderService.DB", "LivestreamRecorderService.DB\LivestreamRecorderService.DB.csproj", "{194EA7A4-7735-40ED-B89A-AFAC094B91C0}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "LivestreamRecorder.DB", "LivestreamRecorder.DB\LivestreamRecorder.DB.csproj", "{194EA7A4-7735-40ED-B89A-AFAC094B91C0}"
 EndProject
 Project("{E53339B2-1760-4266-BCC7-CA923CBCF16C}") = "docker-compose", "docker-compose.dcproj", "{D9705463-12BD-4589-B8E0-53C6EE792EE8}"
 EndProject

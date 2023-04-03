@@ -1,8 +1,8 @@
 using Azure.Identity;
 using Azure.ResourceManager;
 using Discord.Webhook;
-using LivestreamRecorderService.DB.Core;
-using LivestreamRecorderService.DB.Interfaces;
+using LivestreamRecorder.DB.Core;
+using LivestreamRecorder.DB.Interfaces;
 using LivestreamRecorderService.Interfaces;
 using LivestreamRecorderService.Models.OptionDiscords;
 using LivestreamRecorderService.Models.Options;

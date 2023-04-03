@@ -1,5 +1,5 @@
-﻿using LivestreamRecorderService.DB.Interfaces;
-using LivestreamRecorderService.DB.Models;
+﻿using LivestreamRecorder.DB.Interfaces;
+using LivestreamRecorder.DB.Models;
 using LivestreamRecorderService.SingletonServices;
 
 namespace LivestreamRecorderService.ScopedServices;

@@ -3,7 +3,7 @@ using Azure.ResourceManager;
 using Azure.ResourceManager.ContainerInstance;
 using Azure.ResourceManager.Resources;
 using Azure.ResourceManager.Resources.Models;
-using LivestreamRecorderService.DB.Models;
+using LivestreamRecorder.DB.Models;
 using LivestreamRecorderService.Models.Options;
 using Microsoft.Extensions.Options;
 

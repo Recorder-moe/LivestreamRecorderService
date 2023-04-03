@@ -1,26 +1,25 @@
-﻿using LivestreamRecorderService.DB.Enum;
-using Microsoft.EntityFrameworkCore;
+﻿using LivestreamRecorder.DB.Enum;
 using System.ComponentModel.DataAnnotations.Schema;
 
-namespace LivestreamRecorderService.DB.Models;
+namespace LivestreamRecorder.DB.Models;
+#pragma warning disable CS8618 // 退出建構函式時，不可為 Null 的欄位必須包含非 Null 值。請考慮宣告為可為 Null。
 
 [Table("Videos")]
-[PrimaryKey(nameof(id))]
 public class Video : Entity
 {
-    public override required string id { get; set; }
+    public override string id { get; set; }
 
-    public required string Source { get; set; }
+    public string Source { get; set; }
 
-    public required VideoStatus Status { get; set; }
+    public VideoStatus Status { get; set; }
 
     public bool? IsLiveStream { get; set; }
 
-    public required string Title { get; set; }
+    public string Title { get; set; }
 
     public string? Description { get; set; }
 
-    public required Timestamps Timestamps { get; set; }
+    public Timestamps Timestamps { get; set; }
 
     // My system upload timestamp
     public DateTime? ArchivedTime { get; set; }
@@ -35,9 +34,9 @@ public class Video : Entity
 
     public string? Note { get; set; }
 
-    public required string ChannelId { get; set; }
+    public string ChannelId { get; set; }
 
-    public required Channel Channel { get; set; }
+    public Channel Channel { get; set; }
 }
 
 public class Timestamps

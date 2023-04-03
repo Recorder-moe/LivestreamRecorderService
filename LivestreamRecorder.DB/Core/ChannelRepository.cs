@@ -1,7 +1,7 @@
-﻿using LivestreamRecorderService.DB.Interfaces;
-using LivestreamRecorderService.DB.Models;
+﻿using LivestreamRecorder.DB.Interfaces;
+using LivestreamRecorder.DB.Models;
 
-namespace LivestreamRecorderService.DB.Core;
+namespace LivestreamRecorder.DB.Core;
 
 public class ChannelRepository : CosmosDbRepository<Channel>, IChannelRepository
 {
