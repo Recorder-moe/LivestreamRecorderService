@@ -35,6 +35,8 @@ public class Transaction : Entity
 
     public string? Note { get; set; }
 
+    public string? EcPayMerchantTradeNo { get; set; }
+
     public string? EcPayTradeNo { get; set; }
 
     public User User { get; set; }

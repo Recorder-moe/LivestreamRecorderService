@@ -69,10 +69,16 @@ try
                 .ValidateDataAnnotations()
                 .ValidateOnStart();
 
+        services.AddOptions<EcPayOption>()
+                .Bind(configuration.GetSection(EcPayOption.ConfigurationSectionName))
+                .ValidateDataAnnotations()
+                .ValidateOnStart();
+
         var azureOptions = services.BuildServiceProvider().GetRequiredService<IOptions<AzureOption>>().Value;
         var cosmosDbOptions = services.BuildServiceProvider().GetRequiredService<IOptions<CosmosDbOptions>>().Value;
         var twitchOptions = services.BuildServiceProvider().GetRequiredService<IOptions<TwitchOption>>().Value;
         var discordOptions = services.BuildServiceProvider().GetRequiredService<IOptions<DiscordOption>>().Value;
+        var ecPayOptions = services.BuildServiceProvider().GetRequiredService<IOptions<EcPayOption>>().Value;
 
         // Add CosmosDb
         services.AddDbContext<PublicContext>((options) =>
@@ -123,6 +129,7 @@ try
         services.AddSingleton<ACITwitcastingRecorderService>();
         services.AddSingleton<ACIStreamlinkService>();
 
+        services.AddSingleton<EcPayService>();
         services.AddSingleton<DiscordService>();
 
         services.AddSingleton<ITwitchAPI, TwitchAPI>(s =>
@@ -141,9 +148,11 @@ try
         services.AddHostedService<MonitorWorker>();
         services.AddHostedService<UpdateChannelInfoWorker>();
         services.AddHostedService<UpdateVideoStatusWorker>();
+        services.AddHostedService<CheckPendingTransactionWorker>();
 
         services.AddScoped<VideoService>();
         services.AddScoped<ChannelService>();
+        services.AddScoped<TransactionService>();
         services.AddScoped<RSSService>();
         services.AddScoped<YoutubeSerivce>();
         services.AddScoped<TwitcastingService>();
