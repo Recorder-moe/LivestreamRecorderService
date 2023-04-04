@@ -147,9 +147,9 @@ internal class EcPayService
                     return null;
             }
         }
-        catch (Exception)
+        catch (Exception e)
         {
-            _logger.LogError("Update EcPay trade result failed. {transactionId}", transaction.id);
+            _logger.LogError(e, "Update EcPay trade result failed. {transactionId}", transaction.id);
             return null;
         }
     }
