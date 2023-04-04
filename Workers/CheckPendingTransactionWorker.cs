@@ -49,7 +49,7 @@ public class CheckPendingTransactionWorker : BackgroundService
 
                 foreach (var transaction in transactions)
                 {
-                    using var ___ = LogContext.PushProperty("TransactionId", transaction.id);
+                    using var ___ = LogContext.PushProperty("transactionId", transaction.id);
                     var result = await ecPayService.UpdateEcPayTradeResultAsync(transaction, stoppingToken);
                     if (null != result)
                     {

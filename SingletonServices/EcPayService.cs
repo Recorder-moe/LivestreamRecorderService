@@ -61,10 +61,11 @@ internal class EcPayService
         var properties = typeof(T).GetProperties();
         var parameters = properties
             .Where(property => property.Name != "CheckMacValue")
+            .Where(p => null != p.GetValue(result))
             .ToDictionary(property => property.Name, property =>
             {
                 var value = property.GetValue(result);
-                return value is null ? string.Empty : value.ToString();
+                return value?.ToString();
             });
         var toCheck = CheckMac.GetValue(parameters, _hashKey, _hashIV);
         return toCheck == typeof(T).GetProperty("CheckMacValue")?.GetValue(result)?.ToString();
@@ -115,12 +116,6 @@ internal class EcPayService
                 return null;
             }
 
-            if(res.CustomField1 != transaction.id || res.CustomField2 != transaction.UserId)
-            {
-                _logger.LogWarning("EcPay does not return a response which matches our transaction data. {transactionId}", transaction.id);
-                return null;
-            }
-
             switch (res.TradeStatus)
             {
                 case "0":
@@ -130,10 +125,22 @@ internal class EcPayService
                 case "1":
                     // 若為1時，代表交易訂單成立已付款
                     _logger.LogTrace("EcPay trade result is Paid(1). {transactionId}", transaction.id);
+
+                    // 部份錯誤狀態不會回傳CustomField，故只在成功時做檢核
+                    if (res.CustomField1 != transaction.id || res.CustomField2 != transaction.UserId)
+                    {
+                        _logger.LogWarning("EcPay does not return a response which matches our transaction data. {transactionId}", transaction.id);
+                        return null;
+                    }
+
                     return (TransactionState.Success, res.TradeNo);
                 case "10200095":
                     // 若為 10200095時，代表交易訂單未成立，消費者未完成付款作業，故交易失敗。
                     _logger.LogTrace("EcPay trade result is Not established(10200095). {transactionId}", transaction.id);
+                    return (TransactionState.Cancel, null);
+                case "10200047":
+                    // Cant not find the trade data.
+                    _logger.LogTrace("EcPay trade result is Not found(10200047). {transactionId}", transaction.id);
                     return (TransactionState.Cancel, null);
                 default:
                     _logger.LogTrace("EcPay trade result is out of handled! {result} {transactionId}", res.TradeStatus, transaction.id);
