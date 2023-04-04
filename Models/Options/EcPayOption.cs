@@ -6,6 +6,7 @@ public sealed class EcPayOption
     public const string ConfigurationSectionName = "Ecpay";
 #pragma warning restore IDE1006 // 命名樣式
 
+    public string Endpoint { get; set; } = "https://payment.ecpay.com.tw";
     public required string MerchantID { get; set; }
     public required string HashKey { get; set; }
     public required string HashIV { get; set; }

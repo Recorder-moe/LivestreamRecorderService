@@ -20,11 +20,7 @@ internal class EcPayService
     private readonly string _hashKey;
     private readonly string _hashIV;
     private readonly string _merchantID;
-#if DEBUG
-    private const string _ecPayQueryTradeInfoApi = "https://payment-stage.ecpay.com.tw/Cashier/QueryTradeInfo/V5";
-#else
-    private const string _ecPayQueryTradeInfoApi = "https://payment.ecpay.com.tw/Cashier/QueryTradeInfo/V5";
-#endif
+    private readonly string _ecPayQueryTradeInfoApi;
 
     public EcPayService(
         ILogger<EcPayService> logger,
@@ -36,6 +32,7 @@ internal class EcPayService
         _hashKey = options.Value.HashKey;
         _hashIV = options.Value.HashIV;
         _merchantID = options.Value.MerchantID;
+        _ecPayQueryTradeInfoApi = options.Value.Endpoint + "/Cashier/QueryTradeInfo/V5";
     }
 
     internal T SetCheckMac<T>(T obj)
