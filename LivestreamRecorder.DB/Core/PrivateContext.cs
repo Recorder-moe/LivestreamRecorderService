@@ -7,10 +7,11 @@ namespace LivestreamRecorder.DB.Core;
 public class PrivateContext : DbContext
 {
     public DbSet<User> Users { get; set; }
+    public DbSet<Transaction> Transactions { get; set; }
 
     public PrivateContext() { }
 
-    public PrivateContext(DbContextOptions options) : base(options)
+    public PrivateContext(DbContextOptions<PrivateContext> options) : base(options)
     {
     }
 
@@ -54,29 +55,6 @@ public class PrivateContext : DbContext
             .WithMany(o => o.Transactions)
             .HasForeignKey(o => o.UserId);
 
-        #endregion
-
-        #region Other Examples
-        //#region PropertyNames
-        //modelBuilder.Entity<Video>().OwnsOne(
-        //    o => o.ShippingAddress,
-        //    sa =>
-        //    {
-        //        sa.ToJsonProperty("Address");
-        //        sa.Property(p => p.Street).ToJsonProperty("ShipsToStreet");
-        //        sa.Property(p => p.City).ToJsonProperty("ShipsToCity");
-        //    });
-        //#endregion
-
-        //#region OwnsMany
-        //modelBuilder.Entity<Distributor>().OwnsMany(p => p.ShippingCenters);
-        //#endregion
-
-        //#region ETagProperty
-        //modelBuilder.Entity<Distributor>()
-        //    .Property(d => d.ETag)
-        //    .IsETagConcurrency();
-        //#endregion
         #endregion
     }
 }
