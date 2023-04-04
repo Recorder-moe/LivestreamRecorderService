@@ -1,4 +1,5 @@
 ﻿using CodeHollow.FeedReader;
+using LivestreamRecorder.DB.Core;
 using LivestreamRecorder.DB.Enum;
 using LivestreamRecorder.DB.Interfaces;
 using LivestreamRecorder.DB.Models;
@@ -12,7 +13,7 @@ namespace LivestreamRecorderService.ScopedServices;
 public class YoutubeSerivce : PlatformService, IPlatformSerivce
 {
     private readonly ILogger<YoutubeSerivce> _logger;
-    private readonly IUnitOfWork _unitOfWork;
+    private readonly IUnitOfWork _unitOfWork_Public;
     private readonly IVideoRepository _videoRepository;
     private readonly IChannelRepository _channelRepository;
     private readonly RSSService _rSSService;
@@ -26,7 +27,7 @@ public class YoutubeSerivce : PlatformService, IPlatformSerivce
 
     public YoutubeSerivce(
         ILogger<YoutubeSerivce> logger,
-        IUnitOfWork unitOfWork,
+        UnitOfWork_Public unitOfWork_Public,
         IVideoRepository videoRepository,
         IChannelRepository channelRepository,
         RSSService rSSService,
@@ -36,7 +37,7 @@ public class YoutubeSerivce : PlatformService, IPlatformSerivce
         IHttpClientFactory httpClientFactory) : base(channelRepository, aBSService, httpClientFactory, logger)
     {
         _logger = logger;
-        _unitOfWork = unitOfWork;
+        _unitOfWork_Public = unitOfWork_Public;
         _videoRepository = videoRepository;
         _channelRepository = channelRepository;
         _rSSService = rSSService;
@@ -68,7 +69,7 @@ public class YoutubeSerivce : PlatformService, IPlatformSerivce
         {
             await AddOrUpdateVideoAsync(channel, item, cancellation);
         }
-        _unitOfWork.Commit();
+        _unitOfWork_Public.Commit();
     }
 
     private Task<YtdlpVideoData?> GetChannelInfoByYtdlpAsync(string ChannelId, CancellationToken cancellation = default)
@@ -132,10 +133,10 @@ public class YoutubeSerivce : PlatformService, IPlatformSerivce
 
     public override async Task UpdateVideoDataAsync(Video video, CancellationToken cancellation = default)
     {
-        _unitOfWork.ReloadEntityFromDB(video);
+        _unitOfWork_Public.ReloadEntityFromDB(video);
         await UpdateVideoDataWithoutCommitAsync(video, cancellation);
         _videoRepository.Update(video);
-        _unitOfWork.Commit();
+        _unitOfWork_Public.Commit();
     }
 
     /// <summary>
@@ -401,12 +402,12 @@ public class YoutubeSerivce : PlatformService, IPlatformSerivce
             bannerBlobUrl = (await DownloadImageAndUploadToBlobStorage(bannerUrl, $"banner/{channel.id}", cancellation));
         }
 
-        _unitOfWork.Context.Entry(channel).Reload();
+        _unitOfWork_Public.Context.Entry(channel).Reload();
         channel = _channelRepository.LoadRelatedData(channel);
         channel.ChannelName = info.Uploader;
         channel.Avatar = avatarBlobUrl?.Replace("avatar/", "");
         channel.Banner = bannerBlobUrl?.Replace("banner/", "");
         _channelRepository.Update(channel);
-        _unitOfWork.Commit();
+        _unitOfWork_Public.Commit();
     }
 }

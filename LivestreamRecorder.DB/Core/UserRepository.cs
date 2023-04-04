@@ -5,7 +5,7 @@ namespace LivestreamRecorder.DB.Core;
 
 public class UserRepository : CosmosDbRepository<User>, IUserRepository
 {
-    public UserRepository(IUnitOfWork unitOfWork) : base(unitOfWork)
+    public UserRepository(UnitOfWork_Private unitOfWork) : base(unitOfWork)
     {
     }
 

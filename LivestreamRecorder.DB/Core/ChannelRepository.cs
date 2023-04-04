@@ -5,7 +5,7 @@ namespace LivestreamRecorder.DB.Core;
 
 public class ChannelRepository : CosmosDbRepository<Channel>, IChannelRepository
 {
-    public ChannelRepository(IUnitOfWork unitOfWork) : base(unitOfWork)
+    public ChannelRepository(UnitOfWork_Public unitOfWork) : base(unitOfWork)
     {
     }
 

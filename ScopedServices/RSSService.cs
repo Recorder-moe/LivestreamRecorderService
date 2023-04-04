@@ -1,4 +1,5 @@
 ﻿using CodeHollow.FeedReader;
+using LivestreamRecorder.DB.Core;
 using LivestreamRecorder.DB.Interfaces;
 using LivestreamRecorder.DB.Models;
 
@@ -7,16 +8,16 @@ namespace LivestreamRecorderService.ScopedServices;
 public class RSSService
 {
     private readonly ILogger<RSSService> _logger;
-    private readonly IUnitOfWork _unitOfWork;
+    private readonly IUnitOfWork _unitOfWork_Public;
     private readonly IChannelRepository _channelRepository;
 
     public RSSService(
         ILogger<RSSService> logger,
-        IUnitOfWork unitOfWork,
+        UnitOfWork_Public unitOfWork_Public,
         IChannelRepository channelRepository)
     {
         _logger = logger;
-        _unitOfWork = unitOfWork;
+        _unitOfWork_Public = unitOfWork_Public;
         _channelRepository = channelRepository;
     }
 
@@ -42,7 +43,7 @@ public class RSSService
             _logger.LogInformation("Update channel name from {oldName} to {newName}", channel.ChannelName, feed.Title);
             channel.ChannelName = feed.Title;
             _channelRepository.Update(channel);
-            _unitOfWork.Commit();
+            _unitOfWork_Public.Commit();
         }
     }
 }

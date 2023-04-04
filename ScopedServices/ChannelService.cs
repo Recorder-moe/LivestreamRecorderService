@@ -1,4 +1,5 @@
-﻿using LivestreamRecorder.DB.Interfaces;
+﻿using LivestreamRecorder.DB.Core;
+using LivestreamRecorder.DB.Interfaces;
 using LivestreamRecorder.DB.Models;
 using LivestreamRecorderService.SingletonServices;
 
@@ -7,18 +8,18 @@ namespace LivestreamRecorderService.ScopedServices;
 public class ChannelService
 {
     private readonly ILogger<ChannelService> _logger;
-    private readonly IUnitOfWork _unitOfWork;
+    private readonly IUnitOfWork _unitOfWork_Public;
     private readonly IChannelRepository _channelRepository;
     private readonly DiscordService _discordService;
 
     public ChannelService(
         ILogger<ChannelService> logger,
-        IUnitOfWork unitOfWork,
+        UnitOfWork_Public unitOfWork_Public,
         IChannelRepository channelRepository,
         DiscordService discordService)
     {
         _logger = logger;
-        _unitOfWork = unitOfWork;
+        _unitOfWork_Public = unitOfWork_Public;
         _channelRepository = channelRepository;
         _discordService = discordService;
     }
@@ -26,16 +27,16 @@ public class ChannelService
     public void UpdateChannelLatestVideo(Video video)
     {
         var channel = _channelRepository.GetById(video.ChannelId);
-        _unitOfWork.Context.Entry(channel).Reload();
+        _unitOfWork_Public.Context.Entry(channel).Reload();
         channel.LatestVideoId = video.id;
         _channelRepository.Update(channel);
-        _unitOfWork.Commit();
+        _unitOfWork_Public.Commit();
     }
 
     public async Task ConsumeSupportTokenAsync(Video video)
     {
         var channel = _channelRepository.GetById(video.ChannelId);
-        _unitOfWork.Context.Entry(channel).Reload();
+        _unitOfWork_Public.Context.Entry(channel).Reload();
 
         decimal amount = CalculateConsumeSupportToken(video.Size);
         channel.SupportToken -= amount;
@@ -45,7 +46,7 @@ public class ChannelService
         if (channel.SupportToken == 0) channel.Monitoring = false;
 
         _channelRepository.Update(channel);
-        _unitOfWork.Commit();
+        _unitOfWork_Public.Commit();
         _logger.LogDebug("Consume Channel {channelId} {amount} SupportToken ", channel.id, amount);
 
         if (channel.SupportToken == 0)

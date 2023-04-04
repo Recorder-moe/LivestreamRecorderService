@@ -1,4 +1,5 @@
 ﻿using Azure.Storage.Files.Shares.Models;
+using LivestreamRecorder.DB.Core;
 using LivestreamRecorder.DB.Enum;
 using LivestreamRecorder.DB.Interfaces;
 using LivestreamRecorder.DB.Models;
@@ -13,20 +14,20 @@ namespace LivestreamRecorderService.ScopedServices;
 public class VideoService
 {
     private readonly ILogger<VideoService> _logger;
-    private readonly IUnitOfWork _unitOfWork;
+    private readonly IUnitOfWork _unitOfWork_Public;
     private readonly IVideoRepository _videoRepository;
     private readonly DiscordService _discordService;
     private readonly IHttpClientFactory _httpFactory;
 
     public VideoService(
         ILogger<VideoService> logger,
-        IUnitOfWork unitOfWork,
+        UnitOfWork_Public unitOfWork_Public,
         IVideoRepository videoRepository,
         DiscordService discordService,
         IHttpClientFactory httpFactory)
     {
         _logger = logger;
-        _unitOfWork = unitOfWork;
+        _unitOfWork_Public = unitOfWork_Public;
         _videoRepository = videoRepository;
         _discordService = discordService;
         _httpFactory = httpFactory;
@@ -39,19 +40,19 @@ public class VideoService
 
     public void UpdateVideoStatus(Video video, VideoStatus status)
     {
-        _unitOfWork.ReloadEntityFromDB(video);
+        _unitOfWork_Public.ReloadEntityFromDB(video);
         video.Status = status;
         _videoRepository.Update(video);
-        _unitOfWork.Commit();
+        _unitOfWork_Public.Commit();
         _logger.LogDebug("Update Video {videoId} Status to {videostatus}", video.id, status);
     }
 
     public void UpdateVideoNote(Video video, string? Note)
     {
-        _unitOfWork.ReloadEntityFromDB(video);
+        _unitOfWork_Public.ReloadEntityFromDB(video);
         video.Note = Note;
         _videoRepository.Update(video);
-        _unitOfWork.Commit();
+        _unitOfWork_Public.Commit();
         _logger.LogDebug("Update Video {videoId} note", video.id);
     }
 
@@ -79,7 +80,7 @@ public class VideoService
 
         video.ArchivedTime = DateTime.UtcNow;
         _videoRepository.Update(video);
-        _unitOfWork.Commit();
+        _unitOfWork_Public.Commit();
     }
 
     public async Task TransferVideoToBlobStorageAsync(Video video, CancellationToken cancellation = default)

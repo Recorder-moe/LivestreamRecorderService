@@ -11,6 +11,12 @@ public class CosmosDbOptions
 public const string ConfigurationSectionName = "CosmosDb";
 #pragma warning restore IDE1006 // 命名樣式
 
+    public required ContextInfo Public { get; set; }
+    public required ContextInfo Private { get; set; }
+}
+
+public class ContextInfo
+{
     public required string DatabaseName { get; set; }
     public required List<CollectionInfo> CollectionNames { get; set; }
 

@@ -5,7 +5,7 @@ namespace LivestreamRecorder.DB.Core;
 
 public class TransactionRepository : CosmosDbRepository<Transaction>, ITransactionRepository
 {
-    public TransactionRepository(IUnitOfWork unitOfWork) : base(unitOfWork)
+    public TransactionRepository(UnitOfWork_Private unitOfWork) : base(unitOfWork)
     {
     }
 

@@ -1,6 +1,5 @@
 using Azure.Identity;
 using Azure.ResourceManager;
-using Discord.Webhook;
 using LivestreamRecorder.DB.Core;
 using LivestreamRecorder.DB.Interfaces;
 using LivestreamRecorderService.Interfaces;
@@ -81,9 +80,24 @@ try
             options
                 //.EnableSensitiveDataLogging()
                 .UseCosmos(connectionString: configuration.GetConnectionString("Public")!,
-                           databaseName: cosmosDbOptions.DatabaseName,
+                           databaseName: cosmosDbOptions.Public.DatabaseName,
                            cosmosOptionsAction: option => option.GatewayModeMaxConnectionLimit(380));
         });
+        services.AddDbContext<PrivateContext>((options) =>
+        {
+            options
+                //.EnableSensitiveDataLogging()
+                .UseCosmos(connectionString: configuration.GetConnectionString("Private")!,
+                           databaseName: cosmosDbOptions.Private.DatabaseName,
+                           cosmosOptionsAction: option => option.GatewayModeMaxConnectionLimit(380));
+        });
+
+        services.AddScoped<UnitOfWork_Public>();
+        services.AddScoped<UnitOfWork_Private>();
+        services.AddScoped<IVideoRepository, VideoRepository>();
+        services.AddScoped<IChannelRepository, ChannelRepository>();
+        services.AddScoped<IUserRepository, UserRepository>();
+        services.AddScoped<ITransactionRepository, TransactionRepository>();
 
         services.AddHttpClient("AzureFileShares2BlobContainers", client =>
         {
@@ -127,10 +141,6 @@ try
         services.AddHostedService<MonitorWorker>();
         services.AddHostedService<UpdateChannelInfoWorker>();
         services.AddHostedService<UpdateVideoStatusWorker>();
-
-        services.AddScoped<IUnitOfWork, UnitOfWork>();
-        services.AddScoped<IVideoRepository, VideoRepository>();
-        services.AddScoped<IChannelRepository, ChannelRepository>();
 
         services.AddScoped<VideoService>();
         services.AddScoped<ChannelService>();

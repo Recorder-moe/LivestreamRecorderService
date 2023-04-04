@@ -1,4 +1,5 @@
-﻿using LivestreamRecorder.DB.Enum;
+﻿using LivestreamRecorder.DB.Core;
+using LivestreamRecorder.DB.Enum;
 using LivestreamRecorder.DB.Interfaces;
 using LivestreamRecorder.DB.Models;
 using LivestreamRecorderService.Interfaces;
@@ -11,7 +12,7 @@ namespace LivestreamRecorderService.ScopedServices;
 public class TwitchSerivce : PlatformService, IPlatformSerivce
 {
     private readonly ILogger<TwitchSerivce> _logger;
-    private readonly IUnitOfWork _unitOfWork;
+    private readonly IUnitOfWork _unitOfWork_Public;
     private readonly IVideoRepository _videoRepository;
     private readonly ACIStreamlinkService _aCIStreamlinkService;
     private readonly ITwitchAPI _twitchAPI;
@@ -24,7 +25,7 @@ public class TwitchSerivce : PlatformService, IPlatformSerivce
 
     public TwitchSerivce(
         ILogger<TwitchSerivce> logger,
-        IUnitOfWork unitOfWork,
+        UnitOfWork_Public unitOfWork_Public,
         IVideoRepository videoRepository,
         IChannelRepository channelRepository,
         ACIStreamlinkService aCIStreamlinkService,
@@ -34,7 +35,7 @@ public class TwitchSerivce : PlatformService, IPlatformSerivce
         IHttpClientFactory httpClientFactory) : base(channelRepository, aBSService, httpClientFactory, logger)
     {
         _logger = logger;
-        _unitOfWork = unitOfWork;
+        _unitOfWork_Public = unitOfWork_Public;
         _videoRepository = videoRepository;
         _aCIStreamlinkService = aCIStreamlinkService;
         _twitchAPI = twitchAPI;
@@ -118,7 +119,7 @@ public class TwitchSerivce : PlatformService, IPlatformSerivce
             }
 
             _videoRepository.AddOrUpdate(video);
-            _unitOfWork.Commit();
+            _unitOfWork_Public.Commit();
         }
         else
         {
@@ -128,7 +129,7 @@ public class TwitchSerivce : PlatformService, IPlatformSerivce
 
     public override async Task UpdateVideoDataAsync(Video video, CancellationToken cancellation = default)
     {
-        _unitOfWork.ReloadEntityFromDB(video);
+        _unitOfWork_Public.ReloadEntityFromDB(video);
         if (null == video.Timestamps.ActualStartTime)
         {
             video.Timestamps.ActualStartTime = video.Timestamps.PublishedAt;
@@ -148,6 +149,6 @@ public class TwitchSerivce : PlatformService, IPlatformSerivce
         }
 
         _videoRepository.Update(video);
-        _unitOfWork.Commit();
+        _unitOfWork_Public.Commit();
     }
 }

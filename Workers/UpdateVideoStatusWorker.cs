@@ -1,4 +1,5 @@
 ﻿using Azure.Storage.Blobs.Models;
+using LivestreamRecorder.DB.Core;
 using LivestreamRecorder.DB.Enum;
 using LivestreamRecorder.DB.Interfaces;
 using LivestreamRecorder.DB.Models;
@@ -44,7 +45,6 @@ public class UpdateVideoStatusWorker : BackgroundService
             {
                 VideoService videoService = scope.ServiceProvider.GetRequiredService<VideoService>();
                 IVideoRepository videoRepository = scope.ServiceProvider.GetRequiredService<IVideoRepository>();
-                IUnitOfWork unitOfWork = scope.ServiceProvider.GetRequiredService<IUnitOfWork>();
                 IPlatformSerivce youtubeSerivce = scope.ServiceProvider.GetRequiredService<YoutubeSerivce>();
                 IPlatformSerivce twitcastingService = scope.ServiceProvider.GetRequiredService<TwitcastingService>();
                 IPlatformSerivce twitchService = scope.ServiceProvider.GetRequiredService<TwitchSerivce>();

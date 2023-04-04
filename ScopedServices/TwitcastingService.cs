@@ -1,4 +1,5 @@
-﻿using LivestreamRecorder.DB.Enum;
+﻿using LivestreamRecorder.DB.Core;
+using LivestreamRecorder.DB.Enum;
 using LivestreamRecorder.DB.Interfaces;
 using LivestreamRecorder.DB.Models;
 using LivestreamRecorderService.Interfaces;
@@ -13,7 +14,7 @@ public class TwitcastingService : PlatformService, IPlatformSerivce
 {
     private readonly ILogger<TwitcastingService> _logger;
     private readonly IHttpClientFactory _httpFactory;
-    private readonly IUnitOfWork _unitOfWork;
+    private readonly IUnitOfWork _unitOfWork_Public;
     private readonly IVideoRepository _videoRepository;
     private readonly ACITwitcastingRecorderService _aCITwitcastingRecorderService;
     private readonly IABSService _aBSService;
@@ -29,7 +30,7 @@ public class TwitcastingService : PlatformService, IPlatformSerivce
     public TwitcastingService(
         ILogger<TwitcastingService> logger,
         IHttpClientFactory httpClientFactory,
-        IUnitOfWork unitOfWork,
+        UnitOfWork_Public unitOfWork_Public,
         IVideoRepository videoRepository,
         ACITwitcastingRecorderService aCITwitcastingRecorderService,
         IABSService aBSService,
@@ -38,7 +39,7 @@ public class TwitcastingService : PlatformService, IPlatformSerivce
     {
         _logger = logger;
         _httpFactory = httpClientFactory;
-        _unitOfWork = unitOfWork;
+        _unitOfWork_Public = unitOfWork_Public;
         _videoRepository = videoRepository;
         _aCITwitcastingRecorderService = aCITwitcastingRecorderService;
         _aBSService = aBSService;
@@ -128,7 +129,7 @@ public class TwitcastingService : PlatformService, IPlatformSerivce
             }
 
             _videoRepository.AddOrUpdate(video);
-            _unitOfWork.Commit();
+            _unitOfWork_Public.Commit();
         }
     }
 
@@ -233,7 +234,7 @@ public class TwitcastingService : PlatformService, IPlatformSerivce
 
     public override async Task UpdateVideoDataAsync(Video video, CancellationToken cancellation = default)
     {
-        _unitOfWork.ReloadEntityFromDB(video);
+        _unitOfWork_Public.ReloadEntityFromDB(video);
         if (null == video.Timestamps.ActualStartTime)
         {
             video.Timestamps.ActualStartTime = video.Timestamps.PublishedAt;
@@ -280,7 +281,7 @@ public class TwitcastingService : PlatformService, IPlatformSerivce
         }
 
         _videoRepository.Update(video);
-        _unitOfWork.Commit();
+        _unitOfWork_Public.Commit();
     }
 
 }

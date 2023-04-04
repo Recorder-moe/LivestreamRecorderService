@@ -5,7 +5,7 @@ namespace LivestreamRecorder.DB.Core;
 
 public class VideoRepository : CosmosDbRepository<Video>, IVideoRepository
 {
-    public VideoRepository(IUnitOfWork unitOfWork) : base(unitOfWork)
+    public VideoRepository(UnitOfWork_Public unitOfWork) : base(unitOfWork)
     {
     }
 
