@@ -74,6 +74,11 @@ try
                 .ValidateDataAnnotations()
                 .ValidateOnStart();
 
+        services.AddOptions<HeartbeatOption>()
+                .Bind(configuration.GetSection(HeartbeatOption.ConfigurationSectionName))
+                .ValidateDataAnnotations()
+                .ValidateOnStart();
+
         var azureOptions = services.BuildServiceProvider().GetRequiredService<IOptions<AzureOption>>().Value;
         var cosmosDbOptions = services.BuildServiceProvider().GetRequiredService<IOptions<CosmosDbOptions>>().Value;
         var twitchOptions = services.BuildServiceProvider().GetRequiredService<IOptions<TwitchOption>>().Value;
@@ -149,6 +154,7 @@ try
         services.AddHostedService<UpdateChannelInfoWorker>();
         services.AddHostedService<UpdateVideoStatusWorker>();
         services.AddHostedService<CheckPendingTransactionWorker>();
+        services.AddHostedService<HeartbeatWorker>();
 
         services.AddScoped<VideoService>();
         services.AddScoped<ChannelService>();
