@@ -13,7 +13,7 @@ using System.Web;
 
 namespace LivestreamRecorderService.SingletonServices;
 
-internal class EcPayService
+public class EcPayService
 {
     private readonly ILogger<EcPayService> _logger;
     private readonly IHttpClientFactory _httpFactory;

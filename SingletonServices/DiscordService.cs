@@ -131,7 +131,7 @@ public partial class DiscordService
 
         var componentBuilder = GetComponentBuilder(transaction);
 
-        return SendMessageAdmin(embedBuilder.Build(), componentBuilder.Build(), $"{_discordOption.Mention.Admin} ${transaction.Note}");
+        return SendMessageAdmin(embedBuilder.Build(), componentBuilder.Build(), $"{_discordOption.Mention.Admin} {transaction.Note}");
     }
 
     public Task SendChannelSupportTokenZeroMessage(Channel channel)
