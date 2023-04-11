@@ -162,7 +162,7 @@ public class TwitcastingService : PlatformService, IPlatformSerivce
         var token = await GetTwitcastingTokenAsync(videoId, cancellation);
         if (null == token)
         {
-            _logger.LogError("Failed to get video title! {videoId}", videoId);
+            _logger.LogWarning("Failed to get video title because token in null! {videoId}", videoId);
             return default;
         }
 
@@ -200,6 +200,12 @@ public class TwitcastingService : PlatformService, IPlatformSerivce
         return null;
     }
 
+    /// <summary>
+    /// 檢查影片是否公開(沒有密碼鎖或是瀏覧限制)
+    /// </summary>
+    /// <param name="videoId"></param>
+    /// <param name="cancellation"></param>
+    /// <returns></returns>
     private async Task<bool> GetTwitcastingIsPublicAsync(string videoId, CancellationToken cancellation = default)
     {
         var data = await GetTwitcastingInfoDataAsync(videoId, cancellation);
@@ -221,6 +227,12 @@ public class TwitcastingService : PlatformService, IPlatformSerivce
         return data;
     }
 
+    /// <summary>
+    /// 檢查影片是否發佈
+    /// </summary>
+    /// <param name="video"></param>
+    /// <param name="cancellation"></param>
+    /// <returns></returns>
     private async Task<bool> GetTwitcastingIsPublishAsync(Video video, CancellationToken cancellation = default)
     {
         // Web page will contains this string if the video is not published
@@ -247,10 +259,26 @@ public class TwitcastingService : PlatformService, IPlatformSerivce
 
         if (await GetTwitcastingIsPublishAsync(video, cancellation))
         {
-            var (title, telop) = await GetTwitcastingStreamTitleAsync(video.id, cancellation);
-            video.Title = title ?? video.Title;
-            video.Description = telop ?? video.Description;
-            video.SourceStatus = VideoStatus.Exist;
+            if (await GetTwitcastingIsPublicAsync(video.id, cancellation))
+            {
+                var (title, telop) = await GetTwitcastingStreamTitleAsync(video.id, cancellation);
+                video.Title = title ?? video.Title;
+                video.Description = telop ?? video.Description;
+                video.SourceStatus = VideoStatus.Exist;
+            }
+            else
+            {
+                // 有發佈，但是有瀏覧限制
+                // First detected
+                if (video.SourceStatus != VideoStatus.Reject)
+                {
+                    video.SourceStatus = VideoStatus.Reject;
+                    video.Note = $"Video source is detected access required.";
+                    await _discordService.SendDeletedMessage(video);
+                    _logger.LogInformation("Video source is {status} because it is detected access required.", Enum.GetName(typeof(VideoStatus), video.SourceStatus));
+                }
+                video.SourceStatus = VideoStatus.Reject;
+            }
         }
         else
         {

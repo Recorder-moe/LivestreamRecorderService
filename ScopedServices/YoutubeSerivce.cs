@@ -355,6 +355,7 @@ public class YoutubeSerivce : PlatformService, IPlatformSerivce
                 else if (video.SourceStatus != VideoStatus.Reject)
                 {
                     video.SourceStatus = VideoStatus.Reject;
+                    video.Note = $"Video source is detected access required or copyright notice.";
                     await _discordService.SendDeletedMessage(video);
                 }
 
