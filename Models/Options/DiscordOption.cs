@@ -8,6 +8,7 @@ public class DiscordOption
 
     public required string Webhook { get; set; }
     public required string WebhookWarning { get; set; }
+    public required string WebhookAdmin { get; set; }
     public required string FrontEndHost { get; set; }
     public required Emotes Emotes { get; set; }
     public required Mention Mention { get; set; }
@@ -25,5 +26,6 @@ public class Mention
 {
     public string? Deleted { get; set; }
     public string? Channel { get; set; }
+    public string? Admin { get; set; }
 }
 
