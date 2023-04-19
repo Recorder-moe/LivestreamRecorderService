@@ -78,6 +78,11 @@ public class CheckPendingTransactionWorker : BackgroundService
             if (null != result)
             {
                 transactionService.UpdateTransaction(transaction, result.Value.Item1, result.Value.Item2);
+
+                if (transaction.TransactionState == TransactionState.Success)
+                {
+                    transactionService.RewardReferrer(transaction);
+                }
             }
             await Task.Delay(TimeSpan.FromSeconds(3), stoppingToken);
         }
