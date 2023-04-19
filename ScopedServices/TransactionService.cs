@@ -88,6 +88,7 @@ public class TransactionService
                     _transactionRepository.Update(referrerTransaction);
 
                     referrer.Tokens.SupportToken += reward;
+                    referrer.Referral!.Earned += (int)reward;
                     _userRepository.Update(referrer);
                 }
             }
