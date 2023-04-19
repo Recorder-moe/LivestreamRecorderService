@@ -4,11 +4,7 @@ using LivestreamRecorder.DB.Models;
 using LivestreamRecorderService.Models;
 using LivestreamRecorderService.Models.Options;
 using Microsoft.Extensions.Options;
-using Omu.ValueInjecter;
 using System.Collections.Specialized;
-using System.Net.Http.Json;
-using System.Reflection;
-using System.Text.Json;
 using System.Web;
 
 namespace LivestreamRecorderService.SingletonServices;
@@ -126,7 +122,7 @@ public class EcPayService
                     // 部份錯誤狀態不會回傳CustomField，故只在成功時做檢核
                     if (res.CustomField1 != transaction.id || res.CustomField2 != transaction.UserId)
                     {
-                        _logger.LogWarning("EcPay does not return a response which matches our transaction data. {transactionId}", transaction.id);
+                        _logger.LogWarning("EcPay does not return a response which matches our transaction data. {transactionId} {userId} {ecpayCustomField1} {ecpayCustomField2}", transaction.id, transaction.UserId, res.CustomField1, res.CustomField2);
                         return null;
                     }
 
