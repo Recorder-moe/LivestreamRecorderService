@@ -35,6 +35,8 @@ public class User : Entity
 
     public Referral? Referral { get; set; }
 
+    public string[]? ManagedChannels { get; set; }
+
     public ICollection<Transaction> Transactions { get; set; }
 
 }
