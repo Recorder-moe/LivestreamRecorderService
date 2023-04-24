@@ -29,6 +29,8 @@ public class Channel : Entity
 
     public decimal? SupportToken { get; set; }
 
+    public bool? CanActive { get; set; }
+
     public ICollection<Video> Videos { get; set; }
 }
 
