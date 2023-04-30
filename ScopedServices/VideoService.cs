@@ -135,4 +135,6 @@ public class VideoService
                         && p.ArchivedTime.Value.AddMinutes(15) < DateTime.UtcNow)
             .ToList()
             .ForEach(p => UpdateVideoStatus(p, VideoStatus.Recording));
+
+    public void DeleteVideo(Video video) => _videoRepository.Delete(video);
 }

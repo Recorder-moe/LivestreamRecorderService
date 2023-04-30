@@ -80,7 +80,15 @@ public class MonitorWorker : BackgroundService
 
             foreach (var video in videos)
             {
-                await PlatformService.UpdateVideoDataAsync(video, cancellation);
+                if (!video.Channel.Monitoring)
+                {
+                    videoService.DeleteVideo(video);
+                    _logger.LogInformation("Remove scheduled video {videoId} because channel {channelId} is not monitoring", video.id, video.Channel.id);
+                }
+                else
+                {
+                    await PlatformService.UpdateVideoDataAsync(video, cancellation);
+                }
             }
         }
     }
