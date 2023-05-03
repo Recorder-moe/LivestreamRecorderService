@@ -135,20 +135,43 @@ namespace LivestreamRecorderService.ScopedServices
 
             using var client = _httpFactory.CreateClient();
             var response = await client.GetAsync(url, cancellation);
-            if (response.IsSuccessStatusCode)
+            if (!response.IsSuccessStatusCode) return null;
+
+            var contentType = response.Content.Headers.ContentType?.MediaType;
+            var extension = MimeUtility.GetExtensions(contentType)?.FirstOrDefault();
+            extension = extension == "jpeg" ? "jpg" : extension;
+            string pathInStorage = $"{path}.{extension}";
+
+            string tempPath = Path.GetTempFileName();
+            tempPath = Path.ChangeExtension(tempPath, extension);
+            using (var contentStream = await response.Content.ReadAsStreamAsync(cancellation))
+            using (var fileStream = new FileStream(tempPath, FileMode.Create))
             {
-                var contentType = response.Content.Headers.ContentType?.MediaType;
-                var extension = MimeUtility.GetExtensions(contentType)?.FirstOrDefault();
-                extension = extension == "jpeg" ? "jpg" : extension;
-                var blobClient = _aBSService.GetPublicBlob($"{path}.{extension}");
-                _ = await blobClient.UploadAsync(
-                     content: await response.Content.ReadAsStreamAsync(cancellation),
-                     httpHeaders: new BlobHttpHeaders { ContentType = contentType },
-                     accessTier: AccessTier.Hot,
-                     cancellationToken: cancellation);
-                return $"{path}.{extension}";
+                await contentStream.CopyToAsync(fileStream, cancellation);
             }
-            return null;
+
+            List<Task> tasks = new();
+
+            var blobClient = _aBSService.GetPublicBlob(pathInStorage);
+            tasks.Add(blobClient.UploadAsync(
+                 path: tempPath,
+                 httpHeaders: new BlobHttpHeaders { ContentType = contentType },
+                 accessTier: AccessTier.Hot,
+                 cancellationToken: cancellation));
+
+            var avifblobClient = _aBSService.GetPublicBlob($"{path}.avif");
+            tasks.Add(avifblobClient.UploadAsync(
+                 path: await ImageHelper.ConvertToAvifAsync(tempPath),
+                 httpHeaders: new BlobHttpHeaders { ContentType = KnownMimeTypes.Avif },
+                 accessTier: AccessTier.Hot,
+                 cancellationToken: cancellation));
+
+            await Task.WhenAll(tasks);
+
+            File.Delete(tempPath);
+            File.Delete(Path.ChangeExtension(tempPath, ".avif"));
+
+            return pathInStorage;
         }
     }
 }
