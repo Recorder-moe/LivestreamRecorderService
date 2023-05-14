@@ -99,26 +99,32 @@ public class UpdateVideoStatusWorker : BackgroundService
 
     private async Task ExpireVideosAsync(VideoService videoService, CancellationToken cancellation)
     {
-        int expireDays = _azureOption.RetentionDays;
+        int retentionDays = _azureOption.RetentionDays;
         _logger.LogInformation("Start to expire videos.");
         var videos = videoService.GetVideosByStatus(VideoStatus.Archived)
-                                 .Where(p => DateTime.Today - (p.ArchivedTime ?? DateTime.Today) > TimeSpan.FromDays(expireDays))
+                                 .Where(p => DateTime.Today - (p.ArchivedTime ?? DateTime.Today) > TimeSpan.FromDays(retentionDays))
                                  .ToList();
         _logger.LogInformation("Get {count} videos to expire.", videos.Count);
         foreach (var video in videos)
         {
+            if(video.SourceStatus != VideoStatus.Exist)
+            {
+                _logger.LogInformation("Video {videoId} is not exist on source platform, keep it.", video.id);
+                continue;
+            }
+
             var blob = _aBSService.GetVideoBlob(video);
             if (await blob.DeleteIfExistsAsync(DeleteSnapshotsOption.IncludeSnapshots, cancellationToken: cancellation))
             {
                 _logger.LogInformation("Delete blob {path}", blob.Name);
                 videoService.UpdateVideoStatus(video, VideoStatus.Expired);
-                videoService.UpdateVideoNote(video, $"Video expired after {expireDays} days.");
+                videoService.UpdateVideoNote(video, $"Video expired after {retentionDays} days.");
             }
             else
             {
                 _logger.LogError("FAILED to Delete blob {path}", blob.Name);
                 videoService.UpdateVideoStatus(video, VideoStatus.Error);
-                videoService.UpdateVideoNote(video, $"Failed to delete blob after {expireDays} days. Please contact admin if you see this message.");
+                videoService.UpdateVideoNote(video, $"Failed to delete blob after {retentionDays} days. Please contact admin if you see this message.");
             }
         }
     }
