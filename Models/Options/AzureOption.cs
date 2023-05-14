@@ -12,6 +12,7 @@ public sealed class AzureOption
     public required string ShareName { get; set; }
     public required string BlobContainerName { get; set; }
     public required string BlobContainerNamePublic { get; set; }
+    public required int RetentionDays { get; set; }
     public string ConnectionString => $"DefaultEndpointsProtocol=https;AccountName={StorageAccountName};AccountKey={StorageAccountKey};EndpointSuffix=core.windows.net";
 }
 

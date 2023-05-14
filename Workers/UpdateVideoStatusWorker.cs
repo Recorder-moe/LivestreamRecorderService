@@ -15,6 +15,7 @@ public class UpdateVideoStatusWorker : BackgroundService
 {
     private readonly ILogger<UpdateVideoStatusWorker> _logger;
     private readonly IABSService _aBSService;
+    private readonly AzureOption _azureOption;
     private readonly IServiceProvider _serviceProvider;
 
     public UpdateVideoStatusWorker(
@@ -25,6 +26,7 @@ public class UpdateVideoStatusWorker : BackgroundService
     {
         _logger = logger;
         _aBSService = aBSService;
+        _azureOption = options.Value;
         _serviceProvider = serviceProvider;
     }
 
@@ -97,7 +99,7 @@ public class UpdateVideoStatusWorker : BackgroundService
 
     private async Task ExpireVideosAsync(VideoService videoService, CancellationToken cancellation)
     {
-        const int expireDays = 31;
+        int expireDays = _azureOption.RetentionDays;
         _logger.LogInformation("Start to expire videos.");
         var videos = videoService.GetVideosByStatus(VideoStatus.Archived)
                                  .Where(p => DateTime.Today - (p.ArchivedTime ?? DateTime.Today) > TimeSpan.FromDays(expireDays))
