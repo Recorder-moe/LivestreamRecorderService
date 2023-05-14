@@ -7,7 +7,6 @@ namespace LivestreamRecorder.DB.Core;
 public class PrivateContext : DbContext
 {
     public DbSet<User> Users { get; set; }
-    public DbSet<Transaction> Transactions { get; set; }
 
     public PrivateContext() { }
 
@@ -32,29 +31,6 @@ public class PrivateContext : DbContext
 
         modelBuilder.Entity<User>()
             .UseETagConcurrency();
-        #endregion
-
-        #region Transactions
-        modelBuilder.Entity<Transaction>()
-            .ToContainer("Transactions");
-
-        modelBuilder.Entity<Transaction>()
-            .HasNoDiscriminator();
-
-        modelBuilder.Entity<Transaction>()
-            .HasKey(nameof(Transaction.id));
-
-        modelBuilder.Entity<Transaction>()
-            .HasPartitionKey(o => o.UserId);
-
-        modelBuilder.Entity<Transaction>()
-            .UseETagConcurrency();
-
-        modelBuilder.Entity<Transaction>()
-            .HasOne(o => o.User)
-            .WithMany(o => o.Transactions)
-            .HasForeignKey(o => o.UserId);
-
         #endregion
     }
 }

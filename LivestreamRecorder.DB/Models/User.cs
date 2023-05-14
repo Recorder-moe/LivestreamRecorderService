@@ -7,11 +7,6 @@ namespace LivestreamRecorder.DB.Models;
 [Table("Users")]
 public class User : Entity
 {
-    public User()
-    {
-        Transactions = new HashSet<Transaction>();
-    }
-
     [Required]
     public override string id { get; set; }
     [Required]
@@ -31,28 +26,6 @@ public class User : Entity
 
     public string? MicrosoftUID { get; set; }
 
-    public Tokens Tokens { get; set; }
-
-    public Referral? Referral { get; set; }
-
-    public string[]? ManagedChannels { get; set; }
-
-    public ICollection<Transaction> Transactions { get; set; }
-
-}
-
-
-public class Tokens
-{
-    public decimal SupportToken { get; set; } = 0;
-    public decimal DownloadToken { get; set; } = 0;
-}
-
-public class Referral
-{
-    public string? Code { get; set; }
-    public int Clicked { get; set; } = 0;
-    public int Referees { get; set; } = 0;
-    public int Earned { get; set; } = 0;
+    public bool IsAdmin { get; set; } = false;
 }
 

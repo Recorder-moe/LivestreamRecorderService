@@ -112,39 +112,6 @@ public partial class DiscordService
         return SendMessageWarning(embedBuilder.Build(), componentBuilder.Build(), $"{_discordOption.Mention.Deleted} {video.Note}");
     }
 
-    public Task SendChannelSupportTokenAlertMessage(Channel channel)
-    {
-        var embedBuilder = GetEmbedBuilder(channel);
-        embedBuilder.WithTitle($"{channel.ChannelName} has {channel.SupportToken} ST.");
-        embedBuilder.WithColor(Color.Gold);
-
-        var componentBuilder = GetComponentBuilder(channel);
-
-        return SendMessageWarning(embedBuilder.Build(), componentBuilder.Build(), $"{_discordOption.Mention.Channel} The support token is about to run out.");
-    }
-
-    public Task SendNewChannelMessage(Transaction transaction)
-    {
-        var embedBuilder = GetEmbedBuilder(transaction);
-        embedBuilder.WithTitle($"User request for new Channel!");
-        embedBuilder.WithColor(Color.Teal);
-
-        var componentBuilder = GetComponentBuilder(transaction);
-
-        return SendMessageAdmin(embedBuilder.Build(), componentBuilder.Build(), $"{_discordOption.Mention.Admin} {transaction.Note}");
-    }
-
-    public Task SendChannelSupportTokenZeroMessage(Channel channel)
-    {
-        var embedBuilder = GetEmbedBuilder(channel);
-        embedBuilder.WithTitle($"{channel.ChannelName} has {channel.SupportToken} ST.");
-        embedBuilder.WithColor(Color.Red);
-
-        var componentBuilder = GetComponentBuilder(channel);
-
-        return SendMessageWarning(embedBuilder.Build(), componentBuilder.Build(), $"{_discordOption.Mention.Channel} The support token has been exhausted.");
-    }
-
     #region GetEmbedBuilder
     private EmbedBuilder GetEmbedBuilder(Video video)
     {
@@ -171,32 +138,18 @@ public partial class DiscordService
         return embedBuilder;
     }
 
-    private EmbedBuilder GetEmbedBuilder(Channel channel)
-    {
-        EmbedBuilder embedBuilder = new();
-        embedBuilder.WithImageUrl($"https://{_azureOption.StorageAccountName}.blob.core.windows.net/{_azureOption.BlobContainerNamePublic}/avatar/{channel.Avatar}");
-        embedBuilder.WithDescription(channel.ChannelName);
-        embedBuilder.WithUrl($"https://{_discordOption.FrontEndHost}/channels/{channel.id}");
-        embedBuilder.AddField("Channel ID", channel.id, true);
-        embedBuilder.AddField("Source", channel.Source, true);
-        embedBuilder.AddField("Is monitoring", channel.Monitoring, true);
-        embedBuilder.AddField("Support Token", channel.SupportToken, false);
+    //private EmbedBuilder GetEmbedBuilder(Channel channel)
+    //{
+    //    EmbedBuilder embedBuilder = new();
+    //    embedBuilder.WithImageUrl($"https://{_azureOption.StorageAccountName}.blob.core.windows.net/{_azureOption.BlobContainerNamePublic}/avatar/{channel.Avatar}");
+    //    embedBuilder.WithDescription(channel.ChannelName);
+    //    embedBuilder.WithUrl($"https://{_discordOption.FrontEndHost}/channels/{channel.id}");
+    //    embedBuilder.AddField("Channel ID", channel.id, true);
+    //    embedBuilder.AddField("Source", channel.Source, true);
+    //    embedBuilder.AddField("Is monitoring", channel.Monitoring, true);
 
-        return embedBuilder;
-    }
-
-    private EmbedBuilder GetEmbedBuilder(Transaction transaction)
-    {
-        EmbedBuilder embedBuilder = new();
-        //embedBuilder.WithImageUrl($"https://{_azureOption.StorageAccountName}.blob.core.windows.net/{_azureOption.BlobContainerNamePublic}/avatar/{channel.Avatar}");
-        embedBuilder.WithDescription(transaction.Note);
-        //embedBuilder.WithUrl($"https://{_discordOption.FrontEndHost}/channels/{channel.id}");
-        embedBuilder.AddField("Transaction ID", transaction.id);
-        embedBuilder.AddField("User Id", transaction.UserId);
-        embedBuilder.AddField("ChannelId", transaction.ChannelId);
-
-        return embedBuilder;
-    }
+    //    return embedBuilder;
+    //}
     #endregion
 
     #region GetComponentBuilder (Buttons are not showing)
@@ -228,57 +181,31 @@ public partial class DiscordService
         return componentBuilder;
     }
 
-    private ComponentBuilder GetComponentBuilder(Channel channel)
-    {
-        ComponentBuilder componentBuilder = new();
-        componentBuilder.WithButton(label: "Recorder.moe",
-                                    style: ButtonStyle.Link,
-                                    url: $"https://{_discordOption.FrontEndHost}/channels/{channel.id}",
-                                    emote: Emote.Parse(_discordOption.Emotes.RecorderMoe));
-        componentBuilder.WithButton(label: channel.Source,
-                                    style: ButtonStyle.Link,
-                                    url: channel.Source switch
-                                    {
-                                        "Youtube" => $"https://www.youtube.com/channel/{channel.id}",
-                                        "Twitcasting" => $"https://twitcasting.tv/{channel.id}",
-                                        "Twitch" => $"https://twitch.tv/{channel.id}",
-                                        _ => ""
-                                    },
-                                    emote: channel.Source switch
-                                    {
-                                        "Youtube" => Emote.Parse(_discordOption.Emotes.Youtube),
-                                        "Twitcasting" => Emote.Parse(_discordOption.Emotes.Twitcasting),
-                                        "Twitch" => Emote.Parse(_discordOption.Emotes.Twitch),
-                                        _ => ""
-                                    });
-        return componentBuilder;
-    }
-
-    private ComponentBuilder GetComponentBuilder(Transaction transaction)
-    {
-        ComponentBuilder componentBuilder = new();
-        //componentBuilder.WithButton(label: "Recorder.moe",
-        //                            style: ButtonStyle.Link,
-        //                            url: $"https://{_discordOption.FrontEndHost}/channels/{channel.id}",
-        //                            emote: Emote.Parse(_discordOption.Emotes.RecorderMoe));
-        //componentBuilder.WithButton(label: channel.Source,
-        //                            style: ButtonStyle.Link,
-        //                            url: channel.Source switch
-        //                            {
-        //                                "Youtube" => $"https://www.youtube.com/channel/{channel.id}",
-        //                                "Twitcasting" => $"https://twitcasting.tv/{channel.id}",
-        //                                "Twitch" => $"https://twitch.tv/{channel.id}",
-        //                                _ => ""
-        //                            },
-        //                            emote: channel.Source switch
-        //                            {
-        //                                "Youtube" => Emote.Parse(_discordOption.Emotes.Youtube),
-        //                                "Twitcasting" => Emote.Parse(_discordOption.Emotes.Twitcasting),
-        //                                "Twitch" => Emote.Parse(_discordOption.Emotes.Twitch),
-        //                                _ => ""
-        //                            });
-        return componentBuilder;
-    }
+    //private ComponentBuilder GetComponentBuilder(Channel channel)
+    //{
+    //    ComponentBuilder componentBuilder = new();
+    //    componentBuilder.WithButton(label: "Recorder.moe",
+    //                                style: ButtonStyle.Link,
+    //                                url: $"https://{_discordOption.FrontEndHost}/channels/{channel.id}",
+    //                                emote: Emote.Parse(_discordOption.Emotes.RecorderMoe));
+    //    componentBuilder.WithButton(label: channel.Source,
+    //                                style: ButtonStyle.Link,
+    //                                url: channel.Source switch
+    //                                {
+    //                                    "Youtube" => $"https://www.youtube.com/channel/{channel.id}",
+    //                                    "Twitcasting" => $"https://twitcasting.tv/{channel.id}",
+    //                                    "Twitch" => $"https://twitch.tv/{channel.id}",
+    //                                    _ => ""
+    //                                },
+    //                                emote: channel.Source switch
+    //                                {
+    //                                    "Youtube" => Emote.Parse(_discordOption.Emotes.Youtube),
+    //                                    "Twitcasting" => Emote.Parse(_discordOption.Emotes.Twitcasting),
+    //                                    "Twitch" => Emote.Parse(_discordOption.Emotes.Twitch),
+    //                                    _ => ""
+    //                                });
+    //    return componentBuilder;
+    //}
     #endregion
 
     #region Send
@@ -315,26 +242,26 @@ public partial class DiscordService
         _logger.LogDebug("Message warning sent to discord: {title}, {messageId}", embed.Title, messageId);
     }
 
-    async Task SendMessageAdmin(Embed embed, MessageComponent component, string? text)
-    {
-        AllowedMentions allowedMentions = new()
-        {
-            RoleIds = new List<string?>()
-            {
-                _discordOption.Mention.Admin
-            }.Where(p => !string.IsNullOrEmpty(p))
-             .Select(input => ulong.Parse(RegexNumbers().Match(input!).Value))
-             .ToList()
-        };
-        ulong messageId = await _discordWebhookClientAdmin.SendMessageAsync(
-            text: text,
-            embeds: new Embed[] { embed },
-            username: "Recorder.moe Notifier",
-            avatarUrl: $"https://{_discordOption.FrontEndHost}/assets/img/logos/logo-color-big.png",
-            allowedMentions: allowedMentions,
-            components: component);
-        _logger.LogDebug("Message admin sent to discord: {title}, {messageId}", embed.Title, messageId);
-    }
+    //async Task SendMessageAdmin(Embed embed, MessageComponent component, string? text)
+    //{
+    //    AllowedMentions allowedMentions = new()
+    //    {
+    //        RoleIds = new List<string?>()
+    //        {
+    //            _discordOption.Mention.Admin
+    //        }.Where(p => !string.IsNullOrEmpty(p))
+    //         .Select(input => ulong.Parse(RegexNumbers().Match(input!).Value))
+    //         .ToList()
+    //    };
+    //    ulong messageId = await _discordWebhookClientAdmin.SendMessageAsync(
+    //        text: text,
+    //        embeds: new Embed[] { embed },
+    //        username: "Recorder.moe Notifier",
+    //        avatarUrl: $"https://{_discordOption.FrontEndHost}/assets/img/logos/logo-color-big.png",
+    //        allowedMentions: allowedMentions,
+    //        components: component);
+    //    _logger.LogDebug("Message admin sent to discord: {title}, {messageId}", embed.Title, messageId);
+    //}
 
     [GeneratedRegex("\\d+")]
     private static partial Regex RegexNumbers();

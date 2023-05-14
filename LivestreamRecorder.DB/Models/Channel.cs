@@ -27,10 +27,6 @@ public class Channel : Entity
 
     public string? Note { get; set; }
 
-    public decimal? SupportToken { get; set; }
-
-    public bool? CanActive { get; set; }
-
     public ICollection<Video> Videos { get; set; }
 }
 
