@@ -25,6 +25,8 @@ public class Channel : Entity
 
     public string? LatestVideoId { get; set; }
 
+    public bool? Hide { get; set; }
+
     public string? Note { get; set; }
 
     public ICollection<Video> Videos { get; set; }
