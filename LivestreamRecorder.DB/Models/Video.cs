@@ -36,7 +36,7 @@ public class Video : Entity
 
     public string ChannelId { get; set; }
 
-    public Channel Channel { get; set; }
+    public Channel? Channel { get; set; }
 }
 
 public class Timestamps

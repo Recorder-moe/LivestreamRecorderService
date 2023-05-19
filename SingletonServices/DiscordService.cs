@@ -118,13 +118,13 @@ public partial class DiscordService
         EmbedBuilder embedBuilder = new();
         if (null != video.Thumbnail)
             embedBuilder.WithImageUrl($"https://{_azureOption.StorageAccountName}.blob.core.windows.net/{_azureOption.BlobContainerNamePublic}/thumbnails/{video.Thumbnail}");
-        else
+        else if (null != video.Channel)
             embedBuilder.WithImageUrl($"https://{_azureOption.StorageAccountName}.blob.core.windows.net/{_azureOption.BlobContainerNamePublic}/banner/{video.Channel.Banner}");
 
         embedBuilder.WithDescription(video.Title);
         embedBuilder.WithUrl($"https://{_discordOption.FrontEndHost}/channels/{video.ChannelId}/videos/{video.id}");
         embedBuilder.AddField("Video ID", video.id, false);
-        embedBuilder.AddField("Channel", video.Channel.ChannelName, false);
+        embedBuilder.AddField("Channel", video.Channel?.ChannelName ?? video.ChannelId, false);
         embedBuilder.AddField("Channel ID", video.ChannelId, true);
         embedBuilder.AddField("Source", video.Source, true);
         embedBuilder.AddField("Is live stream", video.IsLiveStream?.ToString() ?? "Unknown", true);

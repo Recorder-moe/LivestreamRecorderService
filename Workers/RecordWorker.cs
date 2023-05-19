@@ -159,7 +159,7 @@ public class RecordWorker : BackgroundService
         {
             using var _ = LogContext.PushProperty("videoId", video.id);
             _logger.LogInformation("Start to create ACI: {videoId}", video.id);
-            switch (video.Channel.Source)
+            switch (video.Source)
             {
                 case "Youtube":
                     await _aCIYtarchiveService.StartInstanceAsync(videoId: video.id,
@@ -177,8 +177,8 @@ public class RecordWorker : BackgroundService
                     break;
 
                 default:
-                    _logger.LogError("ACI deployment FAILED, Source not support: {source}", video.Channel.Source);
-                    throw new NotSupportedException($"Source {video.Channel.Source} not supported");
+                    _logger.LogError("ACI deployment FAILED, Source not support: {source}", video.Source);
+                    throw new NotSupportedException($"Source {video.Source} not supported");
             }
             videoService.UpdateVideoStatus(video, VideoStatus.Recording);
 
@@ -200,7 +200,7 @@ public class RecordWorker : BackgroundService
         {
             using var _ = LogContext.PushProperty("videoId", video.id);
             _logger.LogInformation("Start to create ACI: {videoId}", video.id);
-            switch (video.Channel.Source)
+            switch (video.Source)
             {
                 case "Youtube":
                     await _aCIYtdlpService.StartInstanceAsync(
@@ -218,8 +218,8 @@ public class RecordWorker : BackgroundService
                         stoppingToken);
                     break;
                 default:
-                    _logger.LogError("ACI deployment FAILED, Source not support: {source}", video.Channel.Source);
-                    throw new NotSupportedException($"Source {video.Channel.Source} not supported");
+                    _logger.LogError("ACI deployment FAILED, Source not support: {source}", video.Source);
+                    throw new NotSupportedException($"Source {video.Source} not supported");
             }
             videoService.UpdateVideoStatus(video, VideoStatus.Downloading);
             _logger.LogInformation("ACI deployed: {videoId} ", video.id);
