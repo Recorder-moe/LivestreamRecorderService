@@ -111,6 +111,7 @@ public class TwitchSerivce : PlatformService, IPlatformSerivce
             {
                 _ = _aCIStreamlinkService.StartInstanceAsync(videoId: video.id,
                                                              channelId: video.ChannelId,
+                                                             useCookiesFile: false,
                                                              cancellation: cancellation);
 
                 video.Status = VideoStatus.Recording;

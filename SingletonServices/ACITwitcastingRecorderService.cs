@@ -21,7 +21,11 @@ public class ACITwitcastingRecorderService : ACIService
         _logger = logger;
     }
 
-    protected override Task<ArmOperation<ArmDeploymentResource>> CreateNewInstance(string channelId, string instanceName, CancellationToken cancellation)
+    protected override Task<ArmOperation<ArmDeploymentResource>> CreateNewInstance(string id,
+                                                                                   string instanceName,
+                                                                                   string channelId,
+                                                                                   bool useCookiesFile = false,
+                                                                                   CancellationToken cancellation = default)
     {
         try
         {

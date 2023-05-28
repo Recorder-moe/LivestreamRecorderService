@@ -337,6 +337,11 @@ public class YoutubeSerivce : PlatformService, IPlatformSerivce
                 break;
             // Member only
             case "subscriber_only":
+                if (video.Channel?.UseCookiesFile != true)
+                {
+                    goto case "needs_auth";
+                }
+                break;
             // Copyright Notice
             case "needs_auth":
                 // Not archived
@@ -368,6 +373,8 @@ public class YoutubeSerivce : PlatformService, IPlatformSerivce
         if (video.Status == VideoStatus.WaitingToRecord)
         {
             _ = _aCIYtarchiveService.StartInstanceAsync(videoId: video.id,
+                                                        channelId: video.ChannelId,
+                                                        useCookiesFile: video.Channel?.UseCookiesFile ?? false,
                                                         cancellation: cancellation);
 
             video.Status = VideoStatus.Recording;

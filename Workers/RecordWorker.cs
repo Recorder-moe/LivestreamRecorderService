@@ -163,16 +163,20 @@ public class RecordWorker : BackgroundService
             {
                 case "Youtube":
                     await _aCIYtarchiveService.StartInstanceAsync(videoId: video.id,
+                                                                  channelId: video.ChannelId,
+                                                                  useCookiesFile: video.Channel?.UseCookiesFile == true,
                                                                   cancellation: stoppingToken);
                     break;
                 case "Twitcasting":
                     await _aCITwitcastingRecorderService.StartInstanceAsync(videoId: video.id,
                                                                             channelId: video.ChannelId,
+                                                                            useCookiesFile: false,
                                                                             cancellation: stoppingToken);
                     break;
                 case "Twitch":
                     await _aCIStreamlinkService.StartInstanceAsync(videoId: video.id,
                                                                    channelId: video.ChannelId,
+                                                                   useCookiesFile: false,
                                                                    cancellation: stoppingToken);
                     break;
 
@@ -204,18 +208,24 @@ public class RecordWorker : BackgroundService
             {
                 case "Youtube":
                     await _aCIYtdlpService.StartInstanceAsync(
-                        $"https://youtu.be/{video.id}",
-                        stoppingToken);
+                        url: $"https://youtu.be/{video.id}",
+                        channelId: video.ChannelId,
+                        useCookiesFile: video.Channel?.UseCookiesFile == true,
+                        cancellation: stoppingToken);
                     break;
                 case "Twitcasting":
                     await _aCIYtdlpService.StartInstanceAsync(
-                        $"https://twitcasting.tv/{video.ChannelId}/movie/{video.id}",
-                        stoppingToken);
+                        url: $"https://twitcasting.tv/{video.ChannelId}/movie/{video.id}",
+                        channelId: video.ChannelId,
+                        useCookiesFile: false,
+                        cancellation: stoppingToken);
                     break;
                 case "Twitch":
                     await _aCIYtdlpService.StartInstanceAsync(
-                        $"https://www.twitch.tv/videos/{video.id}",
-                        stoppingToken);
+                        url: $"https://www.twitch.tv/videos/{video.id}",
+                        channelId: video.ChannelId,
+                        useCookiesFile: false,
+                        cancellation: stoppingToken);
                     break;
                 default:
                     _logger.LogError("ACI deployment FAILED, Source not support: {source}", video.Source);

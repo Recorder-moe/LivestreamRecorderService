@@ -1,7 +1,5 @@
 ﻿using Azure.ResourceManager;
-using Azure.ResourceManager.ContainerInstance;
 using Azure.ResourceManager.Resources;
-using LivestreamRecorderService.Interfaces;
 using LivestreamRecorderService.Models.Options;
 using Microsoft.Extensions.Options;
 
@@ -23,7 +21,11 @@ public class ACIStreamlinkService : ACIService
         _logger = logger;
     }
 
-    protected override Task<ArmOperation<ArmDeploymentResource>> CreateNewInstance(string channelId, string instanceName, CancellationToken cancellation)
+    protected override Task<ArmOperation<ArmDeploymentResource>> CreateNewInstance(string id,
+                                                                                   string instanceName,
+                                                                                   string channelId,
+                                                                                   bool useCookiesFile = false,
+                                                                                   CancellationToken cancellation = default)
     {
         try
         {

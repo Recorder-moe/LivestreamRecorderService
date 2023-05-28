@@ -117,6 +117,7 @@ public class TwitcastingService : PlatformService, IPlatformSerivce
                 {
                     _ = _aCITwitcastingRecorderService.StartInstanceAsync(videoId: videoId,
                                                                           channelId: video.ChannelId,
+                                                                          useCookiesFile: false,
                                                                           cancellation: cancellation);
 
                     video.Status = VideoStatus.Recording;

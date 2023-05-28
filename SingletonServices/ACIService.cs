@@ -134,7 +134,10 @@ public class ACIService
         }
     }
 
-    public virtual async Task<dynamic> StartInstanceAsync(string videoId, string channelId, CancellationToken cancellation = default)
+    public virtual async Task<dynamic> StartInstanceAsync(string videoId,
+                                                          string channelId,
+                                                          bool useCookiesFile = false,
+                                                          CancellationToken cancellation = default)
     {
         // ACI部署上需要時間，啟動已存在的Instance較省時
         // 同時需注意 BUG#97 的狀況，在「已啟動」的時候部署新的Instance，在「已停止」時直接啟動舊的Instance
@@ -151,27 +154,46 @@ public class ACIService
                 "Succeeded" or "Failed" or "Stopped" => await StartOldACI(instance: instance,
                                                                           channelId: channelId,
                                                                           videoId: videoId,
+                                                                          useCookiesFile: useCookiesFile,
                                                                           cancellation: cancellation),
                 // 啟動新的Instance
-                _ => await CreateNewInstance(channelId, instanceNameVideoId, cancellation),
+                _ => await CreateNewInstance(id: videoId,
+                                             instanceName: instanceNameVideoId,
+                                             channelId: channelId,
+                                             useCookiesFile: useCookiesFile,
+                                             cancellation: cancellation),
             };
         }
         else
         {
             _logger.LogWarning("Failed to get ACI instance for {videoId} {name}. A new instance will now be created.", videoId, instanceNameChannelId);
             // 啟動新的預設Instance
-            return await CreateNewInstance(channelId, instanceNameChannelId, cancellation);
+            return await CreateNewInstance(id: videoId,
+                                           instanceName: instanceNameChannelId,
+                                           channelId: channelId,
+                                           useCookiesFile: useCookiesFile,
+                                           cancellation: cancellation);
         }
     }
 
-    protected async Task<dynamic> StartOldACI(GenericResource instance, string channelId, string videoId, string? newInstanceName = null, int retry = 0, CancellationToken cancellation = default)
+    protected async Task<dynamic> StartOldACI(GenericResource instance,
+                                              string channelId,
+                                              string videoId,
+                                              string? newInstanceName = null,
+                                              int retry = 0,
+                                              bool useCookiesFile = false,
+                                              CancellationToken cancellation = default)
     {
         newInstanceName ??= GetInstanceName(channelId);
 
         if (retry > 3)
         {
             _logger.LogError("Retry too many times for {videoId} {ACIName}, create new instance.", videoId, instance.Id);
-            return await CreateNewInstance(channelId, newInstanceName, cancellation);
+            return await CreateNewInstance(id: videoId,
+                                           instanceName: newInstanceName,
+                                           channelId: channelId,
+                                           useCookiesFile: useCookiesFile,
+                                           cancellation: cancellation);
         }
 
         try
@@ -182,11 +204,20 @@ public class ACIService
         catch (Azure.RequestFailedException e)
         {
             _logger.LogWarning(e, "Start ACI {ACIName} failed, retry {retry}", instance.Id, ++retry);
-            return await StartOldACI(instance, channelId, videoId, newInstanceName, retry, cancellation);
+            return await StartOldACI(instance: instance,
+                                     channelId: channelId,
+                                     videoId: videoId,
+                                     newInstanceName: newInstanceName,
+                                     retry: retry,
+                                     useCookiesFile: useCookiesFile,
+                                     cancellation: cancellation);
         }
     }
 
     // Must be override.
-    protected virtual Task<ArmOperation<ArmDeploymentResource>> CreateNewInstance(string id, string instanceName, CancellationToken cancellation)
+    protected virtual Task<ArmOperation<ArmDeploymentResource>> CreateNewInstance(string id,
+                                                                                  string instanceName,
+                                                                                  string channelId,
+                                                                                  bool useCookiesFile, CancellationToken cancellation)
         => throw new NotImplementedException();
 }
