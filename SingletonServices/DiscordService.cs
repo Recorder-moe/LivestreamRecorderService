@@ -135,6 +135,14 @@ public partial class DiscordService
         if (null != video.Timestamps.ActualStartTime)
             embedBuilder.AddField("Start time", video.Timestamps.ActualStartTime?.ToString("yyyy/MM/dd HH:mm:ss"), true);
 
+        embedBuilder.AddField("Source Url", video.Source switch
+        {
+            "Youtube" => $"https://www.youtube.com/watch?v={video.id}",
+            "Twitch" => $"https://www.twitch.tv/{video.ChannelId}",
+            "Twitcasting" => $"https://twitcasting.tv/{video.ChannelId}/movie/{video.id}",
+            _ => "",
+        });
+
         return embedBuilder;
     }
 
