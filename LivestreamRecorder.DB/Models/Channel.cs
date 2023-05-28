@@ -29,6 +29,8 @@ public class Channel : Entity
 
     public bool? UseCookiesFile { get; set; } = false;
 
+    public bool? SkipNotLiveStream { get; set; } = true;
+
     public string? Note { get; set; }
 
     public ICollection<Video> Videos { get; set; }

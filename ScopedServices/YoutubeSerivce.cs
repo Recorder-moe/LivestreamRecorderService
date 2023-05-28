@@ -210,8 +210,8 @@ public class YoutubeSerivce : PlatformService, IPlatformSerivce
                     case VideoStatus.Pending:
                     case VideoStatus.WaitingToRecord:
                         video.Status = VideoStatus.WaitingToDownload;
-                        video.Thumbnail = await DownloadThumbnailAsync(videoData.Thumbnail, video.id, cancellation);
                         _logger.LogInformation("Change video {videoId} status to {videoStatus}", video.id, Enum.GetName(typeof(VideoStatus), video.Status));
+                        video.Thumbnail = await DownloadThumbnailAsync(videoData.Thumbnail, video.id, cancellation);
                         break;
                     default:
                         // Don't modify status.
@@ -234,7 +234,8 @@ public class YoutubeSerivce : PlatformService, IPlatformSerivce
                 video.IsLiveStream = false;
 
                 // Don't download uploaded videos.
-                if (video.Status == VideoStatus.Unknown)
+                if (video.Status == VideoStatus.Unknown
+                    && video.Channel?.SkipNotLiveStream == true)
                 {
                     video.Note = $"Video skipped because it is not live stream.";
                     // First detected
@@ -243,6 +244,11 @@ public class YoutubeSerivce : PlatformService, IPlatformSerivce
                         await _discordService.SendSkippedMessage(video);
                     }
                     video.Status = VideoStatus.Skipped;
+                    _logger.LogInformation("Change video {videoId} status to {videoStatus}", video.id, Enum.GetName(typeof(VideoStatus), video.Status));
+                }
+                else
+                {
+                    video.Status = VideoStatus.WaitingToDownload;
                     _logger.LogInformation("Change video {videoId} status to {videoStatus}", video.id, Enum.GetName(typeof(VideoStatus), video.Status));
                 }
 
