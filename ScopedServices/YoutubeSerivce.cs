@@ -159,7 +159,8 @@ public class YoutubeSerivce : PlatformService, IPlatformService
         }
 
         // Download thumbnail for new videos
-        if (video.Status == VideoStatus.Unknown)
+        if (video.Status == VideoStatus.Unknown
+            || (video.Status == VideoStatus.Pending && string.IsNullOrEmpty(video.Thumbnail)))
         {
             video.Thumbnail = await DownloadThumbnailAsync(videoData.Thumbnail, video.id, cancellation);
         }
