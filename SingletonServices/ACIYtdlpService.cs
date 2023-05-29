@@ -1,6 +1,5 @@
 ﻿using Azure.ResourceManager;
 using Azure.ResourceManager.Resources;
-using Discord.Rest;
 using LivestreamRecorderService.Models.Options;
 using Microsoft.Extensions.Options;
 
@@ -56,18 +55,29 @@ public class ACIYtdlpService : ACIService
                 {
                     "dumb-init", "--",
                     "sh", "-c",
-                    // It is possible for Youtube to use "-" at the beginning of an id, which can cause errors when using the id as a file name.
-                    // Therefore, we add "_" before the file name to avoid such issues.
-                    $"yt-dlp --ignore-config --retries 30 --concurrent-fragments 16 --merge-output-format mp4 -S '+codec:h264' --embed-thumbnail --embed-metadata --no-part --cookies /fileshare/cookies/{channelId}.txt -o '_%(id)s.%(ext)s' '{id}' && mv *.mp4 /fileshare/"
+                    $"yt-dlp --ignore-config --retries 30 --concurrent-fragments 16 --merge-output-format mp4 -S '+codec:h264' --embed-thumbnail --embed-metadata --no-part --cookies /fileshare/cookies/{channelId}.txt -o '%(id)s.%(ext)s' '{id}' && mv *.mp4 /fileshare/"
                 }
                 : new string[]
                 {
                     "dumb-init", "--",
                     "sh", "-c",
-                    // It is possible for Youtube to use "-" at the beginning of an id, which can cause errors when using the id as a file name.
-                    // Therefore, we add "_" before the file name to avoid such issues.
-                    $"yt-dlp --ignore-config --retries 30 --concurrent-fragments 16 --merge-output-format mp4 -S '+codec:h264' --embed-thumbnail --embed-metadata --no-part -o '_%(id)s.%(ext)s' '{id}' && mv *.mp4 /fileshare/"
+                    $"yt-dlp --ignore-config --retries 30 --concurrent-fragments 16 --merge-output-format mp4 -S '+codec:h264' --embed-thumbnail --embed-metadata --no-part -o '%(id)s.%(ext)s' '{id}' && mv *.mp4 /fileshare/"
                 };
+
+            // Workground for twitcasting ERROR: Initialization fragment found after media fragments, unable to download
+            // https://github.com/yt-dlp/yt-dlp/issues/5497
+            if (id.Contains("twitcasting.tv"))
+            {
+                command[4] = command[4].Replace("--ignore-config --retries 30", "--ignore-config --retries 30 --downloader ffmpeg");
+            }
+
+            // It is possible for Youtube to use "-" at the beginning of an id, which can cause errors when using the id as a file name.
+            // Therefore, we add "_" before the file name to avoid such issues.
+            if (id.Contains("youtu"))
+            {
+                command[4] = command[4].Replace("-o '%(id)s.%(ext)s'", "-o '_%(id)s.%(ext)s'");
+            }
+
             return CreateAzureContainerInstanceAsync(
                     template: "ACI.json",
                     parameters: new

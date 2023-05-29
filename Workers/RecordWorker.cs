@@ -221,8 +221,9 @@ public class RecordWorker : BackgroundService
                         cancellation: stoppingToken);
                     break;
                 case "Twitch":
+                    var id = video.id.TrimStart('v');
                     await _aCIYtdlpService.StartInstanceAsync(
-                        url: $"https://www.twitch.tv/videos/{video.id}",
+                        url: $"https://www.twitch.tv/videos/{id}",
                         channelId: video.ChannelId,
                         useCookiesFile: false,
                         cancellation: stoppingToken);
@@ -251,12 +252,13 @@ public class RecordWorker : BackgroundService
         {
             using var _ = LogContext.PushProperty("videoId", video.id);
 
-            // It is possible for Youtube to use "-" at the beginning of an id, which can cause errors when using the id as a file name.
-            // Therefore, we add "_" before the file name to avoid such issues.
-            var searchPattern = video.Source == "Youtube"
-                                ? "_" + video.id
-                                : video.id;
-
+            string searchPattern = video.Source switch
+            {
+                // It is possible for Youtube to use "-" at the beginning of an id, which can cause errors when using the id as a file name.
+                // Therefore, we add "_" before the file name to avoid such issues.
+                "Youtube" => "_" + video.id,
+                _ => video.id,
+            };
             List<ShareFileItem> files = await _aFSService.GetShareFilesByVideoIdAsync(videoId: searchPattern,
                                                                                       delay: TimeSpan.FromMinutes(5),
                                                                                       cancellation: cancellation);

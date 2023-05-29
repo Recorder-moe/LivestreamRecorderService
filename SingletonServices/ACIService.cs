@@ -76,7 +76,10 @@ public class ACIService
     /// <exception cref="Exception">ACI status is FAILED</exception>
     public async Task RemoveCompletedInstanceContainerAsync(Video video, CancellationToken cancellation = default)
     {
-        var instance = (await GetInstanceByVideoIdAsync(video.id, cancellation));
+        var id = video.Source == "Twitch" 
+            ? video.id.TrimStart('v') 
+            : video.id;
+        var instance = (await GetInstanceByVideoIdAsync(id, cancellation));
         if (null != instance && instance.HasData)
         {
             switch (instance.Data.ProvisioningState)
@@ -109,7 +112,9 @@ public class ACIService
 
     public async Task<bool> IsACIFailedAsync(Video video, CancellationToken cancellation)
     {
-        string ACIName = video.id;
+        string ACIName = video.Source == "Twitch"
+                            ? video.id.TrimStart('v')
+                            : video.id;
         var instance = (await GetInstanceByVideoIdAsync(ACIName, cancellation));
         if (null == instance || !instance.HasData)
         {
