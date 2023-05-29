@@ -10,7 +10,7 @@ using YoutubeDLSharp.Options;
 
 namespace LivestreamRecorderService.ScopedServices
 {
-    public abstract class PlatformService : IPlatformSerivce
+    public abstract class PlatformService : IPlatformService
     {
         private readonly IChannelRepository _channelRepository;
         private readonly IABSService _aBSService;

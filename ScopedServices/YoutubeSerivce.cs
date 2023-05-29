@@ -10,7 +10,7 @@ using Serilog.Context;
 
 namespace LivestreamRecorderService.ScopedServices;
 
-public class YoutubeSerivce : PlatformService, IPlatformSerivce
+public class YoutubeSerivce : PlatformService, IPlatformService
 {
     private readonly ILogger<YoutubeSerivce> _logger;
     private readonly IUnitOfWork _unitOfWork_Public;

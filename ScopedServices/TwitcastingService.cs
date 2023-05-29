@@ -10,7 +10,7 @@ using System.Net.Http.Json;
 
 namespace LivestreamRecorderService.ScopedServices;
 
-public class TwitcastingService : PlatformService, IPlatformSerivce
+public class TwitcastingService : PlatformService, IPlatformService
 {
     private readonly ILogger<TwitcastingService> _logger;
     private readonly IHttpClientFactory _httpFactory;

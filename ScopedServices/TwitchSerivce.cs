@@ -9,7 +9,7 @@ using TwitchLib.Api.Interfaces;
 
 namespace LivestreamRecorderService.ScopedServices;
 
-public class TwitchSerivce : PlatformService, IPlatformSerivce
+public class TwitchSerivce : PlatformService, IPlatformService
 {
     private readonly ILogger<TwitchSerivce> _logger;
     private readonly IUnitOfWork _unitOfWork_Public;

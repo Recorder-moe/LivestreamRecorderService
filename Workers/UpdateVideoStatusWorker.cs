@@ -47,9 +47,9 @@ public class UpdateVideoStatusWorker : BackgroundService
             {
                 VideoService videoService = scope.ServiceProvider.GetRequiredService<VideoService>();
                 IVideoRepository videoRepository = scope.ServiceProvider.GetRequiredService<IVideoRepository>();
-                IPlatformSerivce youtubeSerivce = scope.ServiceProvider.GetRequiredService<YoutubeSerivce>();
-                IPlatformSerivce twitcastingService = scope.ServiceProvider.GetRequiredService<TwitcastingService>();
-                IPlatformSerivce twitchService = scope.ServiceProvider.GetRequiredService<TwitchSerivce>();
+                IPlatformService youtubeSerivce = scope.ServiceProvider.GetRequiredService<YoutubeSerivce>();
+                IPlatformService twitcastingService = scope.ServiceProvider.GetRequiredService<TwitcastingService>();
+                IPlatformService twitchService = scope.ServiceProvider.GetRequiredService<TwitchSerivce>();
                 #endregion
 
                 videos = videoRepository.Where(p => p.Status >= VideoStatus.Archived

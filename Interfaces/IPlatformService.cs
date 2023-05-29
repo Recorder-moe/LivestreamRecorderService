@@ -3,7 +3,7 @@ using LivestreamRecorderService.Models;
 
 namespace LivestreamRecorderService.Interfaces;
 
-public interface IPlatformSerivce
+public interface IPlatformService
 {
     public string PlatformName { get; }
     List<Channel> GetMonitoringChannels();

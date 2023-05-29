@@ -50,7 +50,7 @@ public class MonitorWorker : BackgroundService
         }
     }
 
-    private async Task MonitorPlatform(IPlatformSerivce PlatformService, VideoService videoService, CancellationToken cancellation = default)
+    private async Task MonitorPlatform(IPlatformService PlatformService, VideoService videoService, CancellationToken cancellation = default)
     {
         if (!PlatformService.StepInterval(_interval)) return;
 
