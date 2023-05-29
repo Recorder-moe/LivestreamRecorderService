@@ -19,6 +19,8 @@ public class ChannelService
 
     public void UpdateChannelLatestVideo(Video video)
     {
+        if (!_channelRepository.Exists(video.ChannelId)) return;
+
         var channel = _channelRepository.GetById(video.ChannelId);
         _unitOfWork_Public.Context.Entry(channel).Reload();
         channel.LatestVideoId = video.id;

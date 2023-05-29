@@ -270,6 +270,11 @@ public class TwitcastingService : PlatformService, IPlatformService
                 video.Title = title ?? video.Title;
                 video.Description = telop ?? video.Description;
                 video.SourceStatus = VideoStatus.Exist;
+
+                if(video.Status <= VideoStatus.Pending)
+                {
+                    video.Status = VideoStatus.WaitingToDownload;
+                }
             }
             else
             {

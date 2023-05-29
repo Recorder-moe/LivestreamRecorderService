@@ -136,6 +136,11 @@ public class TwitchSerivce : PlatformService, IPlatformService
             video.Timestamps.ActualStartTime = video.Timestamps.PublishedAt;
         }
 
+        if (video.Status <= VideoStatus.Pending)
+        {
+            video.Status = VideoStatus.WaitingToDownload;
+        }
+
         if (await _aBSService.GetVideoBlob(video)
                              .ExistsAsync(cancellation))
         {

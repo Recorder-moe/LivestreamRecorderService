@@ -61,35 +61,33 @@ public class MonitorWorker : BackgroundService
             await PlatformService.UpdateVideosDataAsync(channel, cancellation);
         }
 
-        // Only Youtube has scheduled videos
-        if (PlatformService.PlatformName == "Youtube")
+        var videos = videoService.GetVideosByStatus(VideoStatus.Scheduled)
+                                 .Concat(videoService.GetVideosByStatus(VideoStatus.Pending))
+                                 .Where(p => p.Source == PlatformService.PlatformName)
+                                 .ToList();
+        if (videos.Count == 0)
         {
-            var videos = videoService.GetVideosByStatus(VideoStatus.Scheduled)
-                                     .Concat(videoService.GetVideosByStatus(VideoStatus.Pending))
-                                     .Where(p => p.Source == PlatformService.PlatformName)
-                                     .ToList();
-            if (videos.Count == 0)
+            _logger.LogTrace("No Scheduled videos for {platform}", PlatformService.PlatformName);
+            return;
+        }
+        else
+        {
+            _logger.LogDebug("Get {videoCount} Scheduled/Pending videos for {platform}", videos.Count, PlatformService.PlatformName);
+        }
+
+        foreach (var video in videos)
+        {
+            // Channel exists and is not monitoring
+            if (null != video.Channel 
+                && video.Status == VideoStatus.Scheduled
+                && !video.Channel.Monitoring)
             {
-                _logger.LogTrace("No Scheduled videos for {platform}", PlatformService.PlatformName);
-                return;
+                videoService.DeleteVideo(video);
+                _logger.LogInformation("Remove scheduled video {videoId} because channel {channelId} is not monitoring.", video.id, video.Channel.id);
             }
             else
             {
-                _logger.LogDebug("Get {videoCount} Scheduled/Pending videos for {platform}", videos.Count, PlatformService.PlatformName);
-            }
-
-            foreach (var video in videos)
-            {
-                // Channel exists and is not monitoring
-                if (null != video.Channel && !video.Channel.Monitoring)
-                {
-                    videoService.DeleteVideo(video);
-                    _logger.LogInformation("Remove scheduled video {videoId} because channel {channelId} is not monitoring.", video.id, video.Channel.id);
-                }
-                else
-                {
-                    await PlatformService.UpdateVideoDataAsync(video, cancellation);
-                }
+                await PlatformService.UpdateVideoDataAsync(video, cancellation);
             }
         }
     }
