@@ -167,6 +167,9 @@ public partial class DiscordService
     private ComponentBuilder GetComponentBuilder(Video video)
     {
         ComponentBuilder componentBuilder = new();
+        return componentBuilder;
+
+#if false
         componentBuilder.WithButton(label: "Recorder.moe",
                                     style: ButtonStyle.Link,
                                     url: $"https://{_discordOption.FrontEndHost}/channels/{video.ChannelId}/videos/{video.id}",
@@ -186,10 +189,11 @@ public partial class DiscordService
                                         "Youtube" => Emote.Parse(_discordOption.Emotes.Youtube),
                                         "Twitcasting" => Emote.Parse(_discordOption.Emotes.Twitcasting),
                                         "Twitch" => Emote.Parse(_discordOption.Emotes.Twitch),
-                                        "FC2" => "",
+                                        "FC2" => Emote.Parse(_discordOption.Emotes.FC2),
                                         _ => ""
                                     });
         return componentBuilder;
+#endif
     }
 
     //private ComponentBuilder GetComponentBuilder(Channel channel)

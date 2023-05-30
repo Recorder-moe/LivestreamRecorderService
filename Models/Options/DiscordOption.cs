@@ -20,6 +20,7 @@ public class Emotes
     public required string Youtube { get; set; }
     public required string Twitch { get; set; }
     public required string Twitcasting { get; set; }
+    public required string FC2 { get; set; }
 }
 
 public class Mention

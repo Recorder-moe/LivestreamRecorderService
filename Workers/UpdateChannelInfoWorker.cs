@@ -31,7 +31,6 @@ public class UpdateChannelInfoWorker : BackgroundService
             #region DI
             using var scope = _serviceProvider.CreateScope();
             YoutubeService youtubeSerivce = scope.ServiceProvider.GetRequiredService<YoutubeService>();
-            FC2Service fc2Serivce = scope.ServiceProvider.GetRequiredService<FC2Service>();
             #endregion
 
             #region Youtube
@@ -40,15 +39,6 @@ public class UpdateChannelInfoWorker : BackgroundService
             foreach (var channel in channels)
             {
                 await youtubeSerivce.UpdateChannelData(channel, stoppingToken);
-            }
-            #endregion
-
-            #region FC2 
-            var fc2channels = fc2Serivce.GetMonitoringChannels();
-            _logger.LogDebug("Get {channelCount} channels for {platform}", channels.Count, fc2Serivce.PlatformName);
-            foreach (var channel in channels)
-            {
-                await fc2Serivce.UpdateChannelData(channel, stoppingToken);
             }
             #endregion
 

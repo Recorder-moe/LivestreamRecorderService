@@ -7,7 +7,6 @@ using LivestreamRecorderService.Models;
 using LivestreamRecorderService.SingletonServices;
 using Newtonsoft.Json;
 using Serilog.Context;
-using System.Net.Http.Json;
 
 namespace LivestreamRecorderService.ScopedServices;
 
@@ -16,7 +15,6 @@ public class FC2Service : PlatformService, IPlatformService
     private readonly ILogger<FC2Service> _logger;
     private readonly IUnitOfWork _unitOfWork_Public;
     private readonly IVideoRepository _videoRepository;
-    private readonly IChannelRepository _channelRepository;
     private readonly ACIFC2LiveDLService _aCIFC2LiveDLService;
     private readonly IABSService _aBSService;
     private readonly DiscordService _discordService;
@@ -41,7 +39,6 @@ public class FC2Service : PlatformService, IPlatformService
         _logger = logger;
         _unitOfWork_Public = unitOfWork_Public;
         _videoRepository = videoRepository;
-        _channelRepository = channelRepository;
         _aCIFC2LiveDLService = aCIFC2LiveDLService;
         _aBSService = aBSService;
         _discordService = discordService;
@@ -164,15 +161,26 @@ public class FC2Service : PlatformService, IPlatformService
         try
         {
             using var client = _httpFactory.CreateClient();
-            var response = await client.PostAsync($@"{_memberApi}", new StringContent($"channel=1&profile=1&user=0&streamid={channelId}"), cancellation);
+            var response = await client.PostAsync(
+                requestUri: $@"{_memberApi}",
+                content: new FormUrlEncodedContent(
+                    new Dictionary<string, string>()
+                    {
+                        { "channel", "1" },
+                        { "profile", "1" },
+                        { "user", "0" },
+                        { "streamid", channelId }
+                    }),
+                cancellationToken: cancellation);
             response.EnsureSuccessStatusCode();
-            var info = await response.Content.ReadFromJsonAsync<FC2MemberData>(cancellationToken: cancellation);
+            string jsonString = await response.Content.ReadAsStringAsync(cancellation);
+            FC2MemberData? info = JsonConvert.DeserializeObject<FC2MemberData>(jsonString);
 
             return info;
         }
-        catch (Exception)
+        catch (Exception e)
         {
-            _logger.LogError("Get fc2 info failed. {channelId} Be careful if this happens repeatedly.", channelId);
+            _logger.LogError(e, "Get fc2 info failed. {channelId} Be careful if this happens repeatedly.", channelId);
             return null;
         }
     }
@@ -204,30 +212,6 @@ public class FC2Service : PlatformService, IPlatformService
         }
 
         _videoRepository.Update(video);
-        _unitOfWork_Public.Commit();
-    }
-
-    internal async Task UpdateChannelData(Channel channel, CancellationToken stoppingToken)
-    {
-        var avatarBlobUrl = channel.Avatar;
-        var info = await GetFC2InfoDataAsync(channel.id, stoppingToken);
-        if (null == info)
-        {
-            _logger.LogWarning("Failed to get channel info for {channelId}", channel.id);
-            return;
-        }
-
-        var avatarUrl = info.Data.ProfileData.Image;
-        if (!string.IsNullOrEmpty(avatarUrl))
-        {
-            avatarBlobUrl = await DownloadImageAndUploadToBlobStorage(avatarUrl, $"avatar/{channel.id}", stoppingToken);
-        }
-
-        _unitOfWork_Public.Context.Entry(channel).Reload();
-        channel = _channelRepository.LoadRelatedData(channel);
-        channel.ChannelName = info.Data.ProfileData.Name;
-        channel.Avatar = avatarBlobUrl?.Replace("avatar/", "");
-        _channelRepository.Update(channel);
         _unitOfWork_Public.Commit();
     }
 }
