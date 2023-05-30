@@ -55,17 +55,17 @@ public class FC2Service : PlatformService, IPlatformService
         var (isLive, videoId) = await GetFC2LiveStatusAsync(channel, cancellation);
         using var ___ = LogContext.PushProperty("videoId", videoId);
 
-        if (null != videoId)
+        if (!isLive || string.IsNullOrEmpty(videoId))
+        {
+            _logger.LogTrace("{channelId} is down.", channel.id);
+            return;
+        }
+        else if (!string.IsNullOrEmpty(videoId))
         {
             Video video;
 
             if (_videoRepository.Exists(videoId))
             {
-                if (!isLive)
-                {
-                    _logger.LogTrace("{channelId} is down.", channel.id);
-                    return;
-                }
 
                 video = _videoRepository.GetById(videoId);
                 switch (video.Status)
@@ -151,9 +151,11 @@ public class FC2Service : PlatformService, IPlatformService
     {
         var info = await GetFC2InfoDataAsync(channel.id, cancellation);
 
-        return null == info
+        var start = info?.Data.ChannelData.Start?.ToString();
+
+        return null == info || string.IsNullOrEmpty(start) || start == "0"
                 ? (false, null)
-                : (info.Data.ChannelData.IsPublish == 1, info.Data.ChannelData.Start?.ToString());
+                : (info.Data.ChannelData.IsPublish == 1, start);
     }
 
     private async Task<FC2MemberData?> GetFC2InfoDataAsync(string channelId, CancellationToken cancellation = default)
