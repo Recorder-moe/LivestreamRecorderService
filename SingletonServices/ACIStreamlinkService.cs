@@ -29,13 +29,13 @@ public class ACIStreamlinkService : ACIService
     {
         try
         {
-            return doWithImage("ghcr.io/recorder-moe/streamlink:5.1.2");
+            return doWithImage("ghcr.io/recorder-moe/streamlink:5.3.1");
         }
         catch (Exception)
         {
             // Use DockerHub as fallback
             _logger.LogWarning("Failed once, try docker hub as fallback.");
-            return doWithImage("recorder-moe/streamlink:5.1.2");
+            return doWithImage("recordermoe/streamlink:5.3.1");
         }
 
         Task<ArmOperation<ArmDeploymentResource>> doWithImage(string imageName)

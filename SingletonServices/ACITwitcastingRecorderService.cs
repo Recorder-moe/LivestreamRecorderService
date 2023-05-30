@@ -35,7 +35,7 @@ public class ACITwitcastingRecorderService : ACIService
         {
             // Use DockerHub as fallback
             _logger.LogWarning("Failed once, try docker hub as fallback.");
-            return doWithImage("recorder-moe/twitcasting-recorder:latest");
+            return doWithImage("recordermoe/twitcasting-recorder:latest");
         }
 
         Task<ArmOperation<ArmDeploymentResource>> doWithImage(string imageName)
