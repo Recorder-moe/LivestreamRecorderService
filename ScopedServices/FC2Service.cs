@@ -196,6 +196,12 @@ public class FC2Service : PlatformService, IPlatformService
         if (video.Status <= VideoStatus.Pending)
         {
             video.Status = VideoStatus.WaitingToDownload;
+            if (video.id.StartsWith("20"))
+            {
+                YtdlpVideoData? videoData = await GetVideoInfoByYtdlpAsync($"https://video.fc2.com/content/{video.id}", cancellation);
+                if (null != videoData)
+                    video.Thumbnail = await DownloadThumbnailAsync(videoData.Thumbnail, video.id, cancellation);
+            }
         }
 
         if (await _aBSService.GetVideoBlob(video)
