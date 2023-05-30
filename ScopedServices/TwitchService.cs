@@ -9,9 +9,9 @@ using TwitchLib.Api.Interfaces;
 
 namespace LivestreamRecorderService.ScopedServices;
 
-public class TwitchSerivce : PlatformService, IPlatformService
+public class TwitchService : PlatformService, IPlatformService
 {
-    private readonly ILogger<TwitchSerivce> _logger;
+    private readonly ILogger<TwitchService> _logger;
     private readonly IUnitOfWork _unitOfWork_Public;
     private readonly IVideoRepository _videoRepository;
     private readonly ACIStreamlinkService _aCIStreamlinkService;
@@ -23,8 +23,8 @@ public class TwitchSerivce : PlatformService, IPlatformService
 
     public override int Interval => 60;
 
-    public TwitchSerivce(
-        ILogger<TwitchSerivce> logger,
+    public TwitchService(
+        ILogger<TwitchService> logger,
         UnitOfWork_Public unitOfWork_Public,
         IVideoRepository videoRepository,
         IChannelRepository channelRepository,

@@ -34,9 +34,9 @@ public class MonitorWorker : BackgroundService
             #region DI
             using (var scope = _serviceProvider.CreateScope())
             {
-                var youtubeSerivce = scope.ServiceProvider.GetRequiredService<YoutubeSerivce>();
+                var youtubeSerivce = scope.ServiceProvider.GetRequiredService<YoutubeService>();
                 var twitcastingService = scope.ServiceProvider.GetRequiredService<TwitcastingService>();
-                var twitchService = scope.ServiceProvider.GetRequiredService<TwitchSerivce>();
+                var twitchService = scope.ServiceProvider.GetRequiredService<TwitchService>();
                 var fc2Service = scope.ServiceProvider.GetRequiredService<FC2Service>();
                 var videoService = scope.ServiceProvider.GetRequiredService<VideoService>();
                 #endregion

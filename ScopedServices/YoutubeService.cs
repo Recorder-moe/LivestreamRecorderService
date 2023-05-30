@@ -10,9 +10,9 @@ using Serilog.Context;
 
 namespace LivestreamRecorderService.ScopedServices;
 
-public class YoutubeSerivce : PlatformService, IPlatformService
+public class YoutubeService : PlatformService, IPlatformService
 {
-    private readonly ILogger<YoutubeSerivce> _logger;
+    private readonly ILogger<YoutubeService> _logger;
     private readonly IUnitOfWork _unitOfWork_Public;
     private readonly IVideoRepository _videoRepository;
     private readonly IChannelRepository _channelRepository;
@@ -25,8 +25,8 @@ public class YoutubeSerivce : PlatformService, IPlatformService
 
     public override int Interval => 5 * 60;
 
-    public YoutubeSerivce(
-        ILogger<YoutubeSerivce> logger,
+    public YoutubeService(
+        ILogger<YoutubeService> logger,
         UnitOfWork_Public unitOfWork_Public,
         IVideoRepository videoRepository,
         IChannelRepository channelRepository,
