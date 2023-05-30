@@ -24,7 +24,7 @@ public class FC2Service : PlatformService, IPlatformService
 
     public override string PlatformName => "FC2";
 
-    public override int Interval => 60;
+    public override int Interval => 10;
 
     private const string _memberApi = "https://live.fc2.com/api/memberApi.php";
 
