@@ -138,8 +138,9 @@ public partial class DiscordService
         embedBuilder.AddField("Source Url", video.Source switch
         {
             "Youtube" => $"https://www.youtube.com/watch?v={video.id}",
-            "Twitch" => $"https://www.twitch.tv/{video.ChannelId}",
             "Twitcasting" => $"https://twitcasting.tv/{video.ChannelId}/movie/{video.id}",
+            "Twitch" => $"https://www.twitch.tv/{video.ChannelId}",
+            "FC2" => $"https://live.fc2.com/{video.ChannelId}/",
             _ => "",
         });
 
@@ -177,6 +178,7 @@ public partial class DiscordService
                                         "Youtube" => $"https://www.youtube.com/watch?v={video.id}",
                                         "Twitcasting" => $"https://twitcasting.tv/{video.ChannelId}/movie/{video.id}",
                                         "Twitch" => $"https://twitch.tv/{video.ChannelId}",
+                                        "FC2" => $"https://live.fc2.com/{video.ChannelId}/",
                                         _ => ""
                                     },
                                     emote: video.Source switch
@@ -184,6 +186,7 @@ public partial class DiscordService
                                         "Youtube" => Emote.Parse(_discordOption.Emotes.Youtube),
                                         "Twitcasting" => Emote.Parse(_discordOption.Emotes.Twitcasting),
                                         "Twitch" => Emote.Parse(_discordOption.Emotes.Twitch),
+                                        "FC2" => "",
                                         _ => ""
                                     });
         return componentBuilder;
@@ -203,6 +206,7 @@ public partial class DiscordService
     //                                    "Youtube" => $"https://www.youtube.com/channel/{channel.id}",
     //                                    "Twitcasting" => $"https://twitcasting.tv/{channel.id}",
     //                                    "Twitch" => $"https://twitch.tv/{channel.id}",
+    //                                    "FC2" => $"https://live.fc2.com/{video.ChannelId}/",
     //                                    _ => ""
     //                                },
     //                                emote: channel.Source switch
@@ -210,6 +214,7 @@ public partial class DiscordService
     //                                    "Youtube" => Emote.Parse(_discordOption.Emotes.Youtube),
     //                                    "Twitcasting" => Emote.Parse(_discordOption.Emotes.Twitcasting),
     //                                    "Twitch" => Emote.Parse(_discordOption.Emotes.Twitch),
+    //                                    "FC2" => "",
     //                                    _ => ""
     //                                });
     //    return componentBuilder;

@@ -18,6 +18,7 @@ public class RecordWorker : BackgroundService
     private readonly ACIYtdlpService _aCIYtdlpService;
     private readonly ACITwitcastingRecorderService _aCITwitcastingRecorderService;
     private readonly ACIStreamlinkService _aCIStreamlinkService;
+    private readonly ACIFC2LiveDLService _aCIFC2LiveDLService;
     private readonly IAFSService _aFSService;
     private readonly IServiceProvider _serviceProvider;
 
@@ -28,6 +29,7 @@ public class RecordWorker : BackgroundService
         ACIYtdlpService aCIYtdlpService,
         ACITwitcastingRecorderService aCITwitcastingRecorderService,
         ACIStreamlinkService aCIStreamlinkService,
+        ACIFC2LiveDLService aCIFC2LiveDLService,
         IAFSService aFSService,
         IOptions<AzureOption> options,
         IServiceProvider serviceProvider)
@@ -38,6 +40,7 @@ public class RecordWorker : BackgroundService
         _aCIYtdlpService = aCIYtdlpService;
         _aCITwitcastingRecorderService = aCITwitcastingRecorderService;
         _aCIStreamlinkService = aCIStreamlinkService;
+        _aCIFC2LiveDLService = aCIFC2LiveDLService;
         _aFSService = aFSService;
         _serviceProvider = serviceProvider;
     }
@@ -179,6 +182,12 @@ public class RecordWorker : BackgroundService
                                                                    useCookiesFile: false,
                                                                    cancellation: stoppingToken);
                     break;
+                case "FC2":
+                    await _aCIFC2LiveDLService.StartInstanceAsync(videoId: video.id,
+                                                                  channelId: video.ChannelId,
+                                                                  useCookiesFile: video.Channel?.UseCookiesFile == true,
+                                                                  cancellation: stoppingToken);
+                    break;
 
                 default:
                     _logger.LogError("ACI deployment FAILED, Source not support: {source}", video.Source);
@@ -228,6 +237,14 @@ public class RecordWorker : BackgroundService
                         useCookiesFile: false,
                         cancellation: stoppingToken);
                     break;
+                case "FC2":
+                    await _aCIYtdlpService.StartInstanceAsync(
+                        url: $"https://video.fc2.com/content/{video.id}",
+                        channelId: video.ChannelId,
+                        useCookiesFile: video.Channel?.UseCookiesFile == true,
+                        cancellation: stoppingToken);
+                    break;
+
                 default:
                     _logger.LogError("ACI deployment FAILED, Source not support: {source}", video.Source);
                     throw new NotSupportedException($"Source {video.Source} not supported");

@@ -37,12 +37,14 @@ public class MonitorWorker : BackgroundService
                 var youtubeSerivce = scope.ServiceProvider.GetRequiredService<YoutubeSerivce>();
                 var twitcastingService = scope.ServiceProvider.GetRequiredService<TwitcastingService>();
                 var twitchService = scope.ServiceProvider.GetRequiredService<TwitchSerivce>();
+                var fc2Service = scope.ServiceProvider.GetRequiredService<FC2Service>();
                 var videoService = scope.ServiceProvider.GetRequiredService<VideoService>();
                 #endregion
 
                 await MonitorPlatform(youtubeSerivce, videoService, stoppingToken);
                 await MonitorPlatform(twitcastingService, videoService, stoppingToken);
                 await MonitorPlatform(twitchService, videoService, stoppingToken);
+                await MonitorPlatform(fc2Service, videoService, stoppingToken);
             }
 
             _logger.LogTrace("{Worker} ends. Sleep {interval} seconds.", nameof(MonitorWorker), _interval);

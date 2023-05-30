@@ -126,6 +126,7 @@ try
         services.AddSingleton<ACIYtdlpService>();
         services.AddSingleton<ACITwitcastingRecorderService>();
         services.AddSingleton<ACIStreamlinkService>();
+        services.AddSingleton<ACIFC2LiveDLService>();
 
         services.AddSingleton<DiscordService>();
 
@@ -150,9 +151,10 @@ try
         services.AddScoped<VideoService>();
         services.AddScoped<ChannelService>();
         services.AddScoped<RSSService>();
-        services.AddScoped<YoutubeSerivce>();
+        services.AddScoped<YoutubeService>();
         services.AddScoped<TwitcastingService>();
-        services.AddScoped<TwitchSerivce>();
+        services.AddScoped<TwitchService>();
+        services.AddScoped<FC2Service>();
     })
     .Build();
 

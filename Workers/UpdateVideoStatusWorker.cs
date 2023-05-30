@@ -47,9 +47,10 @@ public class UpdateVideoStatusWorker : BackgroundService
             {
                 VideoService videoService = scope.ServiceProvider.GetRequiredService<VideoService>();
                 IVideoRepository videoRepository = scope.ServiceProvider.GetRequiredService<IVideoRepository>();
-                IPlatformService youtubeSerivce = scope.ServiceProvider.GetRequiredService<YoutubeSerivce>();
+                IPlatformService youtubeSerivce = scope.ServiceProvider.GetRequiredService<YoutubeService>();
                 IPlatformService twitcastingService = scope.ServiceProvider.GetRequiredService<TwitcastingService>();
-                IPlatformService twitchService = scope.ServiceProvider.GetRequiredService<TwitchSerivce>();
+                IPlatformService twitchService = scope.ServiceProvider.GetRequiredService<TwitchService>();
+                IPlatformService fc2Service = scope.ServiceProvider.GetRequiredService<FC2Service>();
                 #endregion
 
                 videos = videoRepository.Where(p => p.Status >= VideoStatus.Archived
@@ -80,6 +81,9 @@ public class UpdateVideoStatusWorker : BackgroundService
                         break;
                     case "Twitch":
                         await twitchService.UpdateVideoDataAsync(video, stoppingToken);
+                        break;
+                    case "FC2":
+                        await fc2Service.UpdateVideoDataAsync(video, stoppingToken);
                         break;
                     default:
                         break;
