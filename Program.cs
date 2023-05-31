@@ -6,6 +6,7 @@ using LivestreamRecorderService.Interfaces;
 using LivestreamRecorderService.Models.OptionDiscords;
 using LivestreamRecorderService.Models.Options;
 using LivestreamRecorderService.ScopedServices;
+using LivestreamRecorderService.ScopedServices.PlatformService;
 using LivestreamRecorderService.SingletonServices;
 using LivestreamRecorderService.Workers;
 using Microsoft.EntityFrameworkCore;

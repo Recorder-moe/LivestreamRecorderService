@@ -8,7 +8,7 @@ using LivestreamRecorderService.SingletonServices;
 using Serilog.Context;
 using System.Net.Http.Json;
 
-namespace LivestreamRecorderService.ScopedServices;
+namespace LivestreamRecorderService.ScopedServices.PlatformService;
 
 public class TwitcastingService : PlatformService, IPlatformService
 {
@@ -271,7 +271,7 @@ public class TwitcastingService : PlatformService, IPlatformService
                 video.Description = telop ?? video.Description;
                 video.SourceStatus = VideoStatus.Exist;
 
-                if(video.Status <= VideoStatus.Pending)
+                if (video.Status <= VideoStatus.Pending)
                 {
                     video.Status = VideoStatus.WaitingToDownload;
                 }
@@ -322,4 +322,6 @@ public class TwitcastingService : PlatformService, IPlatformService
         _unitOfWork_Public.Commit();
     }
 
+    public override Task UpdateChannelDataAsync(Channel channel, CancellationToken stoppingToken)
+        => throw new InvalidOperationException();
 }

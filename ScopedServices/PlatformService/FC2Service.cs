@@ -8,7 +8,7 @@ using LivestreamRecorderService.SingletonServices;
 using Newtonsoft.Json;
 using Serilog.Context;
 
-namespace LivestreamRecorderService.ScopedServices;
+namespace LivestreamRecorderService.ScopedServices.PlatformService;
 
 public class FC2Service : PlatformService, IPlatformService
 {
@@ -225,7 +225,7 @@ public class FC2Service : PlatformService, IPlatformService
         _unitOfWork_Public.Commit();
     }
 
-    internal async Task UpdateChannelData(Channel channel, CancellationToken stoppingToken)
+    public override async Task UpdateChannelDataAsync(Channel channel, CancellationToken stoppingToken)
     {
         var avatarBlobUrl = channel.Avatar;
         var info = await GetFC2InfoDataAsync(channel.id, stoppingToken);

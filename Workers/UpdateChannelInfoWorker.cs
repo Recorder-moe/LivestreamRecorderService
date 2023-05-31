@@ -1,5 +1,6 @@
-﻿using LivestreamRecorderService.Models.Options;
-using LivestreamRecorderService.ScopedServices;
+﻿using LivestreamRecorderService.Interfaces;
+using LivestreamRecorderService.Models.Options;
+using LivestreamRecorderService.ScopedServices.PlatformService;
 using Microsoft.Extensions.Options;
 using Serilog.Context;
 
@@ -34,30 +35,23 @@ public class UpdateChannelInfoWorker : BackgroundService
             FC2Service fC2Service= scope.ServiceProvider.GetRequiredService<FC2Service>();
             #endregion
 
-            #region Youtube
-            var channels = youtubeSerivce.GetMonitoringChannels();
-            _logger.LogDebug("Get {channelCount} channels for {platform}", channels.Count, youtubeSerivce.PlatformName);
-            foreach (var channel in channels)
-            {
-                if(channel.AutoUpdateInfo != true) continue;
-
-                await youtubeSerivce.UpdateChannelData(channel, stoppingToken);
-            }
-            #endregion
-
-            #region FC2 
-            var channels_FC2 = fC2Service.GetMonitoringChannels();
-            _logger.LogDebug("Get {channelCount} channels for {platform}", channels.Count, fC2Service.PlatformName);
-            foreach (var channel in channels)
-            {
-                if(channel.AutoUpdateInfo != true) continue;
-
-                await fC2Service.UpdateChannelData(channel, stoppingToken);
-            }
-            #endregion
+            await UpdatePlatform(youtubeSerivce, stoppingToken);
+            await UpdatePlatform(fC2Service, stoppingToken);
 
             _logger.LogTrace("{Worker} ends. Sleep 1 day.", nameof(UpdateChannelInfoWorker));
             await Task.Delay(TimeSpan.FromDays(1), stoppingToken);
+        }
+    }
+
+    private async Task UpdatePlatform(IPlatformService platformService, CancellationToken stoppingToken = default)
+    {
+        var channels = platformService.GetMonitoringChannels();
+        _logger.LogDebug("Get {channelCount} channels for {platform}", channels.Count, platformService.PlatformName);
+        foreach (var channel in channels)
+        {
+            if (channel.AutoUpdateInfo != true) continue;
+
+            await platformService.UpdateChannelDataAsync(channel, stoppingToken);
         }
     }
 }

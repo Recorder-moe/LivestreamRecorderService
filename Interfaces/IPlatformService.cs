@@ -17,6 +17,7 @@ public interface IPlatformService
     /// <returns>Should trigger</returns>
     public bool StepInterval(int elapsedTime);
     Task<YtdlpVideoData?> GetVideoInfoByYtdlpAsync(string url, CancellationToken cancellation = default);
+    Task UpdateChannelDataAsync(Channel channel, CancellationToken stoppingToken);
 
     /// <summary>
     /// 每幾秒執行一次

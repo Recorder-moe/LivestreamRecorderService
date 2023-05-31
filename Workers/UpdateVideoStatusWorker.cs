@@ -6,6 +6,7 @@ using LivestreamRecorder.DB.Models;
 using LivestreamRecorderService.Interfaces;
 using LivestreamRecorderService.Models.Options;
 using LivestreamRecorderService.ScopedServices;
+using LivestreamRecorderService.ScopedServices.PlatformService;
 using Microsoft.Extensions.Options;
 using Serilog.Context;
 

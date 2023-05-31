@@ -8,7 +8,7 @@ using LivestreamRecorderService.Models;
 using LivestreamRecorderService.SingletonServices;
 using Serilog.Context;
 
-namespace LivestreamRecorderService.ScopedServices;
+namespace LivestreamRecorderService.ScopedServices.PlatformService;
 
 public class YoutubeService : PlatformService, IPlatformService
 {
@@ -160,7 +160,7 @@ public class YoutubeService : PlatformService, IPlatformService
 
         // Download thumbnail for new videos
         if (video.Status == VideoStatus.Unknown
-            || (video.Status == VideoStatus.Pending && string.IsNullOrEmpty(video.Thumbnail)))
+            || video.Status == VideoStatus.Pending && string.IsNullOrEmpty(video.Thumbnail))
         {
             video.Thumbnail = await DownloadThumbnailAsync(videoData.Thumbnail, video.id, cancellation);
         }
@@ -393,7 +393,7 @@ public class YoutubeService : PlatformService, IPlatformService
             _logger.LogError("Video {videoId} has a Unknown status!", video.id);
     }
 
-    internal async Task UpdateChannelData(Channel channel, CancellationToken cancellation)
+    public override async Task UpdateChannelDataAsync(Channel channel, CancellationToken cancellation)
     {
         var avatarBlobUrl = channel.Avatar;
         var bannerBlobUrl = channel.Banner;
@@ -414,7 +414,7 @@ public class YoutubeService : PlatformService, IPlatformService
         var bannerUrl = thumbnails.Skip(1).FirstOrDefault()?.Url;
         if (!string.IsNullOrEmpty(bannerUrl))
         {
-            bannerBlobUrl = (await DownloadImageAndUploadToBlobStorage(bannerUrl, $"banner/{channel.id}", cancellation));
+            bannerBlobUrl = await DownloadImageAndUploadToBlobStorage(bannerUrl, $"banner/{channel.id}", cancellation);
         }
 
         _unitOfWork_Public.Context.Entry(channel).Reload();

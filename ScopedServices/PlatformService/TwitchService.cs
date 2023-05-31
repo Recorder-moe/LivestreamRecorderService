@@ -7,7 +7,7 @@ using LivestreamRecorderService.SingletonServices;
 using Serilog.Context;
 using TwitchLib.Api.Interfaces;
 
-namespace LivestreamRecorderService.ScopedServices;
+namespace LivestreamRecorderService.ScopedServices.PlatformService;
 
 public class TwitchService : PlatformService, IPlatformService
 {
@@ -157,4 +157,7 @@ public class TwitchService : PlatformService, IPlatformService
         _videoRepository.Update(video);
         _unitOfWork_Public.Commit();
     }
+
+    public override Task UpdateChannelDataAsync(Channel channel, CancellationToken stoppingToken)
+        => throw new InvalidOperationException();
 }
