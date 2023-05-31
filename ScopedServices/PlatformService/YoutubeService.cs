@@ -318,6 +318,16 @@ public class YoutubeService : PlatformService, IPlatformService
 
         switch (videoData.Availability)
         {
+            // Member only
+            case "subscriber_only":
+                if ((video.Channel?.UseCookiesFile) == true)
+                {
+                    goto case "public";
+                }
+                else
+                {
+                    goto case "needs_auth";
+                }
             case "public":
             case "unlisted":
                 // The source status has been restored from rejection or deletion
@@ -340,13 +350,6 @@ public class YoutubeService : PlatformService, IPlatformService
                 else if (video.SourceStatus != VideoStatus.Edited)
                 {
                     video.SourceStatus = VideoStatus.Exist;
-                }
-                break;
-            // Member only
-            case "subscriber_only":
-                if (video.Channel?.UseCookiesFile != true)
-                {
-                    goto case "needs_auth";
                 }
                 break;
             // Copyright Notice
