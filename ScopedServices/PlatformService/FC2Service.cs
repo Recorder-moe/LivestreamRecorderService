@@ -120,8 +120,6 @@ public class FC2Service : PlatformService, IPlatformService
 
             if (info.Data.ChannelData.IsLimited == 0 || info.Data.ChannelData.IsPremium == 0)
             {
-                video.SourceStatus = VideoStatus.Exist;
-
                 if (isLive && (video.Status < VideoStatus.Recording
                                || video.Status == VideoStatus.Missing))
                 {
