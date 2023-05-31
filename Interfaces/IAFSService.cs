@@ -6,5 +6,5 @@ namespace LivestreamRecorderService.Interfaces;
 public interface IAFSService
 {
     Task<ShareDirectoryClient> GetFileShareClientAsync(CancellationToken cancellation = default);
-    Task<List<ShareFileItem>> GetShareFilesByVideoIdAsync(string videoId, TimeSpan delay, CancellationToken cancellation = default);
+    Task<List<ShareFileItem>> GetShareFilesByPrefixAsync(string prefix, TimeSpan delay, CancellationToken cancellation = default);
 }

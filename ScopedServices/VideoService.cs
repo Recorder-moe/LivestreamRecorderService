@@ -94,13 +94,16 @@ public class VideoService
 
             // It is possible for Youtube to use "-" at the beginning of an id, which can cause errors when using the id as a file name.
             // Therefore, we add "_" before the file name to avoid such issues.
-            var videoId = video.Source == "Youtube"
-                          ? "_" + video.id
-                          : video.id;
+            var filename = video.Source switch
+            {
+                "Youtube" => "_" + video.id,
+                "FC2" => video.ChannelId + (video.Timestamps.ActualStartTime ?? DateTime.Today).ToString("yyyy-MM-dd"),
+                _ => video.id
+            };
 
             // https://learn.microsoft.com/zh-tw/azure/azure-functions/durable/durable-functions-overview?tabs=csharp-inproc#async-http
             // https://learn.microsoft.com/en-us/azure/azure-functions/durable/durable-functions-http-api#start-orchestration
-            var startResponse = await client.PostAsync("api/AzureFileShares2BlobContainers?videoId=" + HttpUtility.UrlEncode(videoId), null, cancellation);
+            var startResponse = await client.PostAsync("api/AzureFileShares2BlobContainers?filename=" + HttpUtility.UrlEncode(filename), null, cancellation);
             startResponse.EnsureSuccessStatusCode();
             var responseContent = await startResponse.Content.ReadAsStringAsync(cancellation);
             var deserializedResponse = JsonConvert.DeserializeObject<AcceptedResponse>(responseContent);

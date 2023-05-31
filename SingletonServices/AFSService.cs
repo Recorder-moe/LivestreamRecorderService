@@ -40,7 +40,7 @@ public class AFSService : IAFSService
     /// <param name="videoId"></param>
     /// <param name="delay"></param>
     /// <returns></returns>
-    public async Task<List<ShareFileItem>> GetShareFilesByVideoIdAsync(string videoId, TimeSpan delay, CancellationToken cancellation = default)
+    public async Task<List<ShareFileItem>> GetShareFilesByPrefixAsync(string videoId, TimeSpan delay, CancellationToken cancellation = default)
     {
         ShareDirectoryClient rootDirectoryClient = await GetFileShareClientAsync(cancellation);
         List<ShareFileItem> shareFileItems =

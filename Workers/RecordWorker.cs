@@ -274,11 +274,12 @@ public class RecordWorker : BackgroundService
                 // It is possible for Youtube to use "-" at the beginning of an id, which can cause errors when using the id as a file name.
                 // Therefore, we add "_" before the file name to avoid such issues.
                 "Youtube" => "_" + video.id,
+                "FC2" => video.ChannelId + (video.Timestamps.ActualStartTime ?? DateTime.Today).ToString("yyyy-MM-dd"),
                 _ => video.id,
             };
-            List<ShareFileItem> files = await _aFSService.GetShareFilesByVideoIdAsync(videoId: searchPattern,
-                                                                                      delay: TimeSpan.FromMinutes(5),
-                                                                                      cancellation: cancellation);
+            List<ShareFileItem> files = await _aFSService.GetShareFilesByPrefixAsync(prefix: searchPattern,
+                                                                                     delay: TimeSpan.FromMinutes(5),
+                                                                                     cancellation: cancellation);
             if (files.Count > 0)
             {
                 _logger.LogInformation("Video recording finish {videoId}", video.id);

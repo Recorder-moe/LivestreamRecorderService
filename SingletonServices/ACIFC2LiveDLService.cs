@@ -45,12 +45,12 @@ public class ACIFC2LiveDLService : ACIService
                 {
                     "/usr/bin/dumb-init", "--",
                     "sh", "-c",
-                    $"/venv/bin/fc2-live-dl --threads 4 -o '%(id)s.%(ext)s' --cookies /fileshare/cookies/{channelId}.txt 'https://live.fc2.com/{channelId}/' && mv *.mp4 /fileshare/"
+                    $"/venv/bin/fc2-live-dl --threads 4 -o '%(channel_id)s%(date)s%(time)s.%(ext)s' --cookies /fileshare/cookies/{channelId}.txt 'https://live.fc2.com/{channelId}/' && mv *.mp4 /fileshare/"
                 }
                 : new string[] {
                     "/usr/bin/dumb-init", "--",
                     "sh", "-c",
-                    $"/venv/bin/fc2-live-dl --threads 4 -o '%(id)s.%(ext)s' 'https://live.fc2.com/{channelId}/' && mv *.mp4 /fileshare/"
+                    $"/venv/bin/fc2-live-dl --threads 4 -o '%(channel_id)s%(date)s%(time)s.%(ext)s' 'https://live.fc2.com/{channelId}/' && mv *.mp4 /fileshare/"
                 };
 
             return CreateAzureContainerInstanceAsync(
