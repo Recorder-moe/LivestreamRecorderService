@@ -31,6 +31,8 @@ public class Channel : Entity
 
     public bool? SkipNotLiveStream { get; set; } = true;
 
+    public bool? AutoUpdateInfo { get; set; } = true;
+
     public string? Note { get; set; }
 
     public ICollection<Video> Videos { get; set; }
