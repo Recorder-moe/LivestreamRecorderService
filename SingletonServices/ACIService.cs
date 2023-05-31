@@ -103,12 +103,12 @@ public class ACIService
     }
 
     protected string GetInstanceName(string videoId)
-        => DownloaderName + videoId.Split("/").Last()
-                                   .Split("?").First()
-                                   .Split(".").First()
-                                   .ToLower()
-                                   .Replace("_", "")
-                                   .Replace(":", "");
+        => (DownloaderName + videoId.Split("/").Last()
+                                    .Split("?").First()
+                                    .Split(".").First()
+                                    .Replace("_", "")
+                                    .Replace(":", "")
+           ).ToLower();
 
     public async Task<bool> IsACIFailedAsync(Video video, CancellationToken cancellation)
     {

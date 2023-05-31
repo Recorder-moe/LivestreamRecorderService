@@ -10,7 +10,7 @@ public class ACIFC2LiveDLService : ACIService
     private readonly AzureOption _azureOption;
     private readonly ILogger<ACIFC2LiveDLService> _logger;
 
-    public override string DownloaderName => "FC2LiveDL";
+    public override string DownloaderName => "fc2livedl";
 
     public ACIFC2LiveDLService(
         ILogger<ACIFC2LiveDLService> logger,
