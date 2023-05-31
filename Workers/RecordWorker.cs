@@ -74,7 +74,7 @@ public class RecordWorker : BackgroundService
                 List<Task> tasks = new();
                 foreach (var kvp in finished)
                 {
-                    var (video, files) = (kvp.Key, kvp.Value);
+                    var (video, file) = (kvp.Key, kvp.Value);
                     using var ___ = LogContext.PushProperty("videoId", video.id);
 
                     try
@@ -89,9 +89,9 @@ public class RecordWorker : BackgroundService
 
                     channelService.UpdateChannelLatestVideo(video);
 
-                    videoService.AddFilePropertiesToVideo(video, files);
+                    videoService.AddFilePropertiesToVideo(video, file);
 
-                    tasks.Add(videoService.TransferVideoToBlobStorageAsync(video, stoppingToken));
+                    tasks.Add(videoService.TransferVideoToBlobStorageAsync(video, file, stoppingToken));
 
                     // Avoid concurrency requests
                     await Task.Delay(TimeSpan.FromSeconds(5), stoppingToken);
@@ -260,16 +260,16 @@ public class RecordWorker : BackgroundService
     /// </summary>
     /// <param name="videoService"></param>
     /// <returns>Videos that finish recording.</returns>
-    private async Task<Dictionary<Video, List<ShareFileItem>>> MonitorRecordingVideosAsync(VideoService videoService, CancellationToken cancellation = default)
+    private async Task<Dictionary<Video, ShareFileItem>> MonitorRecordingVideosAsync(VideoService videoService, CancellationToken cancellation = default)
     {
-        var finishedRecordingVideos = new Dictionary<Video, List<ShareFileItem>>();
+        var finishedRecordingVideos = new Dictionary<Video, ShareFileItem>();
         var videos = videoService.GetVideosByStatus(VideoStatus.Recording)
              .Concat(videoService.GetVideosByStatus(VideoStatus.Downloading));
         foreach (var video in videos)
         {
             using var _ = LogContext.PushProperty("videoId", video.id);
 
-            string searchPattern = video.Source switch
+            string prefix = video.Source switch
             {
                 // It is possible for Youtube to use "-" at the beginning of an id, which can cause errors when using the id as a file name.
                 // Therefore, we add "_" before the file name to avoid such issues.
@@ -277,13 +277,13 @@ public class RecordWorker : BackgroundService
                 "FC2" => video.ChannelId + (video.Timestamps.ActualStartTime ?? DateTime.Today).ToString("yyyy-MM-dd"),
                 _ => video.id,
             };
-            List<ShareFileItem> files = await _aFSService.GetShareFilesByPrefixAsync(prefix: searchPattern,
-                                                                                     delay: TimeSpan.FromMinutes(5),
-                                                                                     cancellation: cancellation);
-            if (files.Count > 0)
+            var file = await _aFSService.GetVideoShareFileByPrefixAsync(prefix: prefix,
+                                                                        delay: TimeSpan.FromMinutes(5),
+                                                                        cancellation: cancellation);
+            if (null != file)
             {
                 _logger.LogInformation("Video recording finish {videoId}", video.id);
-                finishedRecordingVideos.Add(video, files);
+                finishedRecordingVideos.Add(video, file);
             }
         }
         return finishedRecordingVideos;

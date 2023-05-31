@@ -56,34 +56,20 @@ public class VideoService
         _logger.LogDebug("Update Video {videoId} note", video.id);
     }
 
-    public void AddFilePropertiesToVideo(Video video, List<ShareFileItem> sharefileItems)
+    public void AddFilePropertiesToVideo(Video video, ShareFileItem file)
     {
         video = _videoRepository.GetById(video.id);
         _videoRepository.LoadRelatedData(video);
 
-        var videoFile = sharefileItems.FirstOrDefault(p => p.Name.Split('.').Last() is "mp4" or "mkv" or "webm");
-        if (null != videoFile)
-        {
-            video.Size = videoFile.FileSize;
-            video.Filename = videoFile.Name;
-        }
-        else
-        {
-            _logger.LogWarning("No video file found for video {videoId}", video.id);
-        }
-
-        var thumbnail = sharefileItems.FirstOrDefault(p => p.Name.Split('.').Last() is "webp" or "jpg" or "jpeg" or "png");
-        if (null != thumbnail)
-        {
-            video.Thumbnail = thumbnail.Name;
-        }
-
+        video.Size = file.FileSize;
+        video.Filename = file.Name;
         video.ArchivedTime = DateTime.UtcNow;
+
         _videoRepository.Update(video);
         _unitOfWork_Public.Commit();
     }
 
-    public async Task TransferVideoToBlobStorageAsync(Video video, CancellationToken cancellation = default)
+    public async Task TransferVideoToBlobStorageAsync(Video video, ShareFileItem file, CancellationToken cancellation = default)
     {
         try
         {
@@ -92,18 +78,9 @@ public class VideoService
             _logger.LogInformation("Call Azure Function to transfer video to blob storage: {videoId}", video.id);
             using var client = _httpFactory.CreateClient("AzureFileShares2BlobContainers");
 
-            // It is possible for Youtube to use "-" at the beginning of an id, which can cause errors when using the id as a file name.
-            // Therefore, we add "_" before the file name to avoid such issues.
-            var filename = video.Source switch
-            {
-                "Youtube" => "_" + video.id,
-                "FC2" => video.ChannelId + (video.Timestamps.ActualStartTime ?? DateTime.Today).ToString("yyyy-MM-dd"),
-                _ => video.id
-            };
-
             // https://learn.microsoft.com/zh-tw/azure/azure-functions/durable/durable-functions-overview?tabs=csharp-inproc#async-http
             // https://learn.microsoft.com/en-us/azure/azure-functions/durable/durable-functions-http-api#start-orchestration
-            var startResponse = await client.PostAsync("api/AzureFileShares2BlobContainers?filename=" + HttpUtility.UrlEncode(filename), null, cancellation);
+            var startResponse = await client.PostAsync("api/AzureFileShares2BlobContainers?filename=" + HttpUtility.UrlEncode(file.Name), null, cancellation);
             startResponse.EnsureSuccessStatusCode();
             var responseContent = await startResponse.Content.ReadAsStringAsync(cancellation);
             var deserializedResponse = JsonConvert.DeserializeObject<AcceptedResponse>(responseContent);

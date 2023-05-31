@@ -37,31 +37,29 @@ public class AFSService : IAFSService
     /// <summary>
     /// Search files with videoId as prefix in the file share and return when all the files matches delay filter.
     /// </summary>
-    /// <param name="videoId"></param>
+    /// <param name="prefix"></param>
     /// <param name="delay"></param>
     /// <returns></returns>
-    public async Task<List<ShareFileItem>> GetShareFilesByPrefixAsync(string videoId, TimeSpan delay, CancellationToken cancellation = default)
+    public async Task<ShareFileItem?> GetVideoShareFileByPrefixAsync(string prefix, TimeSpan delay, CancellationToken cancellation = default)
     {
         ShareDirectoryClient rootDirectoryClient = await GetFileShareClientAsync(cancellation);
         List<ShareFileItem> shareFileItems =
             rootDirectoryClient
             .GetFilesAndDirectories(new ShareDirectoryGetFilesAndDirectoriesOptions()
             {
-                Prefix = videoId
+                Prefix = prefix
             }, cancellation)
             .Where(p => !p.IsDirectory)
             .ToList();
 
         return shareFileItems != null
                    && shareFileItems.Count > 0
-                   && !shareFileItems.Any(p => Path.GetExtension(p.Name) == ".ts")
-                   && shareFileItems.Any(p => Path.GetExtension(p.Name) == ".mp4")
                    && shareFileItems.All(p =>
                       {
                           DateTimeOffset lastModified = rootDirectoryClient.GetFileClient(p.Name).GetProperties().Value.LastModified;
                           return DateTimeOffset.Now - lastModified > delay;
                       })
-               ? shareFileItems
-               : new List<ShareFileItem>();
+               ? shareFileItems.FirstOrDefault(p => p.Name.Split('.').Last() is "mp4" or "mkv" or "webm")
+               : null;
     }
 }
