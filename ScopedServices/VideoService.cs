@@ -38,6 +38,12 @@ public class VideoService
                            .Select(p => _videoRepository.LoadRelatedData(p))
                            .ToList();
 
+    public IQueryable<Video> GetVideosBySource(string source)
+        => _videoRepository.Where(p => p.Source == source);
+
+    public Video LoadRelatedData(Video video)
+        => _videoRepository.LoadRelatedData(video);
+
     public void UpdateVideoStatus(Video video, VideoStatus status)
     {
         _unitOfWork_Public.ReloadEntityFromDB(video);

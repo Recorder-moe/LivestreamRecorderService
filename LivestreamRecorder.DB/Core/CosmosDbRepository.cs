@@ -40,6 +40,10 @@ public abstract class CosmosDbRepository<T> : ICosmosDbRepository<T> where T : E
         => All().SingleOrDefault(p => p.id == id)
             ?? throw new EntityNotFoundException($"Entity with id: {id} was not found.");
 
+    public virtual IQueryable<T> GetByPartitionKey(string partitionKey)
+        => All().WithPartitionKey(partitionKey)
+            ?? throw new EntityNotFoundException($"Entity with partition key: {partitionKey} was not found.");
+
     public virtual bool Exists(string id)
 #pragma warning disable CA1827 // 不要在可使用 Any() 時使用 Count() 或 LongCount()
         => All().Where(p => p.id == id).Count() > 0;

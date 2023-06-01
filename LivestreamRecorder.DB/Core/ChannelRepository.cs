@@ -9,7 +9,7 @@ public class ChannelRepository : CosmosDbRepository<Channel>, IChannelRepository
     {
     }
 
-    public IQueryable<Channel> GetMonitoringChannels() => Where(p => p.Monitoring);
+    public IQueryable<Channel> GetChannelsBySource(string source) => base.GetByPartitionKey(source);
 
     public override string CollectionName { get; } = "Channels";
 }

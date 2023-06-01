@@ -64,10 +64,12 @@ public class MonitorWorker : BackgroundService
             await PlatformService.UpdateVideosDataAsync(channel, cancellation);
         }
 
-        var videos = videoService.GetVideosByStatus(VideoStatus.Scheduled)
-                                 .Concat(videoService.GetVideosByStatus(VideoStatus.Pending))
-                                 .Where(p => p.Source == PlatformService.PlatformName)
+        var videos = videoService.GetVideosBySource(PlatformService.PlatformName)
+                                 .Where(p => p.Status == VideoStatus.Scheduled
+                                             && p.Status == VideoStatus.Pending)
+                                 .Select(p => videoService.LoadRelatedData(p))
                                  .ToList();
+
         if (videos.Count == 0)
         {
             _logger.LogTrace("No Scheduled videos for {platform}", PlatformService.PlatformName);
@@ -81,7 +83,7 @@ public class MonitorWorker : BackgroundService
         foreach (var video in videos)
         {
             // Channel exists and is not monitoring
-            if (null != video.Channel 
+            if (null != video.Channel
                 && video.Status == VideoStatus.Scheduled
                 && !video.Channel.Monitoring)
             {

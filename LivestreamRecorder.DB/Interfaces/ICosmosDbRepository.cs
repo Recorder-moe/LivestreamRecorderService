@@ -23,6 +23,7 @@ public interface ICosmosDbRepository<T> where T : Entity
     /// <returns></returns>
     /// <exception cref="EntityNotFoundException"></exception>
     T GetById(string id);
+    IQueryable<T> GetByPartitionKey(string partitionKey);
     T LoadRelatedData(T entity);
     EntityEntry<T> Update(T entity);
     IQueryable<T> Where(Expression<Func<T, bool>> predicate);

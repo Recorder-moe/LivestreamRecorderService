@@ -9,5 +9,7 @@ public class VideoRepository : CosmosDbRepository<Video>, IVideoRepository
     {
     }
 
+    public IQueryable<Video> GetVideosByChannel(string channelId) => base.GetByPartitionKey(channelId);
+
     public override string CollectionName { get; } = "Videos";
 }

@@ -42,8 +42,8 @@ public abstract class PlatformService : IPlatformService
     }
 
     public List<Channel> GetMonitoringChannels()
-        => _channelRepository.GetMonitoringChannels()
-                             .Where(p => p.Source == PlatformName)
+        => _channelRepository.GetChannelsBySource(PlatformName)
+                             .Where(p => p.Monitoring)
                              .ToList();
 
     public abstract Task UpdateVideosDataAsync(Channel channel, CancellationToken cancellation = default);
