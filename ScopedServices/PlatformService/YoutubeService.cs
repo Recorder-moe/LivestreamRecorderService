@@ -170,7 +170,22 @@ public class YoutubeService : PlatformService, IPlatformService
             case "is_upcoming":
                 // Premiere video
                 if (null != videoData.Duration)
-                    goto case "not_live";
+                {
+                    video.IsLiveStream = false;
+
+                    if (video.Channel?.SkipNotLiveStream == true)
+                    {
+                        video.Note = $"Video skipped because it is not live stream.";
+                        // First detected
+                        if (video.Status != VideoStatus.Skipped)
+                        {
+                            await _discordService.SendSkippedMessage(video);
+                        }
+                        video.Status = VideoStatus.Skipped;
+                        _logger.LogInformation("Change video {videoId} status to {videoStatus}", video.id, Enum.GetName(typeof(VideoStatus), video.Status));
+                        break;
+                    }
+                }
 
                 // New stream published
                 video.Status = VideoStatus.Scheduled;
@@ -180,7 +195,10 @@ public class YoutubeService : PlatformService, IPlatformService
             case "is_live":
                 // Premiere video
                 if (null != videoData.Duration)
-                    goto case "not_live";
+                {
+                    video.Status = VideoStatus.Pending;
+                    break;
+                }
 
                 // Stream started
                 if (video.Status != VideoStatus.Recording)
