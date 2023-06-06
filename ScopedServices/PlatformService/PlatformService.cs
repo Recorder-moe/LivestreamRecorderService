@@ -133,45 +133,61 @@ public abstract class PlatformService : IPlatformService
             throw new ArgumentNullException(nameof(path));
         }
 
-        using var client = _httpFactory.CreateClient();
-        var response = await client.GetAsync(url, cancellation);
-        if (!response.IsSuccessStatusCode) return null;
-
-        var contentType = response.Content.Headers.ContentType?.MediaType;
-        var extension = MimeUtility.GetExtensions(contentType)?.FirstOrDefault();
-        extension = extension == "jpeg" ? "jpg" : extension;
-        string pathInStorage = $"{path}.{extension}";
-
-        string tempPath = Path.GetTempFileName();
-        tempPath = Path.ChangeExtension(tempPath, extension);
-        using (var contentStream = await response.Content.ReadAsStreamAsync(cancellation))
-        using (var fileStream = new FileStream(tempPath, FileMode.Create))
+        string? extension, contentType, pathInStorage, tempPath;
+        try
         {
+            using var client = _httpFactory.CreateClient();
+            var response = await client.GetAsync(url, cancellation);
+            response.EnsureSuccessStatusCode();
+
+            contentType = response.Content.Headers.ContentType?.MediaType;
+            extension = MimeUtility.GetExtensions(contentType)?.FirstOrDefault();
+            extension = extension == "jpeg" ? "jpg" : extension;
+            pathInStorage = $"{path}.{extension}";
+
+            tempPath = Path.GetTempFileName();
+            tempPath = Path.ChangeExtension(tempPath, extension);
+            using var contentStream = await response.Content.ReadAsStreamAsync(cancellation);
+            using var fileStream = new FileStream(tempPath, FileMode.Create);
             await contentStream.CopyToAsync(fileStream, cancellation);
         }
+        catch (Exception e)
+        {
+            _logger.LogError(e, "An exception occurred while downloading image: {url}", url);
+            return null;
+        }
 
-        List<Task> tasks = new();
+        try
+        {
+            List<Task> tasks = new();
 
-        var blobClient = _aBSService.GetPublicBlob(pathInStorage);
-        tasks.Add(blobClient.UploadAsync(
-             path: tempPath,
-             httpHeaders: new BlobHttpHeaders { ContentType = contentType },
-             accessTier: AccessTier.Hot,
-             cancellationToken: cancellation));
+            var blobClient = _aBSService.GetPublicBlob(pathInStorage);
+            tasks.Add(blobClient.UploadAsync(
+                 path: tempPath,
+                 httpHeaders: new BlobHttpHeaders { ContentType = contentType },
+                 accessTier: AccessTier.Hot,
+                 cancellationToken: cancellation));
 
-        var avifblobClient = _aBSService.GetPublicBlob($"{path}.avif");
-        tasks.Add(avifblobClient.UploadAsync(
-             path: await ImageHelper.ConvertToAvifAsync(tempPath),
-             httpHeaders: new BlobHttpHeaders { ContentType = KnownMimeTypes.Avif },
-             accessTier: AccessTier.Hot,
-             cancellationToken: cancellation));
+            var avifblobClient = _aBSService.GetPublicBlob($"{path}.avif");
+            tasks.Add(avifblobClient.UploadAsync(
+                 path: await ImageHelper.ConvertToAvifAsync(tempPath),
+                 httpHeaders: new BlobHttpHeaders { ContentType = KnownMimeTypes.Avif },
+                 accessTier: AccessTier.Hot,
+                 cancellationToken: cancellation));
 
-        await Task.WhenAll(tasks);
-
-        File.Delete(tempPath);
-        File.Delete(Path.ChangeExtension(tempPath, ".avif"));
-
-        return pathInStorage;
+            await Task.WhenAll(tasks);
+            return pathInStorage;
+        }
+        catch (Exception e)
+        {
+            _logger.LogError(e, "An exception occurred while uploading image to blob storage: {url}", url);
+            return null;
+        }
+        finally
+        {
+            File.Delete(tempPath);
+            File.Delete(Path.ChangeExtension(tempPath, ".avif"));
+        }
     }
 
     public abstract Task UpdateChannelDataAsync(Channel channel, CancellationToken stoppingToken);

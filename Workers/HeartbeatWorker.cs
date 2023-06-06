@@ -42,15 +42,16 @@ public class HeartbeatWorker : BackgroundService
     {
         if (!_option.Enabled) return;
 
-        var client = _httpFactory.CreateClient();
-        var response = await client.GetAsync(_option.Endpoint);
-        if (response.IsSuccessStatusCode)
+        using var client = _httpFactory.CreateClient();
+        try
         {
+            var response = await client.GetAsync(_option.Endpoint);
+            response.EnsureSuccessStatusCode();
             _logger.LogTrace("Heartbeat sent successfully.");
         }
-        else
+        catch (Exception e)
         {
-            _logger.LogError("Heartbeat sent failed.");
+            _logger.LogError(e, "Heartbeat sent failed.");
         }
     }
 
