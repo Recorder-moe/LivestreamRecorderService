@@ -112,10 +112,10 @@ public class UpdateVideoStatusWorker : BackgroundService
         _logger.LogInformation("Get {count} videos to expire.", videos.Count);
         foreach (var video in videos)
         {
-            if(video.SourceStatus != VideoStatus.Exist)
+            if (video.SourceStatus == VideoStatus.Deleted
+                && video.SourceStatus == VideoStatus.Reject)
             {
-                _logger.LogInformation("Video {videoId} is not exist on source platform, keep it.", video.id);
-                continue;
+                _logger.LogWarning("The video {videoId} that has expired does not exist on the source platform!!", video.id);
             }
 
             var blob = _aBSService.GetVideoBlob(video);
