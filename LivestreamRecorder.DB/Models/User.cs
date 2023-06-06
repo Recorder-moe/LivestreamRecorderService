@@ -26,6 +26,8 @@ public class User : Entity
 
     public string? MicrosoftUID { get; set; }
 
+    public string? DiscordUID { get; set; }
+
     public bool IsAdmin { get; set; } = false;
 }
 
