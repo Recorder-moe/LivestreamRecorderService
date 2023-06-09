@@ -9,6 +9,11 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "LivestreamRecorder.DB", "Li
 EndProject
 Project("{E53339B2-1760-4266-BCC7-CA923CBCF16C}") = "docker-compose", "docker-compose.dcproj", "{D9705463-12BD-4589-B8E0-53C6EE792EE8}"
 EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "方案項目", "方案項目", "{05516183-EF2E-4C8F-B2F3-97C2222C1723}"
+	ProjectSection(SolutionItems) = preProject
+		.github\workflows\docker_publish.yml = .github\workflows\docker_publish.yml
+	EndProjectSection
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
