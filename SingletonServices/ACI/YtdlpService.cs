@@ -1,19 +1,20 @@
 ﻿using Azure.ResourceManager;
 using Azure.ResourceManager.Resources;
+using LivestreamRecorderService.Interfaces.Job;
 using LivestreamRecorderService.Models.Options;
 using Microsoft.Extensions.Options;
 
-namespace LivestreamRecorderService.SingletonServices;
+namespace LivestreamRecorderService.SingletonServices.ACI;
 
-public class ACIYtdlpService : ACIService
+public class YtdlpService : ACIServiceBase, IYtdlpService
 {
     private readonly AzureOption _azureOption;
-    private readonly ILogger<ACIYtdlpService> _logger;
+    private readonly ILogger<YtdlpService> _logger;
 
     public override string DownloaderName => "ytdlp";
 
-    public ACIYtdlpService(
-        ILogger<ACIYtdlpService> logger,
+    public YtdlpService(
+        ILogger<YtdlpService> logger,
         ArmClient armClient,
         IOptions<AzureOption> options) : base(logger, armClient, options)
     {
@@ -21,7 +22,7 @@ public class ACIYtdlpService : ACIService
         _logger = logger;
     }
 
-    public override async Task<dynamic> StartInstanceAsync(string url,
+    public override async Task<dynamic> InitJobAsync(string url,
                                                   string channelId,
                                                   bool useCookiesFile = false,
                                                   CancellationToken cancellation = default)

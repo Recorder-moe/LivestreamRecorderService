@@ -3,6 +3,7 @@ using LivestreamRecorder.DB.Enum;
 using LivestreamRecorder.DB.Interfaces;
 using LivestreamRecorder.DB.Models;
 using LivestreamRecorderService.Interfaces;
+using LivestreamRecorderService.Interfaces.Job;
 using LivestreamRecorderService.SingletonServices;
 using Serilog.Context;
 using TwitchLib.Api.Interfaces;
@@ -14,7 +15,7 @@ public class TwitchService : PlatformService, IPlatformService
     private readonly ILogger<TwitchService> _logger;
     private readonly IUnitOfWork _unitOfWork_Public;
     private readonly IVideoRepository _videoRepository;
-    private readonly ACIStreamlinkService _aCIStreamlinkService;
+    private readonly IStreamlinkService _streamlinkService;
     private readonly ITwitchAPI _twitchAPI;
     private readonly IABSService _aBSService;
     private readonly DiscordService _discordService;
@@ -28,7 +29,7 @@ public class TwitchService : PlatformService, IPlatformService
         UnitOfWork_Public unitOfWork_Public,
         IVideoRepository videoRepository,
         IChannelRepository channelRepository,
-        ACIStreamlinkService aCIStreamlinkService,
+        IStreamlinkService streamlinkService,
         ITwitchAPI twitchAPI,
         IABSService aBSService,
         DiscordService discordService,
@@ -37,7 +38,7 @@ public class TwitchService : PlatformService, IPlatformService
         _logger = logger;
         _unitOfWork_Public = unitOfWork_Public;
         _videoRepository = videoRepository;
-        _aCIStreamlinkService = aCIStreamlinkService;
+        _streamlinkService = streamlinkService;
         _twitchAPI = twitchAPI;
         _aBSService = aBSService;
         _discordService = discordService;
@@ -109,10 +110,10 @@ public class TwitchService : PlatformService, IPlatformService
             if (video.Status < VideoStatus.Recording
                 || video.Status == VideoStatus.Missing)
             {
-                _ = _aCIStreamlinkService.StartInstanceAsync(videoId: video.id,
-                                                             channelId: video.ChannelId,
-                                                             useCookiesFile: false,
-                                                             cancellation: cancellation);
+                _ = _streamlinkService.InitJobAsync(url: video.id,
+                                                    channelId: video.ChannelId,
+                                                    useCookiesFile: false,
+                                                    cancellation: cancellation);
 
                 video.Status = VideoStatus.Recording;
                 _logger.LogInformation("{channelId} is now lived! Start recording.", channel.id);

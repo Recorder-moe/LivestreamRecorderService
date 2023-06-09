@@ -1,19 +1,20 @@
 ﻿using Azure.ResourceManager;
 using Azure.ResourceManager.Resources;
+using LivestreamRecorderService.Interfaces.Job;
 using LivestreamRecorderService.Models.Options;
 using Microsoft.Extensions.Options;
 
-namespace LivestreamRecorderService.SingletonServices;
+namespace LivestreamRecorderService.SingletonServices.ACI;
 
-public class ACITwitcastingRecorderService : ACIService
+public class FC2LiveDLService : ACIServiceBase, IFC2LiveDLService
 {
     private readonly AzureOption _azureOption;
-    private readonly ILogger<ACITwitcastingRecorderService> _logger;
+    private readonly ILogger<FC2LiveDLService> _logger;
 
-    public override string DownloaderName => "twitcastingrecorder";
+    public override string DownloaderName => "fc2livedl";
 
-    public ACITwitcastingRecorderService(
-        ILogger<ACITwitcastingRecorderService> logger,
+    public FC2LiveDLService(
+        ILogger<FC2LiveDLService> logger,
         ArmClient armClient,
         IOptions<AzureOption> options) : base(logger, armClient, options)
     {
@@ -21,7 +22,7 @@ public class ACITwitcastingRecorderService : ACIService
         _logger = logger;
     }
 
-    protected override Task<ArmOperation<ArmDeploymentResource>> CreateNewInstance(string id,
+    protected override Task<ArmOperation<ArmDeploymentResource>> CreateNewInstance(string _,
                                                                                    string instanceName,
                                                                                    string channelId,
                                                                                    bool useCookiesFile = false,
@@ -29,17 +30,30 @@ public class ACITwitcastingRecorderService : ACIService
     {
         try
         {
-            return doWithImage("ghcr.io/recorder-moe/twitcasting-recorder:latest");
+            return doWithImage("ghcr.io/recorder-moe/fc2-live-dl:2.1.3");
         }
         catch (Exception)
         {
             // Use DockerHub as fallback
             _logger.LogWarning("Failed once, try docker hub as fallback.");
-            return doWithImage("recordermoe/twitcasting-recorder:latest");
+            return doWithImage("recordermoe/fc2-live-dl:2.1.3");
         }
 
         Task<ArmOperation<ArmDeploymentResource>> doWithImage(string imageName)
         {
+            string[] command = useCookiesFile
+                ? new string[]
+                {
+                    "/usr/bin/dumb-init", "--",
+                    "sh", "-c",
+                    $"/venv/bin/fc2-live-dl --threads 1 -o '%(channel_id)s%(date)s%(time)s.%(ext)s' --log-level trace --cookies /fileshare/cookies/{channelId}.txt 'https://live.fc2.com/{channelId}/' && mv *.mp4 /fileshare/"
+                }
+                : new string[] {
+                    "/usr/bin/dumb-init", "--",
+                    "sh", "-c",
+                    $"/venv/bin/fc2-live-dl --threads 1 -o '%(channel_id)s%(date)s%(time)s.%(ext)s' --log-level trace 'https://live.fc2.com/{channelId}/' && mv *.mp4 /fileshare/"
+                };
+
             return CreateAzureContainerInstanceAsync(
                     template: "ACI.json",
                     parameters: new
@@ -54,11 +68,7 @@ public class ACITwitcastingRecorderService : ACIService
                         },
                         commandOverrideArray = new
                         {
-                            value = new string[] {
-                                "/usr/bin/dumb-init", "--",
-                                "/bin/bash", "-c",
-                                $"/bin/bash record_twitcast.sh {channelId} once && mv /download/*.mp4 /fileshare/"
-                            }
+                            value = command
                         },
                         storageAccountName = new
                         {

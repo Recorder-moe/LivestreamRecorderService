@@ -3,6 +3,7 @@ using LivestreamRecorder.DB.Enum;
 using LivestreamRecorder.DB.Interfaces;
 using LivestreamRecorder.DB.Models;
 using LivestreamRecorderService.Interfaces;
+using LivestreamRecorderService.Interfaces.Job;
 using LivestreamRecorderService.Models;
 using LivestreamRecorderService.SingletonServices;
 using Newtonsoft.Json;
@@ -16,7 +17,7 @@ public class FC2Service : PlatformService, IPlatformService
     private readonly IUnitOfWork _unitOfWork_Public;
     private readonly IVideoRepository _videoRepository;
     private readonly IChannelRepository _channelRepository;
-    private readonly ACIFC2LiveDLService _aCIFC2LiveDLService;
+    private readonly IFC2LiveDLService _fC2LiveDLService;
     private readonly IABSService _aBSService;
     private readonly DiscordService _discordService;
     private readonly IHttpClientFactory _httpFactory;
@@ -32,7 +33,7 @@ public class FC2Service : PlatformService, IPlatformService
         UnitOfWork_Public unitOfWork_Public,
         IVideoRepository videoRepository,
         IChannelRepository channelRepository,
-        ACIFC2LiveDLService aCIFC2LiveDLService,
+        IFC2LiveDLService fC2LiveDLService,
         IABSService aBSService,
         DiscordService discordService,
         IHttpClientFactory httpClientFactory) : base(channelRepository, aBSService, httpClientFactory, logger)
@@ -41,7 +42,7 @@ public class FC2Service : PlatformService, IPlatformService
         _unitOfWork_Public = unitOfWork_Public;
         _videoRepository = videoRepository;
         _channelRepository = channelRepository;
-        _aCIFC2LiveDLService = aCIFC2LiveDLService;
+        _fC2LiveDLService = fC2LiveDLService;
         _aBSService = aBSService;
         _discordService = discordService;
         _httpFactory = httpClientFactory;
@@ -123,7 +124,7 @@ public class FC2Service : PlatformService, IPlatformService
                 if (isLive && (video.Status < VideoStatus.Recording
                                || video.Status == VideoStatus.Missing))
                 {
-                    _ = _aCIFC2LiveDLService.StartInstanceAsync(videoId: $"https://live.fc2.com/{channel.id}/",
+                    _ = _fC2LiveDLService.InitJobAsync(url: $"https://live.fc2.com/{channel.id}/",
                                                                 channelId: video.ChannelId,
                                                                 useCookiesFile: channel.UseCookiesFile == true,
                                                                 cancellation: cancellation);

@@ -4,6 +4,7 @@ using LivestreamRecorder.DB.Enum;
 using LivestreamRecorder.DB.Interfaces;
 using LivestreamRecorder.DB.Models;
 using LivestreamRecorderService.Interfaces;
+using LivestreamRecorderService.Interfaces.Job;
 using LivestreamRecorderService.Models;
 using LivestreamRecorderService.SingletonServices;
 using Serilog.Context;
@@ -18,7 +19,7 @@ public class YoutubeService : PlatformService, IPlatformService
     private readonly IChannelRepository _channelRepository;
     private readonly RSSService _rSSService;
     private readonly IABSService _aBSService;
-    private readonly ACIYtarchiveService _aCIYtarchiveService;
+    private readonly IYtarchiveService _ytarchiveService;
     private readonly DiscordService _discordService;
 
     public override string PlatformName => "Youtube";
@@ -32,7 +33,7 @@ public class YoutubeService : PlatformService, IPlatformService
         IChannelRepository channelRepository,
         RSSService rSSService,
         IABSService aBSService,
-        ACIYtarchiveService aCIYtarchiveService,
+        IYtarchiveService ytarchiveService,
         DiscordService discordService,
         IHttpClientFactory httpClientFactory) : base(channelRepository, aBSService, httpClientFactory, logger)
     {
@@ -42,7 +43,7 @@ public class YoutubeService : PlatformService, IPlatformService
         _channelRepository = channelRepository;
         _rSSService = rSSService;
         _aBSService = aBSService;
-        _aCIYtarchiveService = aCIYtarchiveService;
+        _ytarchiveService = ytarchiveService;
         _discordService = discordService;
     }
 
@@ -400,7 +401,7 @@ public class YoutubeService : PlatformService, IPlatformService
 
         if (video.Status == VideoStatus.WaitingToRecord)
         {
-            _ = _aCIYtarchiveService.StartInstanceAsync(videoId: video.id,
+            _ = _ytarchiveService.InitJobAsync(url: video.id,
                                                         channelId: video.ChannelId,
                                                         useCookiesFile: video.Channel?.UseCookiesFile ?? false,
                                                         cancellation: cancellation);

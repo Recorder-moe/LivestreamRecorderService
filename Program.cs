@@ -3,11 +3,13 @@ using Azure.ResourceManager;
 using LivestreamRecorder.DB.Core;
 using LivestreamRecorder.DB.Interfaces;
 using LivestreamRecorderService.Interfaces;
+using LivestreamRecorderService.Interfaces.Job;
 using LivestreamRecorderService.Models.OptionDiscords;
 using LivestreamRecorderService.Models.Options;
 using LivestreamRecorderService.ScopedServices;
 using LivestreamRecorderService.ScopedServices.PlatformService;
 using LivestreamRecorderService.SingletonServices;
+using LivestreamRecorderService.SingletonServices.ACI;
 using LivestreamRecorderService.Workers;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Azure;
@@ -122,12 +124,14 @@ try
         });
         services.AddSingleton<IAFSService, AFSService>();
         services.AddSingleton<IABSService, ABSService>();
-        services.AddSingleton<ACIService>();
-        services.AddSingleton<ACIYtarchiveService>();
-        services.AddSingleton<ACIYtdlpService>();
-        services.AddSingleton<ACITwitcastingRecorderService>();
-        services.AddSingleton<ACIStreamlinkService>();
-        services.AddSingleton<ACIFC2LiveDLService>();
+
+        services.AddSingleton<IJobService, ACIService>();
+
+        services.AddSingleton<IYtarchiveService, YtarchiveService>();
+        services.AddSingleton<IYtdlpService, YtdlpService>();
+        services.AddSingleton<ITwitcastingRecorderService, TwitcastingRecorderService>();
+        services.AddSingleton<IStreamlinkService, StreamlinkService>();
+        services.AddSingleton<IFC2LiveDLService, FC2LiveDLService>();
 
         services.AddSingleton<DiscordService>();
 

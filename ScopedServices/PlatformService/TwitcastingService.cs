@@ -3,6 +3,7 @@ using LivestreamRecorder.DB.Enum;
 using LivestreamRecorder.DB.Interfaces;
 using LivestreamRecorder.DB.Models;
 using LivestreamRecorderService.Interfaces;
+using LivestreamRecorderService.Interfaces.Job;
 using LivestreamRecorderService.Models;
 using LivestreamRecorderService.SingletonServices;
 using Serilog.Context;
@@ -16,7 +17,7 @@ public class TwitcastingService : PlatformService, IPlatformService
     private readonly IHttpClientFactory _httpFactory;
     private readonly IUnitOfWork _unitOfWork_Public;
     private readonly IVideoRepository _videoRepository;
-    private readonly ACITwitcastingRecorderService _aCITwitcastingRecorderService;
+    private readonly ITwitcastingRecorderService _twitcastingRecorderService;
     private readonly IABSService _aBSService;
     private readonly DiscordService _discordService;
 
@@ -32,7 +33,7 @@ public class TwitcastingService : PlatformService, IPlatformService
         IHttpClientFactory httpClientFactory,
         UnitOfWork_Public unitOfWork_Public,
         IVideoRepository videoRepository,
-        ACITwitcastingRecorderService aCITwitcastingRecorderService,
+        ITwitcastingRecorderService twitcastingRecorderService,
         IABSService aBSService,
         DiscordService discordService,
         IChannelRepository channelRepository) : base(channelRepository, aBSService, httpClientFactory, logger)
@@ -41,7 +42,7 @@ public class TwitcastingService : PlatformService, IPlatformService
         _httpFactory = httpClientFactory;
         _unitOfWork_Public = unitOfWork_Public;
         _videoRepository = videoRepository;
-        _aCITwitcastingRecorderService = aCITwitcastingRecorderService;
+        _twitcastingRecorderService = twitcastingRecorderService;
         _aBSService = aBSService;
         _discordService = discordService;
     }
@@ -115,7 +116,7 @@ public class TwitcastingService : PlatformService, IPlatformService
                 if (isLive && (video.Status < VideoStatus.Recording
                                || video.Status == VideoStatus.Missing))
                 {
-                    _ = _aCITwitcastingRecorderService.StartInstanceAsync(videoId: videoId,
+                    _ = _twitcastingRecorderService.InitJobAsync(url: videoId,
                                                                           channelId: video.ChannelId,
                                                                           useCookiesFile: false,
                                                                           cancellation: cancellation);

@@ -1,19 +1,20 @@
 ﻿using Azure.ResourceManager;
 using Azure.ResourceManager.Resources;
+using LivestreamRecorderService.Interfaces.Job;
 using LivestreamRecorderService.Models.Options;
 using Microsoft.Extensions.Options;
 
-namespace LivestreamRecorderService.SingletonServices;
+namespace LivestreamRecorderService.SingletonServices.ACI;
 
-public class ACIStreamlinkService : ACIService
+public class TwitcastingRecorderService : ACIServiceBase, ITwitcastingRecorderService
 {
     private readonly AzureOption _azureOption;
-    private readonly ILogger<ACIStreamlinkService> _logger;
+    private readonly ILogger<TwitcastingRecorderService> _logger;
 
-    public override string DownloaderName => "streamlink";
+    public override string DownloaderName => "twitcastingrecorder";
 
-    public ACIStreamlinkService(
-        ILogger<ACIStreamlinkService> logger,
+    public TwitcastingRecorderService(
+        ILogger<TwitcastingRecorderService> logger,
         ArmClient armClient,
         IOptions<AzureOption> options) : base(logger, armClient, options)
     {
@@ -29,13 +30,13 @@ public class ACIStreamlinkService : ACIService
     {
         try
         {
-            return doWithImage("ghcr.io/recorder-moe/streamlink:5.3.1");
+            return doWithImage("ghcr.io/recorder-moe/twitcasting-recorder:latest");
         }
         catch (Exception)
         {
             // Use DockerHub as fallback
             _logger.LogWarning("Failed once, try docker hub as fallback.");
-            return doWithImage("recordermoe/streamlink:5.3.1");
+            return doWithImage("recordermoe/twitcasting-recorder:latest");
         }
 
         Task<ArmOperation<ArmDeploymentResource>> doWithImage(string imageName)
@@ -55,8 +56,9 @@ public class ACIStreamlinkService : ACIService
                         commandOverrideArray = new
                         {
                             value = new string[] {
-                                "/bin/sh", "-c",
-                                $"/usr/local/bin/streamlink --twitch-disable-ads -o '/downloads/{{id}}.mp4' -f 'twitch.tv/{channelId}' best && cd /downloads && for file in *.mp4; do ffmpeg -i \"$file\" -map 0:v:0 -map 0:a:0 -c copy -movflags +faststart 'temp.mp4' && mv 'temp.mp4' \"/fileshare/$file\"; done"
+                                "/usr/bin/dumb-init", "--",
+                                "/bin/bash", "-c",
+                                $"/bin/bash record_twitcast.sh {channelId} once && mv /download/*.mp4 /fileshare/"
                             }
                         },
                         storageAccountName = new
