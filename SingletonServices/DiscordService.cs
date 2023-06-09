@@ -228,13 +228,26 @@ public partial class DiscordService
     #region Send
     async Task SendMessage(Embed embed, MessageComponent component, string text = "")
     {
-        ulong messageId = await _discordWebhookClient.SendMessageAsync(
-            text: text,
-            embeds: new Embed[] { embed },
-            username: "Recorder.moe Notifier",
-            avatarUrl: $"https://{_discordOption.FrontEndHost}/assets/img/logos/logo-color-big.png",
-            components: component);
-        _logger.LogDebug("Message sent to discord: {title}, {messageId}", embed.Title, messageId);
+        int retry = 3;
+        while (retry-- >= 0)
+        {
+            try
+            {
+                ulong messageId = await _discordWebhookClient.SendMessageAsync(
+                    text: text,
+                    embeds: new Embed[] { embed },
+                    username: "Recorder.moe Notifier",
+                    avatarUrl: $"https://{_discordOption.FrontEndHost}/assets/img/logos/logo-color-big.png",
+                    components: component);
+                _logger.LogDebug("Message sent to discord: {title}, {messageId}", embed.Title, messageId);
+                retry = -1;
+            }
+            catch (HttpRequestException)
+            {
+                // Retry
+                _logger.LogError("Failed to send message to discord, retrying...");
+            }
+        }
     }
 
     async Task SendMessageWarning(Embed embed, MessageComponent component, string? text)
