@@ -66,7 +66,7 @@ public class MonitorWorker : BackgroundService
 
         var videos = videoService.GetVideosBySource(PlatformService.PlatformName)
                                  .Where(p => p.Status == VideoStatus.Scheduled
-                                             && p.Status == VideoStatus.Pending)
+                                             || p.Status == VideoStatus.Pending)
                                  .Select(p => videoService.LoadRelatedData(p))
                                  .ToList();
 
