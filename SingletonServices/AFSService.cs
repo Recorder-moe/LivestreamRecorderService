@@ -3,10 +3,11 @@ using Azure.Storage.Files.Shares.Models;
 using LivestreamRecorderService.Interfaces;
 using LivestreamRecorderService.Models.Options;
 using Microsoft.Extensions.Options;
+using FileInfo = LivestreamRecorderService.Models.FileInfo;
 
 namespace LivestreamRecorderService.SingletonServices;
 
-public class AFSService : IAFSService
+public class AFSService : IPersistentVolumeService
 {
     private readonly ILogger<AFSService> _logger;
     private readonly ShareClient _shareClient;
@@ -20,7 +21,7 @@ public class AFSService : IAFSService
         _shareClient = shareServiceClient.GetShareClient(options.Value.AzureFileShare!.ShareName);
     }
 
-    public async Task<ShareDirectoryClient> GetFileShareClientAsync(CancellationToken cancellation = default)
+    private async Task<ShareDirectoryClient> GetFileShareClientAsync(CancellationToken cancellation = default)
     {
         // Ensure that the share exists
         if (!await _shareClient.ExistsAsync(cancellation))
@@ -40,7 +41,7 @@ public class AFSService : IAFSService
     /// <param name="prefix"></param>
     /// <param name="delay"></param>
     /// <returns></returns>
-    public async Task<ShareFileItem?> GetVideoShareFileByPrefixAsync(string prefix, TimeSpan delay, CancellationToken cancellation = default)
+    public async Task<FileInfo?> GetVideoFileInfoByPrefixAsync(string prefix, TimeSpan delay, CancellationToken cancellation = default)
     {
         ShareDirectoryClient rootDirectoryClient = await GetFileShareClientAsync(cancellation);
         List<ShareFileItem> shareFileItems =
@@ -59,7 +60,8 @@ public class AFSService : IAFSService
                           DateTimeOffset lastModified = rootDirectoryClient.GetFileClient(p.Name).GetProperties().Value.LastModified;
                           return DateTimeOffset.Now - lastModified > delay;
                       })
-               ? shareFileItems.FirstOrDefault(p => p.Name.Split('.').Last() is "mp4" or "mkv" or "webm")
+               ? shareFileItems.Select(p => new FileInfo { Name = p.Name, FileSize = p.FileSize })
+                               .FirstOrDefault(p => p.Name.Split('.').Last() is "mp4" or "mkv" or "webm")
                : null;
     }
 }

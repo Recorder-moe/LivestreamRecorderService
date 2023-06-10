@@ -7,9 +7,9 @@ using LivestreamRecorderService.Workers;
 using Microsoft.Extensions.Options;
 using Serilog;
 
-//#if DEBUG
-Serilog.Debugging.SelfLog.Enable(msg => Console.WriteLine(msg));
-//#endif
+#if DEBUG
+Serilog.Debugging.SelfLog.Enable(Console.WriteLine);
+#endif
 
 
 IConfiguration configuration = new ConfigurationBuilder()
@@ -54,7 +54,7 @@ try
 
         services.AddDatabase(configuration);
 
-        if (serviceOptions.PresistentVolumeService == ServiceName.AzureFileShare
+        if (serviceOptions.PersistentVolumeService == ServiceName.AzureFileShare
             && serviceOptions.StorageService == ServiceName.AzureBlobStorage)
         {
             services.AddHttpClient("AzureFileShares2BlobContainers", client =>
@@ -65,7 +65,7 @@ try
             });
         }
 
-        switch (serviceOptions.ContainerService)
+        switch (serviceOptions.JobService)
         {
             case ServiceName.AzureContainerInstance:
                 services.AddAzureContainerInstanceService();
@@ -77,7 +77,7 @@ try
                 throw new NotImplementedException("Currently only Azure Container Instance and K8s are supported.");
         }
 
-        switch (serviceOptions.PresistentVolumeService)
+        switch (serviceOptions.PersistentVolumeService)
         {
             case ServiceName.AzureFileShare:
                 services.AddAzureFileShareService();

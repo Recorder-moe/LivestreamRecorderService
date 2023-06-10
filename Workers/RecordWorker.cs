@@ -1,5 +1,4 @@
-﻿using Azure.Storage.Files.Shares.Models;
-using LivestreamRecorder.DB.Enum;
+﻿using LivestreamRecorder.DB.Enum;
 using LivestreamRecorder.DB.Models;
 using LivestreamRecorderService.Interfaces;
 using LivestreamRecorderService.Interfaces.Job;
@@ -7,6 +6,7 @@ using LivestreamRecorderService.Models.Options;
 using LivestreamRecorderService.ScopedServices;
 using Microsoft.Extensions.Options;
 using Serilog.Context;
+using FileInfo = LivestreamRecorderService.Models.FileInfo;
 
 namespace LivestreamRecorderService.Workers;
 
@@ -19,7 +19,7 @@ public class RecordWorker : BackgroundService
     private readonly ITwitcastingRecorderService _twitcastingRecorderService;
     private readonly IStreamlinkService _streamlinkService;
     private readonly IFC2LiveDLService _fC2LiveDLService;
-    private readonly IAFSService _aFSService;
+    private readonly IPersistentVolumeService _aFSService;
     private readonly IServiceProvider _serviceProvider;
 
     public RecordWorker(
@@ -30,7 +30,7 @@ public class RecordWorker : BackgroundService
         ITwitcastingRecorderService twitcastingRecorderService,
         IStreamlinkService streamlinkService,
         IFC2LiveDLService fC2LiveDLService,
-        IAFSService aFSService,
+        IPersistentVolumeService aFSService,
         IOptions<AzureOption> options,
         IServiceProvider serviceProvider)
     {
@@ -260,9 +260,9 @@ public class RecordWorker : BackgroundService
     /// </summary>
     /// <param name="videoService"></param>
     /// <returns>Videos that finish recording.</returns>
-    private async Task<Dictionary<Video, ShareFileItem>> MonitorRecordingVideosAsync(VideoService videoService, CancellationToken cancellation = default)
+    private async Task<Dictionary<Video, FileInfo>> MonitorRecordingVideosAsync(VideoService videoService, CancellationToken cancellation = default)
     {
-        var finishedRecordingVideos = new Dictionary<Video, ShareFileItem>();
+        var finishedRecordingVideos = new Dictionary<Video, FileInfo>();
         var videos = videoService.GetVideosByStatus(VideoStatus.Recording)
              .Concat(videoService.GetVideosByStatus(VideoStatus.Downloading));
         foreach (var video in videos)
@@ -277,13 +277,13 @@ public class RecordWorker : BackgroundService
                 "FC2" => video.ChannelId + (video.Timestamps.ActualStartTime ?? DateTime.Today).ToString("yyyy-MM-dd"),
                 _ => video.id,
             };
-            var file = await _aFSService.GetVideoShareFileByPrefixAsync(prefix: prefix,
+            var file = await _aFSService.GetVideoFileInfoByPrefixAsync(prefix: prefix,
                                                                         delay: TimeSpan.FromMinutes(5),
                                                                         cancellation: cancellation);
             if (null != file)
             {
                 _logger.LogInformation("Video recording finish {videoId}", video.id);
-                finishedRecordingVideos.Add(video, file);
+                finishedRecordingVideos.Add(video, file.Value);
             }
         }
         return finishedRecordingVideos;

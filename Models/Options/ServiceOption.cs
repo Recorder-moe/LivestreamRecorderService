@@ -8,8 +8,8 @@ public class ServiceOption
     public const string ConfigurationSectionName = "Service";
 #pragma warning restore IDE1006 // 命名樣式
 
-    public required ServiceName ContainerService { get; set; } = ServiceName.AzureContainerInstance;
-    public required ServiceName PresistentVolumeService { get; set; } = ServiceName.AzureFileShare;
+    public required ServiceName JobService { get; set; } = ServiceName.AzureContainerInstance;
+    public required ServiceName PersistentVolumeService { get; set; } = ServiceName.AzureFileShare;
     public required ServiceName StorageService { get; set; } = ServiceName.AzureBlobStorage;
     public required ServiceName DatabaseService { get; set; } = ServiceName.AzureCosmosDB;
 }
