@@ -1,19 +1,20 @@
 ﻿using Azure.ResourceManager;
 using Azure.ResourceManager.Resources;
+using LivestreamRecorderService.Interfaces.Job;
 using LivestreamRecorderService.Models.Options;
 using Microsoft.Extensions.Options;
 
-namespace LivestreamRecorderService.SingletonServices;
+namespace LivestreamRecorderService.SingletonServices.ACI;
 
-public class ACITwitcastingRecorderService : ACIService
+public class TwitcastingRecorderService : ACIServiceBase, ITwitcastingRecorderService
 {
     private readonly AzureOption _azureOption;
-    private readonly ILogger<ACITwitcastingRecorderService> _logger;
+    private readonly ILogger<TwitcastingRecorderService> _logger;
 
     public override string DownloaderName => "twitcastingrecorder";
 
-    public ACITwitcastingRecorderService(
-        ILogger<ACITwitcastingRecorderService> logger,
+    public TwitcastingRecorderService(
+        ILogger<TwitcastingRecorderService> logger,
         ArmClient armClient,
         IOptions<AzureOption> options) : base(logger, armClient, options)
     {
@@ -62,11 +63,11 @@ public class ACITwitcastingRecorderService : ACIService
                         },
                         storageAccountName = new
                         {
-                            value = _azureOption.StorageAccountName
+                            value = _azureOption.FileShare!.StorageAccountName
                         },
                         storageAccountKey = new
                         {
-                            value = _azureOption.StorageAccountKey
+                            value = _azureOption.FileShare!.StorageAccountKey
                         },
                         fileshareVolumeName = new
                         {

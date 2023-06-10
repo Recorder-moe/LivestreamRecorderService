@@ -1,25 +1,15 @@
-using Azure.Identity;
-using Azure.ResourceManager;
-using LivestreamRecorder.DB.Core;
-using LivestreamRecorder.DB.Interfaces;
-using LivestreamRecorderService.Interfaces;
-using LivestreamRecorderService.Models.OptionDiscords;
+using LivestreamRecorder.DB.Enum;
+using LivestreamRecorderService.DependencyInjection;
 using LivestreamRecorderService.Models.Options;
 using LivestreamRecorderService.ScopedServices;
 using LivestreamRecorderService.ScopedServices.PlatformService;
-using LivestreamRecorderService.SingletonServices;
 using LivestreamRecorderService.Workers;
-using Microsoft.EntityFrameworkCore;
-using Microsoft.Extensions.Azure;
 using Microsoft.Extensions.Options;
 using Serilog;
-using TwitchLib.Api;
-using TwitchLib.Api.Core;
-using TwitchLib.Api.Interfaces;
 
-//#if DEBUG
-Serilog.Debugging.SelfLog.Enable(msg => Console.WriteLine(msg));
-//#endif
+#if DEBUG
+Serilog.Debugging.SelfLog.Enable(Console.WriteLine);
+#endif
 
 
 IConfiguration configuration = new ConfigurationBuilder()
@@ -55,106 +45,80 @@ try
                 .ValidateDataAnnotations()
                 .ValidateOnStart();
 
-        services.AddOptions<CosmosDbOptions>()
-                .Bind(configuration.GetSection(CosmosDbOptions.ConfigurationSectionName))
+        services.AddOptions<ServiceOption>()
+                .Bind(configuration.GetSection(ServiceOption.ConfigurationSectionName))
                 .ValidateDataAnnotations()
                 .ValidateOnStart();
 
-        services.AddOptions<TwitchOption>()
-                .Bind(configuration.GetSection(TwitchOption.ConfigurationSectionName))
-                .ValidateDataAnnotations()
-                .ValidateOnStart();
+        var serviceOptions = services.BuildServiceProvider().GetRequiredService<IOptions<ServiceOption>>().Value;
 
-        services.AddOptions<DiscordOption>()
-                .Bind(configuration.GetSection(DiscordOption.ConfigurationSectionName))
-                .ValidateDataAnnotations()
-                .ValidateOnStart();
-
-        services.AddOptions<HeartbeatOption>()
-                .Bind(configuration.GetSection(HeartbeatOption.ConfigurationSectionName))
-                .ValidateDataAnnotations()
-                .ValidateOnStart();
-
-        var azureOptions = services.BuildServiceProvider().GetRequiredService<IOptions<AzureOption>>().Value;
-        var cosmosDbOptions = services.BuildServiceProvider().GetRequiredService<IOptions<CosmosDbOptions>>().Value;
-        var twitchOptions = services.BuildServiceProvider().GetRequiredService<IOptions<TwitchOption>>().Value;
-        var discordOptions = services.BuildServiceProvider().GetRequiredService<IOptions<DiscordOption>>().Value;
-
-        // Add CosmosDb
-        services.AddDbContext<PublicContext>((options) =>
+        switch (serviceOptions.DatabaseService)
         {
-            options
-                //.EnableSensitiveDataLogging()
-                .UseCosmos(connectionString: configuration.GetConnectionString("Public")!,
-                           databaseName: cosmosDbOptions.Public.DatabaseName,
-                           cosmosOptionsAction: option => option.GatewayModeMaxConnectionLimit(380));
-        });
-        services.AddDbContext<PrivateContext>((options) =>
+            case ServiceName.AzureCosmosDb:
+                services.AddCosmosDb(configuration);
+                break;
+            default:
+                Log.Fatal("Currently only Azure CosmosDb is supported.");
+                throw new NotImplementedException("Currently only Azure CosmosDb is supported.");
+        }
+
+        if (serviceOptions.PersistentVolumeService == ServiceName.AzureFileShare
+            && serviceOptions.StorageService == ServiceName.AzureBlobStorage)
         {
-            options
-                //.EnableSensitiveDataLogging()
-                .UseCosmos(connectionString: configuration.GetConnectionString("Private")!,
-                           databaseName: cosmosDbOptions.Private.DatabaseName,
-                           cosmosOptionsAction: option => option.GatewayModeMaxConnectionLimit(380));
-        });
+            services.AddHttpClient("AzureFileShares2BlobContainers", client =>
+            {
+                client.BaseAddress = new Uri("https://azurefileshares2blobcontainers.azurewebsites.net/");
+                // Set this bigger than Azure Function timeout (10min)
+                client.Timeout = TimeSpan.FromMinutes(11);
+            });
+        }
 
-        services.AddScoped<UnitOfWork_Public>();
-        services.AddScoped<UnitOfWork_Private>();
-        services.AddScoped<IVideoRepository, VideoRepository>();
-        services.AddScoped<IChannelRepository, ChannelRepository>();
-        services.AddScoped<IUserRepository, UserRepository>();
-
-        services.AddHttpClient("AzureFileShares2BlobContainers", client =>
+        switch (serviceOptions.JobService)
         {
-            client.BaseAddress = new Uri("https://azurefileshares2blobcontainers.azurewebsites.net/");
-            // Set this bigger than Azure Function timeout (10min)
-            client.Timeout = TimeSpan.FromMinutes(11);
-        });
+            case ServiceName.AzureContainerInstance:
+                services.AddAzureContainerInstanceService();
+                break;
+            case ServiceName.K8s:
+                throw new NotImplementedException("K8s is not implemented yet.");
+            default:
+                Log.Fatal("Currently only Azure Container Instance and K8s are supported.");
+                throw new NotImplementedException("Currently only Azure Container Instance and K8s are supported.");
+        }
 
-        services.AddAzureClients(clientsBuilder =>
+        switch (serviceOptions.PersistentVolumeService)
         {
-            clientsBuilder.UseCredential(new DefaultAzureCredential())
-                          .AddClient<ArmClient, ArmClientOptions>((options, token) => new ArmClient(token));
-            clientsBuilder.UseCredential(new DefaultAzureCredential())
-                          .AddFileServiceClient(azureOptions.ConnectionString);
-            clientsBuilder.UseCredential(new DefaultAzureCredential())
-                          .AddBlobServiceClient(azureOptions.ConnectionString);
-        });
-        services.AddSingleton<IAFSService, AFSService>();
-        services.AddSingleton<IABSService, ABSService>();
-        services.AddSingleton<ACIService>();
-        services.AddSingleton<ACIYtarchiveService>();
-        services.AddSingleton<ACIYtdlpService>();
-        services.AddSingleton<ACITwitcastingRecorderService>();
-        services.AddSingleton<ACIStreamlinkService>();
-        services.AddSingleton<ACIFC2LiveDLService>();
+            case ServiceName.AzureFileShare:
+                services.AddAzureFileShareService();
+                break;
+            default:
+                Log.Fatal("Currently only Azure File Share is supported.");
+                throw new NotImplementedException("Currently only Azure File Share is supported.");
+        }
 
-        services.AddSingleton<DiscordService>();
-
-        services.AddSingleton<ITwitchAPI, TwitchAPI>(s =>
+        switch (serviceOptions.StorageService)
         {
-            var api = new TwitchAPI(
-                loggerFactory: s.GetRequiredService<ILoggerFactory>(),
-                settings: new ApiSettings()
-                {
-                    ClientId = twitchOptions.ClientId,
-                    Secret = twitchOptions.ClientSecret
-                });
-            return api;
-        });
+            case ServiceName.AzureBlobStorage:
+                services.AddAzuerBlobStorageService();
+                break;
+            default:
+                Log.Fatal("Currently only Azure Blob Storage is supported.");
+                throw new NotImplementedException("Currently only Azure Blob Storage is supported.");
+        }
+
+        services.AddDiscordService(configuration);
 
         services.AddHostedService<RecordWorker>();
         services.AddHostedService<MonitorWorker>();
         services.AddHostedService<UpdateChannelInfoWorker>();
         services.AddHostedService<UpdateVideoStatusWorker>();
-        services.AddHostedService<HeartbeatWorker>();
+        services.AddHeartbeatWorker(configuration);
 
         services.AddScoped<VideoService>();
         services.AddScoped<ChannelService>();
         services.AddScoped<RSSService>();
         services.AddScoped<YoutubeService>();
         services.AddScoped<TwitcastingService>();
-        services.AddScoped<TwitchService>();
+        services.AddTwitchService(configuration);
         services.AddScoped<FC2Service>();
     })
     .Build();
@@ -170,4 +134,3 @@ finally
     Log.Information("Shut down complete");
     Log.CloseAndFlush();
 }
-

@@ -1,46 +1,46 @@
-﻿using Azure.Storage.Files.Shares.Models;
-using LivestreamRecorder.DB.Enum;
+﻿using LivestreamRecorder.DB.Enum;
 using LivestreamRecorder.DB.Models;
 using LivestreamRecorderService.Interfaces;
+using LivestreamRecorderService.Interfaces.Job;
 using LivestreamRecorderService.Models.Options;
 using LivestreamRecorderService.ScopedServices;
-using LivestreamRecorderService.SingletonServices;
 using Microsoft.Extensions.Options;
 using Serilog.Context;
+using FileInfo = LivestreamRecorderService.Models.FileInfo;
 
 namespace LivestreamRecorderService.Workers;
 
 public class RecordWorker : BackgroundService
 {
     private readonly ILogger<RecordWorker> _logger;
-    private readonly ACIService _aCIService;
-    private readonly ACIYtarchiveService _aCIYtarchiveService;
-    private readonly ACIYtdlpService _aCIYtdlpService;
-    private readonly ACITwitcastingRecorderService _aCITwitcastingRecorderService;
-    private readonly ACIStreamlinkService _aCIStreamlinkService;
-    private readonly ACIFC2LiveDLService _aCIFC2LiveDLService;
-    private readonly IAFSService _aFSService;
+    private readonly IJobService _jobService;
+    private readonly IYtarchiveService _ytarchiveService;
+    private readonly IYtdlpService _ytdlpService;
+    private readonly ITwitcastingRecorderService _twitcastingRecorderService;
+    private readonly IStreamlinkService _streamlinkService;
+    private readonly IFC2LiveDLService _fC2LiveDLService;
+    private readonly IPersistentVolumeService _aFSService;
     private readonly IServiceProvider _serviceProvider;
 
     public RecordWorker(
         ILogger<RecordWorker> logger,
-        ACIService aCIService,
-        ACIYtarchiveService aCIYtarchiveService,
-        ACIYtdlpService aCIYtdlpService,
-        ACITwitcastingRecorderService aCITwitcastingRecorderService,
-        ACIStreamlinkService aCIStreamlinkService,
-        ACIFC2LiveDLService aCIFC2LiveDLService,
-        IAFSService aFSService,
+        IJobService jobService,
+        IYtarchiveService ytarchiveService,
+        IYtdlpService ytdlpService,
+        ITwitcastingRecorderService twitcastingRecorderService,
+        IStreamlinkService streamlinkService,
+        IFC2LiveDLService fC2LiveDLService,
+        IPersistentVolumeService aFSService,
         IOptions<AzureOption> options,
         IServiceProvider serviceProvider)
     {
         _logger = logger;
-        _aCIService = aCIService;
-        _aCIYtarchiveService = aCIYtarchiveService;
-        _aCIYtdlpService = aCIYtdlpService;
-        _aCITwitcastingRecorderService = aCITwitcastingRecorderService;
-        _aCIStreamlinkService = aCIStreamlinkService;
-        _aCIFC2LiveDLService = aCIFC2LiveDLService;
+        _jobService = jobService;
+        _ytarchiveService = ytarchiveService;
+        _ytdlpService = ytdlpService;
+        _twitcastingRecorderService = twitcastingRecorderService;
+        _streamlinkService = streamlinkService;
+        _fC2LiveDLService = fC2LiveDLService;
         _aFSService = aFSService;
         _serviceProvider = serviceProvider;
     }
@@ -63,10 +63,10 @@ public class RecordWorker : BackgroundService
                 var channelService = scope.ServiceProvider.GetRequiredService<ChannelService>();
                 #endregion
 
-                await HandledFailedACIsAsync(videoService, stoppingToken);
+                await HandledFailedJobsAsync(videoService, stoppingToken);
 
-                await CreateACIStartRecordAsync(videoService, stoppingToken);
-                await CreateACIStartDownloadAsync(videoService, stoppingToken);
+                await CreateStartRecordJobAsync(videoService, stoppingToken);
+                await CreateStartDownloadJobAsync(videoService, stoppingToken);
 
                 videoService.RollbackVideosStatusStuckAtUploading();
 
@@ -79,7 +79,7 @@ public class RecordWorker : BackgroundService
 
                     try
                     {
-                        await _aCIService.RemoveCompletedInstanceContainerAsync(video, stoppingToken);
+                        await _jobService.RemoveCompletedJobsAsync(video, stoppingToken);
                     }
                     catch (Exception)
                     {
@@ -104,7 +104,7 @@ public class RecordWorker : BackgroundService
         }
     }
 
-    private async Task HandledFailedACIsAsync(VideoService videoService, CancellationToken stoppingToken)
+    private async Task HandledFailedJobsAsync(VideoService videoService, CancellationToken stoppingToken)
     {
         var videos = videoService.GetVideosByStatus(VideoStatus.Recording)
              .Concat(videoService.GetVideosByStatus(VideoStatus.Downloading))
@@ -121,7 +121,7 @@ public class RecordWorker : BackgroundService
 
         foreach (var video in videos)
         {
-            if (await _aCIService.IsACIFailedAsync(video, stoppingToken))
+            if (await _jobService.IsJobFailedAsync(video, stoppingToken))
             {
                 switch (video.Source)
                 {
@@ -146,7 +146,7 @@ public class RecordWorker : BackgroundService
     /// <param name="stoppingToken"></param>
     /// <returns></returns>
     /// <exception cref="NotSupportedException"></exception>
-    private async Task CreateACIStartRecordAsync(VideoService videoService, CancellationToken stoppingToken)
+    private async Task CreateStartRecordJobAsync(VideoService videoService, CancellationToken stoppingToken)
     {
         _logger.LogDebug("Getting videos to record");
         var videos = videoService.GetVideosByStatus(VideoStatus.WaitingToRecord);
@@ -165,25 +165,25 @@ public class RecordWorker : BackgroundService
             switch (video.Source)
             {
                 case "Youtube":
-                    await _aCIYtarchiveService.StartInstanceAsync(videoId: video.id,
+                    await _ytarchiveService.InitJobAsync(url: video.id,
                                                                   channelId: video.ChannelId,
                                                                   useCookiesFile: video.Channel?.UseCookiesFile == true,
                                                                   cancellation: stoppingToken);
                     break;
                 case "Twitcasting":
-                    await _aCITwitcastingRecorderService.StartInstanceAsync(videoId: video.id,
+                    await _twitcastingRecorderService.InitJobAsync(url: video.id,
                                                                             channelId: video.ChannelId,
                                                                             useCookiesFile: false,
                                                                             cancellation: stoppingToken);
                     break;
                 case "Twitch":
-                    await _aCIStreamlinkService.StartInstanceAsync(videoId: video.id,
+                    await _streamlinkService.InitJobAsync(url: video.id,
                                                                    channelId: video.ChannelId,
                                                                    useCookiesFile: false,
                                                                    cancellation: stoppingToken);
                     break;
                 case "FC2":
-                    await _aCIFC2LiveDLService.StartInstanceAsync(videoId: video.id,
+                    await _fC2LiveDLService.InitJobAsync(url: video.id,
                                                                   channelId: video.ChannelId,
                                                                   useCookiesFile: video.Channel?.UseCookiesFile == true,
                                                                   cancellation: stoppingToken);
@@ -200,7 +200,7 @@ public class RecordWorker : BackgroundService
         }
     }
 
-    private async Task CreateACIStartDownloadAsync(VideoService videoService, CancellationToken stoppingToken)
+    private async Task CreateStartDownloadJobAsync(VideoService videoService, CancellationToken stoppingToken)
     {
         _logger.LogDebug("Getting videos to download");
         var videos = videoService.GetVideosByStatus(VideoStatus.WaitingToDownload);
@@ -216,14 +216,14 @@ public class RecordWorker : BackgroundService
             switch (video.Source)
             {
                 case "Youtube":
-                    await _aCIYtdlpService.StartInstanceAsync(
+                    await _ytdlpService.InitJobAsync(
                         url: $"https://youtu.be/{video.id}",
                         channelId: video.ChannelId,
                         useCookiesFile: video.Channel?.UseCookiesFile == true,
                         cancellation: stoppingToken);
                     break;
                 case "Twitcasting":
-                    await _aCIYtdlpService.StartInstanceAsync(
+                    await _ytdlpService.InitJobAsync(
                         url: $"https://twitcasting.tv/{video.ChannelId}/movie/{video.id}",
                         channelId: video.ChannelId,
                         useCookiesFile: false,
@@ -231,14 +231,14 @@ public class RecordWorker : BackgroundService
                     break;
                 case "Twitch":
                     var id = video.id.TrimStart('v');
-                    await _aCIYtdlpService.StartInstanceAsync(
+                    await _ytdlpService.InitJobAsync(
                         url: $"https://www.twitch.tv/videos/{id}",
                         channelId: video.ChannelId,
                         useCookiesFile: false,
                         cancellation: stoppingToken);
                     break;
                 case "FC2":
-                    await _aCIYtdlpService.StartInstanceAsync(
+                    await _ytdlpService.InitJobAsync(
                         url: $"https://video.fc2.com/content/{video.id}",
                         channelId: video.ChannelId,
                         useCookiesFile: video.Channel?.UseCookiesFile == true,
@@ -260,9 +260,9 @@ public class RecordWorker : BackgroundService
     /// </summary>
     /// <param name="videoService"></param>
     /// <returns>Videos that finish recording.</returns>
-    private async Task<Dictionary<Video, ShareFileItem>> MonitorRecordingVideosAsync(VideoService videoService, CancellationToken cancellation = default)
+    private async Task<Dictionary<Video, FileInfo>> MonitorRecordingVideosAsync(VideoService videoService, CancellationToken cancellation = default)
     {
-        var finishedRecordingVideos = new Dictionary<Video, ShareFileItem>();
+        var finishedRecordingVideos = new Dictionary<Video, FileInfo>();
         var videos = videoService.GetVideosByStatus(VideoStatus.Recording)
              .Concat(videoService.GetVideosByStatus(VideoStatus.Downloading));
         foreach (var video in videos)
@@ -277,13 +277,13 @@ public class RecordWorker : BackgroundService
                 "FC2" => video.ChannelId + (video.Timestamps.ActualStartTime ?? DateTime.Today).ToString("yyyy-MM-dd"),
                 _ => video.id,
             };
-            var file = await _aFSService.GetVideoShareFileByPrefixAsync(prefix: prefix,
+            var file = await _aFSService.GetVideoFileInfoByPrefixAsync(prefix: prefix,
                                                                         delay: TimeSpan.FromMinutes(5),
                                                                         cancellation: cancellation);
             if (null != file)
             {
                 _logger.LogInformation("Video recording finish {videoId}", video.id);
-                finishedRecordingVideos.Add(video, file);
+                finishedRecordingVideos.Add(video, file.Value);
             }
         }
         return finishedRecordingVideos;

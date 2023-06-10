@@ -12,15 +12,17 @@ public class MonitorWorker : BackgroundService
 {
     private readonly ILogger<MonitorWorker> _logger;
     private readonly IServiceProvider _serviceProvider;
+    private readonly TwitchOption _twitchOption;
     private const int _interval = 10;   // in seconds
 
     public MonitorWorker(
         ILogger<MonitorWorker> logger,
-        IOptions<AzureOption> options,
+        IOptions<TwitchOption> twitchOption,
         IServiceProvider serviceProvider)
     {
         _logger = logger;
         _serviceProvider = serviceProvider;
+        _twitchOption = twitchOption.Value;
     }
 
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
@@ -37,15 +39,19 @@ public class MonitorWorker : BackgroundService
             {
                 var youtubeSerivce = scope.ServiceProvider.GetRequiredService<YoutubeService>();
                 var twitcastingService = scope.ServiceProvider.GetRequiredService<TwitcastingService>();
-                var twitchService = scope.ServiceProvider.GetRequiredService<TwitchService>();
                 var fc2Service = scope.ServiceProvider.GetRequiredService<FC2Service>();
                 var videoService = scope.ServiceProvider.GetRequiredService<VideoService>();
                 #endregion
 
                 await MonitorPlatform(youtubeSerivce, videoService, stoppingToken);
                 await MonitorPlatform(twitcastingService, videoService, stoppingToken);
-                await MonitorPlatform(twitchService, videoService, stoppingToken);
                 await MonitorPlatform(fc2Service, videoService, stoppingToken);
+
+                if (_twitchOption.Enabled)
+                {
+                    var twitchService = scope.ServiceProvider.GetRequiredService<TwitchService>();
+                    await MonitorPlatform(twitchService, videoService, stoppingToken);
+                }
             }
 
             _logger.LogTrace("{Worker} ends. Sleep {interval} seconds.", nameof(MonitorWorker), _interval);

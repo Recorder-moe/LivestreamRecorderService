@@ -109,17 +109,20 @@ public partial class DiscordService
 
         var componentBuilder = GetComponentBuilder(video);
 
-        return SendMessageWarning(embedBuilder.Build(), componentBuilder.Build(), $"{_discordOption.Mention.Deleted} {video.Note}");
+        return SendMessageWarning(embedBuilder.Build(), componentBuilder.Build(), $"{_discordOption.Mention!.Deleted} {video.Note}");
     }
 
     #region GetEmbedBuilder
     private EmbedBuilder GetEmbedBuilder(Video video)
     {
         EmbedBuilder embedBuilder = new();
+        if(null != _azureOption.BlobStorage)
+        {
         if (null != video.Thumbnail)
-            embedBuilder.WithImageUrl($"https://{_azureOption.StorageAccountName}.blob.core.windows.net/{_azureOption.BlobContainerNamePublic}/thumbnails/{video.Thumbnail}");
+            embedBuilder.WithImageUrl($"https://{_azureOption.BlobStorage.StorageAccountName}.blob.core.windows.net/{_azureOption.BlobStorage.BlobContainerName_Public}/thumbnails/{video.Thumbnail}");
         else if (null != video.Channel)
-            embedBuilder.WithImageUrl($"https://{_azureOption.StorageAccountName}.blob.core.windows.net/{_azureOption.BlobContainerNamePublic}/banner/{video.Channel.Banner}");
+            embedBuilder.WithImageUrl($"https://{_azureOption.BlobStorage.StorageAccountName}.blob.core.windows.net/{_azureOption.BlobStorage.BlobContainerName_Public}/banner/{video.Channel.Banner}");
+        }
 
         embedBuilder.WithDescription(video.Title);
         embedBuilder.WithUrl($"https://{_discordOption.FrontEndHost}/channels/{video.ChannelId}/videos/{video.id}");
@@ -256,8 +259,8 @@ public partial class DiscordService
         {
             RoleIds = new List<string?>()
             {
-                _discordOption.Mention.Deleted,
-                _discordOption.Mention.Channel
+                _discordOption.Mention!.Deleted,
+                _discordOption.Mention!.Channel
             }.Where(p => !string.IsNullOrEmpty(p))
              .Select(input => ulong.Parse(RegexNumbers().Match(input!).Value))
              .ToList()

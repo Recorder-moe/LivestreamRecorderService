@@ -1,5 +1,4 @@
-﻿using Azure.Storage.Files.Shares.Models;
-using LivestreamRecorder.DB.Core;
+﻿using LivestreamRecorder.DB.Core;
 using LivestreamRecorder.DB.Enum;
 using LivestreamRecorder.DB.Interfaces;
 using LivestreamRecorder.DB.Models;
@@ -8,6 +7,7 @@ using LivestreamRecorderService.SingletonServices;
 using Newtonsoft.Json;
 using System.Net;
 using System.Web;
+using FileInfo = LivestreamRecorderService.Models.FileInfo;
 
 namespace LivestreamRecorderService.ScopedServices;
 
@@ -62,7 +62,7 @@ public class VideoService
         _logger.LogDebug("Update Video {videoId} note", video.id);
     }
 
-    public void AddFilePropertiesToVideo(Video video, ShareFileItem file)
+    public void AddFilePropertiesToVideo(Video video, FileInfo file)
     {
         video = _videoRepository.GetById(video.id);
         _videoRepository.LoadRelatedData(video);
@@ -75,7 +75,7 @@ public class VideoService
         _unitOfWork_Public.Commit();
     }
 
-    public async Task TransferVideoToBlobStorageAsync(Video video, ShareFileItem file, CancellationToken cancellation = default)
+    public async Task TransferVideoToBlobStorageAsync(Video video, FileInfo file, CancellationToken cancellation = default)
     {
         try
         {

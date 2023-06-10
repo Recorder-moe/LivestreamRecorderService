@@ -1,19 +1,20 @@
 ﻿using Azure.ResourceManager;
 using Azure.ResourceManager.Resources;
+using LivestreamRecorderService.Interfaces.Job;
 using LivestreamRecorderService.Models.Options;
 using Microsoft.Extensions.Options;
 
-namespace LivestreamRecorderService.SingletonServices;
+namespace LivestreamRecorderService.SingletonServices.ACI;
 
-public class ACIStreamlinkService : ACIService
+public class StreamlinkService : ACIServiceBase, IStreamlinkService
 {
     private readonly AzureOption _azureOption;
-    private readonly ILogger<ACIStreamlinkService> _logger;
+    private readonly ILogger<StreamlinkService> _logger;
 
     public override string DownloaderName => "streamlink";
 
-    public ACIStreamlinkService(
-        ILogger<ACIStreamlinkService> logger,
+    public StreamlinkService(
+        ILogger<StreamlinkService> logger,
         ArmClient armClient,
         IOptions<AzureOption> options) : base(logger, armClient, options)
     {
@@ -61,11 +62,11 @@ public class ACIStreamlinkService : ACIService
                         },
                         storageAccountName = new
                         {
-                            value = _azureOption.StorageAccountName
+                            value = _azureOption.FileShare!.StorageAccountName
                         },
                         storageAccountKey = new
                         {
-                            value = _azureOption.StorageAccountKey
+                            value = _azureOption.FileShare!.StorageAccountKey
                         },
                         fileshareVolumeName = new
                         {

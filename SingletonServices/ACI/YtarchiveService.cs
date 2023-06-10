@@ -1,19 +1,20 @@
 ﻿using Azure.ResourceManager;
 using Azure.ResourceManager.Resources;
+using LivestreamRecorderService.Interfaces.Job;
 using LivestreamRecorderService.Models.Options;
 using Microsoft.Extensions.Options;
 
-namespace LivestreamRecorderService.SingletonServices;
+namespace LivestreamRecorderService.SingletonServices.ACI;
 
-public class ACIYtarchiveService : ACIService
+public class YtarchiveService : ACIServiceBase, IYtarchiveService
 {
-    private readonly ILogger<ACIYtarchiveService> _logger;
+    private readonly ILogger<YtarchiveService> _logger;
     private readonly AzureOption _azureOption;
 
     public override string DownloaderName => "ytarchive";
 
-    public ACIYtarchiveService(
-        ILogger<ACIYtarchiveService> logger,
+    public YtarchiveService(
+        ILogger<YtarchiveService> logger,
         ArmClient armClient,
         IOptions<AzureOption> options) : base(logger, armClient, options)
     {
@@ -21,7 +22,7 @@ public class ACIYtarchiveService : ACIService
         _azureOption = options.Value;
     }
 
-    public override async Task<dynamic> StartInstanceAsync(string videoId,
+    public override async Task<dynamic> InitJobAsync(string videoId,
                                                            string channelId,
                                                            bool useCookiesFile = false,
                                                            CancellationToken cancellation = default)
@@ -96,11 +97,11 @@ public class ACIYtarchiveService : ACIService
                         },
                         storageAccountName = new
                         {
-                            value = _azureOption.StorageAccountName
+                            value = _azureOption.FileShare!.StorageAccountName
                         },
                         storageAccountKey = new
                         {
-                            value = _azureOption.StorageAccountKey
+                            value = _azureOption.FileShare!.StorageAccountKey
                         },
                         fileshareVolumeName = new
                         {

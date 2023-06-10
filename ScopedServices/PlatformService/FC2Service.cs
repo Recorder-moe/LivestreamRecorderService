@@ -3,8 +3,11 @@ using LivestreamRecorder.DB.Enum;
 using LivestreamRecorder.DB.Interfaces;
 using LivestreamRecorder.DB.Models;
 using LivestreamRecorderService.Interfaces;
+using LivestreamRecorderService.Interfaces.Job;
 using LivestreamRecorderService.Models;
+using LivestreamRecorderService.Models.OptionDiscords;
 using LivestreamRecorderService.SingletonServices;
+using Microsoft.Extensions.Options;
 using Newtonsoft.Json;
 using Serilog.Context;
 
@@ -16,9 +19,8 @@ public class FC2Service : PlatformService, IPlatformService
     private readonly IUnitOfWork _unitOfWork_Public;
     private readonly IVideoRepository _videoRepository;
     private readonly IChannelRepository _channelRepository;
-    private readonly ACIFC2LiveDLService _aCIFC2LiveDLService;
-    private readonly IABSService _aBSService;
-    private readonly DiscordService _discordService;
+    private readonly IFC2LiveDLService _fC2LiveDLService;
+    private readonly IStorageService _storageService;
     private readonly IHttpClientFactory _httpFactory;
 
     public override string PlatformName => "FC2";
@@ -32,18 +34,24 @@ public class FC2Service : PlatformService, IPlatformService
         UnitOfWork_Public unitOfWork_Public,
         IVideoRepository videoRepository,
         IChannelRepository channelRepository,
-        ACIFC2LiveDLService aCIFC2LiveDLService,
-        IABSService aBSService,
+        IFC2LiveDLService fC2LiveDLService,
+        IStorageService storageService,
         DiscordService discordService,
-        IHttpClientFactory httpClientFactory) : base(channelRepository, aBSService, httpClientFactory, logger)
+        IHttpClientFactory httpClientFactory,
+        IOptions<DiscordOption> discordOptions,
+        IServiceProvider serviceProvider) : base(channelRepository,
+                                                 storageService,
+                                                 httpClientFactory,
+                                                 logger,
+                                                 discordOptions,
+                                                 serviceProvider)
     {
         _logger = logger;
         _unitOfWork_Public = unitOfWork_Public;
         _videoRepository = videoRepository;
         _channelRepository = channelRepository;
-        _aCIFC2LiveDLService = aCIFC2LiveDLService;
-        _aBSService = aBSService;
-        _discordService = discordService;
+        _fC2LiveDLService = fC2LiveDLService;
+        _storageService = storageService;
         _httpFactory = httpClientFactory;
     }
 
@@ -123,7 +131,7 @@ public class FC2Service : PlatformService, IPlatformService
                 if (isLive && (video.Status < VideoStatus.Recording
                                || video.Status == VideoStatus.Missing))
                 {
-                    _ = _aCIFC2LiveDLService.StartInstanceAsync(videoId: $"https://live.fc2.com/{channel.id}/",
+                    _ = _fC2LiveDLService.InitJobAsync(url: $"https://live.fc2.com/{channel.id}/",
                                                                 channelId: video.ChannelId,
                                                                 useCookiesFile: channel.UseCookiesFile == true,
                                                                 cancellation: cancellation);
@@ -131,7 +139,10 @@ public class FC2Service : PlatformService, IPlatformService
                     video.Status = VideoStatus.Recording;
                     _logger.LogInformation("{channelId} is now lived! Start recording.", channel.id);
                     _logger.LogDebug("fc2Info: {info}", JsonConvert.SerializeObject(info));
-                    await _discordService.SendStartRecordingMessage(video);
+                    if (null != discordService)
+                    {
+                        await discordService.SendStartRecordingMessage(video);
+                    }
                 }
             }
             else
@@ -206,8 +217,7 @@ public class FC2Service : PlatformService, IPlatformService
             }
         }
 
-        if (await _aBSService.GetVideoBlob(video)
-                             .ExistsAsync(cancellation))
+        if (await _storageService.IsVideoFileExists(video.Filename, cancellation))
         {
             video.Status = VideoStatus.Archived;
             video.Note = null;

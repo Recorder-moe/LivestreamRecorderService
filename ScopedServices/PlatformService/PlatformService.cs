@@ -1,9 +1,11 @@
-﻿using Azure.Storage.Blobs.Models;
-using LivestreamRecorder.DB.Interfaces;
+﻿using LivestreamRecorder.DB.Interfaces;
 using LivestreamRecorder.DB.Models;
 using LivestreamRecorderService.Helper;
 using LivestreamRecorderService.Interfaces;
 using LivestreamRecorderService.Models;
+using LivestreamRecorderService.Models.OptionDiscords;
+using LivestreamRecorderService.SingletonServices;
+using Microsoft.Extensions.Options;
 using MimeMapping;
 using System.Configuration;
 using YoutubeDLSharp.Options;
@@ -13,7 +15,7 @@ namespace LivestreamRecorderService.ScopedServices.PlatformService;
 public abstract class PlatformService : IPlatformService
 {
     private readonly IChannelRepository _channelRepository;
-    private readonly IABSService _aBSService;
+    private readonly IStorageService _storageService;
     private readonly IHttpClientFactory _httpFactory;
     private readonly ILogger<PlatformService> _logger;
 
@@ -21,24 +23,30 @@ public abstract class PlatformService : IPlatformService
     public abstract int Interval { get; }
 
     private static readonly Dictionary<string, int> _elapsedTime = new();
+    protected readonly DiscordService? discordService = null;
 
     private string _ffmpegPath = "/usr/bin/ffmpeg";
     private string _ytdlPath = "/usr/bin/yt-dlp";
 
     public PlatformService(
         IChannelRepository channelRepository,
-        IABSService aBSService,
+        IStorageService storageService,
         IHttpClientFactory httpClientFactory,
-        ILogger<PlatformService> logger)
+        ILogger<PlatformService> logger,
+        IOptions<DiscordOption> discordOptions,
+        IServiceProvider serviceProvider)
     {
         _channelRepository = channelRepository;
-        _aBSService = aBSService;
+        _storageService = storageService;
         _httpFactory = httpClientFactory;
         _logger = logger;
         if (!_elapsedTime.ContainsKey(PlatformName))
         {
             _elapsedTime.Add(PlatformName, 0);
         }
+
+        if (discordOptions.Value.Enabled)
+            discordService = serviceProvider.GetRequiredService<DiscordService>();
     }
 
     public List<Channel> GetMonitoringChannels()
@@ -159,21 +167,11 @@ public abstract class PlatformService : IPlatformService
 
         try
         {
-            List<Task> tasks = new();
-
-            var blobClient = _aBSService.GetPublicBlob(pathInStorage);
-            tasks.Add(blobClient.UploadAsync(
-                 path: tempPath,
-                 httpHeaders: new BlobHttpHeaders { ContentType = contentType },
-                 accessTier: AccessTier.Hot,
-                 cancellationToken: cancellation));
-
-            var avifblobClient = _aBSService.GetPublicBlob($"{path}.avif");
-            tasks.Add(avifblobClient.UploadAsync(
-                 path: await ImageHelper.ConvertToAvifAsync(tempPath),
-                 httpHeaders: new BlobHttpHeaders { ContentType = KnownMimeTypes.Avif },
-                 accessTier: AccessTier.Hot,
-                 cancellationToken: cancellation));
+            List<Task> tasks = new()
+            {
+                _storageService.UploadVideoFile(contentType, pathInStorage, tempPath, cancellation),
+                _storageService.UploadVideoFile(KnownMimeTypes.Avif, $"{path}.avif", await ImageHelper.ConvertToAvifAsync(tempPath), cancellation)
+            };
 
             await Task.WhenAll(tasks);
             return pathInStorage;

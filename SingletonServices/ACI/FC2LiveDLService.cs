@@ -1,19 +1,20 @@
 ﻿using Azure.ResourceManager;
 using Azure.ResourceManager.Resources;
+using LivestreamRecorderService.Interfaces.Job;
 using LivestreamRecorderService.Models.Options;
 using Microsoft.Extensions.Options;
 
-namespace LivestreamRecorderService.SingletonServices;
+namespace LivestreamRecorderService.SingletonServices.ACI;
 
-public class ACIFC2LiveDLService : ACIService
+public class FC2LiveDLService : ACIServiceBase, IFC2LiveDLService
 {
     private readonly AzureOption _azureOption;
-    private readonly ILogger<ACIFC2LiveDLService> _logger;
+    private readonly ILogger<FC2LiveDLService> _logger;
 
     public override string DownloaderName => "fc2livedl";
 
-    public ACIFC2LiveDLService(
-        ILogger<ACIFC2LiveDLService> logger,
+    public FC2LiveDLService(
+        ILogger<FC2LiveDLService> logger,
         ArmClient armClient,
         IOptions<AzureOption> options) : base(logger, armClient, options)
     {
@@ -71,11 +72,11 @@ public class ACIFC2LiveDLService : ACIService
                         },
                         storageAccountName = new
                         {
-                            value = _azureOption.StorageAccountName
+                            value = _azureOption.FileShare!.StorageAccountName
                         },
                         storageAccountKey = new
                         {
-                            value = _azureOption.StorageAccountKey
+                            value = _azureOption.FileShare!.StorageAccountKey
                         },
                         fileshareVolumeName = new
                         {

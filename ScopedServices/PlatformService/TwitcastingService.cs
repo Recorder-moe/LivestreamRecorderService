@@ -3,8 +3,10 @@ using LivestreamRecorder.DB.Enum;
 using LivestreamRecorder.DB.Interfaces;
 using LivestreamRecorder.DB.Models;
 using LivestreamRecorderService.Interfaces;
+using LivestreamRecorderService.Interfaces.Job;
 using LivestreamRecorderService.Models;
-using LivestreamRecorderService.SingletonServices;
+using LivestreamRecorderService.Models.OptionDiscords;
+using Microsoft.Extensions.Options;
 using Serilog.Context;
 using System.Net.Http.Json;
 
@@ -16,9 +18,8 @@ public class TwitcastingService : PlatformService, IPlatformService
     private readonly IHttpClientFactory _httpFactory;
     private readonly IUnitOfWork _unitOfWork_Public;
     private readonly IVideoRepository _videoRepository;
-    private readonly ACITwitcastingRecorderService _aCITwitcastingRecorderService;
-    private readonly IABSService _aBSService;
-    private readonly DiscordService _discordService;
+    private readonly ITwitcastingRecorderService _twitcastingRecorderService;
+    private readonly IStorageService _storageService;
 
     public override string PlatformName => "Twitcasting";
     public override int Interval => 10;
@@ -32,18 +33,23 @@ public class TwitcastingService : PlatformService, IPlatformService
         IHttpClientFactory httpClientFactory,
         UnitOfWork_Public unitOfWork_Public,
         IVideoRepository videoRepository,
-        ACITwitcastingRecorderService aCITwitcastingRecorderService,
-        IABSService aBSService,
-        DiscordService discordService,
-        IChannelRepository channelRepository) : base(channelRepository, aBSService, httpClientFactory, logger)
+        ITwitcastingRecorderService twitcastingRecorderService,
+        IStorageService storageService,
+        IChannelRepository channelRepository,
+        IOptions<DiscordOption> discordOptions,
+        IServiceProvider serviceProvider) : base(channelRepository,
+                                                 storageService,
+                                                 httpClientFactory,
+                                                 logger,
+                                                 discordOptions,
+                                                 serviceProvider)
     {
         _logger = logger;
         _httpFactory = httpClientFactory;
         _unitOfWork_Public = unitOfWork_Public;
         _videoRepository = videoRepository;
-        _aCITwitcastingRecorderService = aCITwitcastingRecorderService;
-        _aBSService = aBSService;
-        _discordService = discordService;
+        _twitcastingRecorderService = twitcastingRecorderService;
+        _storageService = storageService;
     }
 
     public override async Task UpdateVideosDataAsync(Channel channel, CancellationToken cancellation = default)
@@ -115,14 +121,18 @@ public class TwitcastingService : PlatformService, IPlatformService
                 if (isLive && (video.Status < VideoStatus.Recording
                                || video.Status == VideoStatus.Missing))
                 {
-                    _ = _aCITwitcastingRecorderService.StartInstanceAsync(videoId: videoId,
+                    _ = _twitcastingRecorderService.InitJobAsync(url: videoId,
                                                                           channelId: video.ChannelId,
                                                                           useCookiesFile: false,
                                                                           cancellation: cancellation);
 
                     video.Status = VideoStatus.Recording;
                     _logger.LogInformation("{channelId} is now lived! Start recording.", channel.id);
-                    await _discordService.SendStartRecordingMessage(video);
+
+                    if (null != discordService)
+                    {
+                        await discordService.SendStartRecordingMessage(video);
+                    }
                 }
             }
             else
@@ -284,7 +294,10 @@ public class TwitcastingService : PlatformService, IPlatformService
                 {
                     video.SourceStatus = VideoStatus.Reject;
                     video.Note = $"Video source is detected access required.";
-                    await _discordService.SendDeletedMessage(video);
+                    if (null != discordService)
+                    {
+                        await discordService.SendDeletedMessage(video);
+                    }
                     _logger.LogInformation("Video source is {status} because it is detected access required.", Enum.GetName(typeof(VideoStatus), video.SourceStatus));
                 }
                 video.SourceStatus = VideoStatus.Reject;
@@ -296,8 +309,11 @@ public class TwitcastingService : PlatformService, IPlatformService
                && video.Status == VideoStatus.Archived)
             {
                 video.SourceStatus = VideoStatus.Deleted;
-                // First detected
-                await _discordService.SendDeletedMessage(video);
+                if (null != discordService)
+                {
+                    // First detected
+                    await discordService.SendDeletedMessage(video);
+                }
             }
             video.SourceStatus = VideoStatus.Deleted;
             video.Status = VideoStatus.Missing;
@@ -305,8 +321,7 @@ public class TwitcastingService : PlatformService, IPlatformService
             _logger.LogInformation("Twitcasting video {videoId} is not published.", video.id);
         }
 
-        if (await _aBSService.GetVideoBlob(video)
-                             .ExistsAsync(cancellation))
+        if (await _storageService.IsVideoFileExists(video.Filename, cancellation))
         {
             video.Status = VideoStatus.Archived;
             video.Note = null;

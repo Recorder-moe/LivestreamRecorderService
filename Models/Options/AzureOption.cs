@@ -6,13 +6,63 @@ public sealed class AzureOption
     public const string ConfigurationSectionName = "Azure";
 #pragma warning restore IDE1006 // 命名樣式
 
-    public required string ResourceGroupName { get; set; }
+    public ACIOption? ContainerInstance { get; set; } = null;
+    public AFSOption? FileShare { get; set; } = null;
+    public ABSOption? BlobStorage { get; set; } = null;
+    public CosmosDbOptions? CosmosDb { get; set; } = null;
+   }
+
+public class ABSOption
+{
     public required string StorageAccountName { get; set; }
     public required string StorageAccountKey { get; set; }
-    public required string ShareName { get; set; }
-    public required string BlobContainerName { get; set; }
-    public required string BlobContainerNamePublic { get; set; }
+    public required string BlobContainerName_Private { get; set; }
+    public required string BlobContainerName_Public { get; set; }
     public required int RetentionDays { get; set; }
     public string ConnectionString => $"DefaultEndpointsProtocol=https;AccountName={StorageAccountName};AccountKey={StorageAccountKey};EndpointSuffix=core.windows.net";
 }
 
+public class AFSOption
+{
+    public required string StorageAccountName { get; set; }
+    public required string StorageAccountKey { get; set; }
+    public required string ShareName { get; set; }
+    public string ConnectionString => $"DefaultEndpointsProtocol=https;AccountName={StorageAccountName};AccountKey={StorageAccountKey};EndpointSuffix=core.windows.net";
+}
+
+public class ACIOption
+{
+    public required ClientSecretTenant ClientSecret { get; set; }
+    public required string ResourceGroupName { get; set; }
+}
+
+public class ClientSecretTenant
+{
+    public required string TenantID { get; set; }
+    public required string ClientID { get; set; }
+    public required string ClientSecret { get; set; }
+}
+
+public class CosmosDbOptions
+{
+    public required ContextInfo Public { get; set; }
+    public required ContextInfo Private { get; set; }
+}
+
+public class ContextInfo
+{
+    public required string DatabaseName { get; set; }
+    public required List<CollectionInfo> CollectionNames { get; set; }
+
+    public void Deconstruct(out string databaseName, out List<CollectionInfo> collectionNames)
+    {
+        databaseName = DatabaseName;
+        collectionNames = CollectionNames;
+    }
+}
+
+public class CollectionInfo
+{
+    public required string Name { get; set; }
+    public string? PartitionKey { get; set; }
+}
