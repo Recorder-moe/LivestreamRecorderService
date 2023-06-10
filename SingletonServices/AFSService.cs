@@ -17,7 +17,7 @@ public class AFSService : IAFSService
         IOptions<AzureOption> options)
     {
         _logger = logger;
-        _shareClient = shareServiceClient.GetShareClient(options.Value.ShareName);
+        _shareClient = shareServiceClient.GetShareClient(options.Value.AzureFileShare!.ShareName);
     }
 
     public async Task<ShareDirectoryClient> GetFileShareClientAsync(CancellationToken cancellation = default)

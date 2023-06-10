@@ -21,7 +21,7 @@ public class ACIService : IJobService
     {
         _logger = logger;
         _armClient = armClient;
-        _resourceGroupName = options.Value.ResourceGroupName!;
+        _resourceGroupName = options.Value.AzureContainerInstance!.ResourceGroupName!;
     }
 
     /// <summary>

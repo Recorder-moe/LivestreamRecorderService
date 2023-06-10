@@ -62,11 +62,11 @@ public class StreamlinkService : ACIServiceBase, IStreamlinkService
                         },
                         storageAccountName = new
                         {
-                            value = _azureOption.StorageAccountName
+                            value = _azureOption.AzureFileShare!.StorageAccountName
                         },
                         storageAccountKey = new
                         {
-                            value = _azureOption.StorageAccountKey
+                            value = _azureOption.AzureFileShare!.StorageAccountKey
                         },
                         fileshareVolumeName = new
                         {

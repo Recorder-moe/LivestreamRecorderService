@@ -88,81 +88,23 @@ try
             });
         }
 
-        services.AddAzureClients(clientsBuilder =>
-        {
-            if (serviceOptions.ContainerService == ServiceName.AzureContainerInstance
-                || serviceOptions.PresistentVolumeService == ServiceName.AzureFileShare
-                || serviceOptions.StorageService == ServiceName.AzureBlobStorage)
-            {
-                var values = Environment.GetEnvironmentVariables();
-                if (!values.Contains("AZURE_CLIENT_SECRET") || string.IsNullOrEmpty(string.Format("{0}", values["AZURE_CLIENT_SECRET"]))
-                 || !values.Contains("AZURE_CLIENT_ID") || string.IsNullOrEmpty(string.Format("{0}", values["AZURE_CLIENT_ID"]))
-                 || !values.Contains("AZURE_TENANT_ID") || string.IsNullOrEmpty(string.Format("{0}", values["AZURE_TENANT_ID"]))
-                )
-                {
-                    Log.Fatal("Missing Azure Credentials. Please set environment variables AZURE_CLIENT_SECRET, AZURE_CLIENT_ID and AZURE_TENANT_ID.");
-                    throw new ConfigurationErrorsException("Missing Azure Credentials. Please set environment variables AZURE_CLIENT_SECRET, AZURE_CLIENT_ID and AZURE_TENANT_ID.");
-                }
-            }
-            if (serviceOptions.ContainerService == ServiceName.AzureContainerInstance)
-            {
-                clientsBuilder.UseCredential(new DefaultAzureCredential())
-                              .AddClient<ArmClient, ArmClientOptions>((options, token) => new ArmClient(token));
-            }
-            if (serviceOptions.PresistentVolumeService == ServiceName.AzureFileShare)
-            {
-                clientsBuilder.UseCredential(new DefaultAzureCredential())
-                              .AddFileServiceClient(azureOptions.ConnectionString);
-            }
-            if (serviceOptions.StorageService == ServiceName.AzureBlobStorage)
-            {
-                clientsBuilder.UseCredential(new DefaultAzureCredential())
-                              .AddBlobServiceClient(azureOptions.ConnectionString);
-            }
-        });
-
-        switch (serviceOptions.PresistentVolumeService)
-        {
-            case ServiceName.AzureFileShare:
-                if (string.IsNullOrEmpty(azureOptions.ShareName))
-                {
-                    Log.Fatal("Missing Azure File Share Name. Please set Azure:ShareName in appsettings.json.");
-                    throw new ConfigurationErrorsException("Missing Azure File Share Name. Please set Azure:ShareName in appsettings.json.");
-                }
-                services.AddSingleton<IAFSService, AFSService>();
-                break;
-            default:
-                Log.Fatal("Currently only Azure File Share is supported.");
-                throw new NotImplementedException("Currently only Azure File Share is supported.");
-        }
-
-        switch (serviceOptions.StorageService)
-        {
-            case ServiceName.AzureBlobStorage:
-                if (string.IsNullOrEmpty(azureOptions.BlobContainerName)
-                         || string.IsNullOrEmpty(azureOptions.BlobContainerNamePublic))
-                {
-                    Log.Fatal("Missing Azure Blob Container Name. Please set Azure:BlobContainerName in appsettings.json.");
-                    throw new ConfigurationErrorsException("Missing Azure Blob Container Name. Please set Azure:BlobContainerName in appsettings.json.");
-                }
-                services.AddSingleton<IABSService, ABSService>();
-                break;
-            default:
-                Log.Fatal("Currently only Azure Blob Storage is supported.");
-                throw new NotImplementedException("Currently only Azure Blob Storage is supported.");
-        }
-
         switch (serviceOptions.ContainerService)
         {
             case ServiceName.AzureContainerInstance:
-                if (string.IsNullOrEmpty(azureOptions.ResourceGroupName)
-                         || string.IsNullOrEmpty(azureOptions.StorageAccountName)
-                         || string.IsNullOrEmpty(azureOptions.StorageAccountKey)
-                        )
+                if (null == azureOptions.AzureContainerInstance
+                    || string.IsNullOrEmpty(azureOptions.AzureContainerInstance.ClientSecret.ClientID)
+                    || string.IsNullOrEmpty(azureOptions.AzureContainerInstance.ClientSecret.ClientSecret))
                 {
-                    Log.Fatal("Missing Azure Resource Group Name. Please set Azure:ResourceGroupName in appsettings.json.");
-                    throw new ConfigurationErrorsException("Missing Azure Resource Group Name. Please set Azure:ResourceGroupName in appsettings.json.");
+                    Log.Fatal("Missing AzureContainerInstance. Please set Azure:AzureContainerInstance in appsettings.json.");
+                    throw new ConfigurationErrorsException("Missing AzureContainerInstance. Please set Azure:AzureContainerInstance in appsettings.json.");
                 }
+                services.AddAzureClients(clientsBuilder
+                    => clientsBuilder.UseCredential((options)
+                        => new ClientSecretCredential(tenantId: azureOptions.AzureContainerInstance.ClientSecret.TenantID,
+                                                      clientId: azureOptions.AzureContainerInstance.ClientSecret.ClientID,
+                                                      clientSecret: azureOptions.AzureContainerInstance.ClientSecret.ClientSecret))
+                                     .AddClient<ArmClient, ArmClientOptions>((options, token) => new ArmClient(token)));
+
                 services.AddSingleton<IJobService, ACIService>();
 
                 services.AddSingleton<IYtarchiveService, YtarchiveService>();
@@ -173,43 +115,69 @@ try
                 break;
             case ServiceName.K8s:
                 // TODO K8s
-                services.AddSingleton<IJobService, ACIService>();
-
-                services.AddSingleton<IYtarchiveService, YtarchiveService>();
-                services.AddSingleton<IYtdlpService, YtdlpService>();
-                services.AddSingleton<ITwitcastingRecorderService, TwitcastingRecorderService>();
-                services.AddSingleton<IStreamlinkService, StreamlinkService>();
-                services.AddSingleton<IFC2LiveDLService, FC2LiveDLService>();
-                break;
+                throw new NotImplementedException("K8s is not implemented yet.");
             default:
                 Log.Fatal("Currently only Azure Container Instance and K8s are supported.");
                 throw new NotImplementedException("Currently only Azure Container Instance and K8s are supported.");
+        }
+
+        switch (serviceOptions.PresistentVolumeService)
+        {
+            case ServiceName.AzureFileShare:
+                if (null == azureOptions.AzureFileShare)
+                {
+                    Log.Fatal("Missing AzureFileShare. Please set Azure:AzureFileShare in appsettings.json.");
+                    throw new ConfigurationErrorsException("Missing AzureFileShare. Please set Azure:AzureFileShare in appsettings.json.");
+                }
+
+                services.AddAzureClients(clientsBuilder
+                    => clientsBuilder.AddFileServiceClient(azureOptions.AzureFileShare.ConnectionString));
+                services.AddSingleton<IAFSService, AFSService>();
+                break;
+            default:
+                Log.Fatal("Currently only Azure File Share is supported.");
+                throw new NotImplementedException("Currently only Azure File Share is supported.");
+        }
+
+        switch (serviceOptions.StorageService)
+        {
+            case ServiceName.AzureBlobStorage:
+                if (null == azureOptions.AzuerBlobStorage)
+                {
+                    Log.Fatal("Missing AzuerBlobStorage. Please set Azure:AzuerBlobStorage in appsettings.json.");
+                    throw new ConfigurationErrorsException("Missing AzuerBlobStorage. Please set Azure:AzuerBlobStorage in appsettings.json.");
+                }
+                services.AddAzureClients(clientsBuilder
+                    => clientsBuilder.AddBlobServiceClient(azureOptions.AzuerBlobStorage.ConnectionString));
+
+                services.AddSingleton<IABSService, ABSService>();
+                break;
+            default:
+                Log.Fatal("Currently only Azure Blob Storage is supported.");
+                throw new NotImplementedException("Currently only Azure Blob Storage is supported.");
         }
 
         services.AddDiscordService(configuration);
 
         if (twitchOptions.Enabled)
         {
-            if (!string.IsNullOrEmpty(twitchOptions.ClientId)
-             && !string.IsNullOrEmpty(twitchOptions.ClientSecret))
-            {
-                services.AddSingleton<ITwitchAPI, TwitchAPI>(s =>
-                {
-                    var api = new TwitchAPI(
-                        loggerFactory: s.GetRequiredService<ILoggerFactory>(),
-                        settings: new ApiSettings()
-                        {
-                            ClientId = twitchOptions.ClientId,
-                            Secret = twitchOptions.ClientSecret
-                        });
-                    return api;
-                });
-            }
-            else
+            if (string.IsNullOrEmpty(twitchOptions.ClientId)
+             || string.IsNullOrEmpty(twitchOptions.ClientSecret))
             {
                 Log.Fatal("Missing Twitch ClientId or ClientSecret. Please set Twitch:ClientId and Twitch:ClientSecret in appsettings.json.");
                 throw new ConfigurationErrorsException("Missing Twitch ClientId or ClientSecret. Please set Twitch:ClientId and Twitch:ClientSecret in appsettings.json.");
             }
+            services.AddSingleton<ITwitchAPI, TwitchAPI>(s =>
+            {
+                var api = new TwitchAPI(
+                    loggerFactory: s.GetRequiredService<ILoggerFactory>(),
+                    settings: new ApiSettings()
+                    {
+                        ClientId = twitchOptions.ClientId,
+                        Secret = twitchOptions.ClientSecret
+                    });
+                return api;
+            });
         }
 
         services.AddHostedService<RecordWorker>();

@@ -15,8 +15,8 @@ public class ABSService : IABSService
         BlobServiceClient blobServiceClient,
         IOptions<AzureOption> options)
     {
-        _blobContainerClient = blobServiceClient.GetBlobContainerClient(options.Value.BlobContainerName);
-        _blobContainerClient_public = blobServiceClient.GetBlobContainerClient(options.Value.BlobContainerNamePublic);
+        _blobContainerClient = blobServiceClient.GetBlobContainerClient(options.Value.AzuerBlobStorage!.BlobContainerName);
+        _blobContainerClient_public = blobServiceClient.GetBlobContainerClient(options.Value.AzuerBlobStorage!.BlobContainerNamePublic);
     }
 
     /// <summary>

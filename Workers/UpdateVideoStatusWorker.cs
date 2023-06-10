@@ -112,10 +112,10 @@ public class UpdateVideoStatusWorker : BackgroundService
 
     private async Task ExpireVideosAsync(VideoService videoService, CancellationToken cancellation)
     {
-        int? retentionDays = _azureOption.RetentionDays;
+        int? retentionDays = _azureOption.AzuerBlobStorage?.RetentionDays;
         if(null == retentionDays)
         {
-            _logger.LogInformation("RetentionDays is not set. Skip to expire videos.");
+            _logger.LogInformation("The RetentionDays setting is not configured. Videos will be skipped for expiration.");
             return;
         }
 

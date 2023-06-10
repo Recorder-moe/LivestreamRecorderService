@@ -116,10 +116,13 @@ public partial class DiscordService
     private EmbedBuilder GetEmbedBuilder(Video video)
     {
         EmbedBuilder embedBuilder = new();
+        if(null != _azureOption.AzuerBlobStorage)
+        {
         if (null != video.Thumbnail)
-            embedBuilder.WithImageUrl($"https://{_azureOption.StorageAccountName}.blob.core.windows.net/{_azureOption.BlobContainerNamePublic}/thumbnails/{video.Thumbnail}");
+            embedBuilder.WithImageUrl($"https://{_azureOption.AzuerBlobStorage.StorageAccountName}.blob.core.windows.net/{_azureOption.AzuerBlobStorage.BlobContainerNamePublic}/thumbnails/{video.Thumbnail}");
         else if (null != video.Channel)
-            embedBuilder.WithImageUrl($"https://{_azureOption.StorageAccountName}.blob.core.windows.net/{_azureOption.BlobContainerNamePublic}/banner/{video.Channel.Banner}");
+            embedBuilder.WithImageUrl($"https://{_azureOption.AzuerBlobStorage.StorageAccountName}.blob.core.windows.net/{_azureOption.AzuerBlobStorage.BlobContainerNamePublic}/banner/{video.Channel.Banner}");
+        }
 
         embedBuilder.WithDescription(video.Title);
         embedBuilder.WithUrl($"https://{_discordOption.FrontEndHost}/channels/{video.ChannelId}/videos/{video.id}");
