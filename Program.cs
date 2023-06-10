@@ -1,8 +1,6 @@
 using Azure.Identity;
 using Azure.ResourceManager;
-using LivestreamRecorder.DB.Core;
 using LivestreamRecorder.DB.Enum;
-using LivestreamRecorder.DB.Interfaces;
 using LivestreamRecorderService.DependencyInjection;
 using LivestreamRecorderService.Interfaces;
 using LivestreamRecorderService.Interfaces.Job;
@@ -12,7 +10,6 @@ using LivestreamRecorderService.ScopedServices.PlatformService;
 using LivestreamRecorderService.SingletonServices;
 using LivestreamRecorderService.SingletonServices.ACI;
 using LivestreamRecorderService.Workers;
-using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Azure;
 using Microsoft.Extensions.Options;
 using Serilog;
@@ -59,11 +56,6 @@ try
                 .ValidateDataAnnotations()
                 .ValidateOnStart();
 
-        services.AddOptions<CosmosDbOptions>()
-                .Bind(configuration.GetSection(CosmosDbOptions.ConfigurationSectionName))
-                .ValidateDataAnnotations()
-                .ValidateOnStart();
-
         services.AddOptions<TwitchOption>()
                 .Bind(configuration.GetSection(TwitchOption.ConfigurationSectionName))
                 .ValidateDataAnnotations()
@@ -80,41 +72,10 @@ try
                 .ValidateOnStart();
 
         var azureOptions = services.BuildServiceProvider().GetRequiredService<IOptions<AzureOption>>().Value;
-        var cosmosDbOptions = services.BuildServiceProvider().GetRequiredService<IOptions<CosmosDbOptions>>().Value;
         var twitchOptions = services.BuildServiceProvider().GetRequiredService<IOptions<TwitchOption>>().Value;
         var serviceOptions = services.BuildServiceProvider().GetRequiredService<IOptions<ServiceOption>>().Value;
 
-        if (serviceOptions.DatabaseService == ServiceName.AzureCosmosDB)
-        {
-            // Add CosmosDb
-            services.AddDbContext<PublicContext>((options) =>
-            {
-                options
-                    //.EnableSensitiveDataLogging()
-                    .UseCosmos(connectionString: configuration.GetConnectionString("Public")!,
-                               databaseName: cosmosDbOptions.Public.DatabaseName,
-                               cosmosOptionsAction: option => option.GatewayModeMaxConnectionLimit(380));
-            });
-            services.AddDbContext<PrivateContext>((options) =>
-            {
-                options
-                    //.EnableSensitiveDataLogging()
-                    .UseCosmos(connectionString: configuration.GetConnectionString("Private")!,
-                               databaseName: cosmosDbOptions.Private.DatabaseName,
-                               cosmosOptionsAction: option => option.GatewayModeMaxConnectionLimit(380));
-            });
-
-            services.AddScoped<UnitOfWork_Public>();
-            services.AddScoped<UnitOfWork_Private>();
-            services.AddScoped<IVideoRepository, VideoRepository>();
-            services.AddScoped<IChannelRepository, ChannelRepository>();
-            services.AddScoped<IUserRepository, UserRepository>();
-        }
-        else
-        {
-            Log.Fatal("Currently only Azure CosmosDB is supported.");
-            throw new NotImplementedException("Currently only Azure CosmosDB is supported.");
-        }
+        services.AddDatabase(configuration);
 
         if (serviceOptions.PresistentVolumeService == ServiceName.AzureFileShare
             && serviceOptions.StorageService == ServiceName.AzureBlobStorage)
