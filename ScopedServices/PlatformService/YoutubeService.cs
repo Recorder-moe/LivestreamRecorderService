@@ -19,7 +19,7 @@ public class YoutubeService : PlatformService, IPlatformService
     private readonly IVideoRepository _videoRepository;
     private readonly IChannelRepository _channelRepository;
     private readonly RSSService _rSSService;
-    private readonly IABSService _aBSService;
+    private readonly IStorageService _storageService;
     private readonly IYtarchiveService _ytarchiveService;
 
     public override string PlatformName => "Youtube";
@@ -32,12 +32,12 @@ public class YoutubeService : PlatformService, IPlatformService
         IVideoRepository videoRepository,
         IChannelRepository channelRepository,
         RSSService rSSService,
-        IABSService aBSService,
+        IStorageService storageService,
         IYtarchiveService ytarchiveService,
         IHttpClientFactory httpClientFactory,
         IOptions<DiscordOption> discordOptions,
         IServiceProvider serviceProvider) : base(channelRepository,
-                                                 aBSService,
+                                                 storageService,
                                                  httpClientFactory,
                                                  logger,
                                                  discordOptions,
@@ -48,7 +48,7 @@ public class YoutubeService : PlatformService, IPlatformService
         _videoRepository = videoRepository;
         _channelRepository = channelRepository;
         _rSSService = rSSService;
-        _aBSService = aBSService;
+        _storageService = storageService;
         _ytarchiveService = ytarchiveService;
     }
 
@@ -320,8 +320,7 @@ public class YoutubeService : PlatformService, IPlatformService
             video.Description = videoData.Description;
         }
 
-        if (await _aBSService.GetVideoBlob(video)
-                             .ExistsAsync(cancellation))
+        if (await _storageService.IsVideoFileExists(video.Filename, cancellation))
         {
             video.Status = VideoStatus.Archived;
             video.Note = null;

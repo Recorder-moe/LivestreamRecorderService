@@ -18,7 +18,7 @@ public class TwitchService : PlatformService, IPlatformService
     private readonly IVideoRepository _videoRepository;
     private readonly IStreamlinkService _streamlinkService;
     private readonly ITwitchAPI _twitchAPI;
-    private readonly IABSService _aBSService;
+    private readonly IStorageService _storageService;
 
     public override string PlatformName => "Twitch";
 
@@ -31,11 +31,11 @@ public class TwitchService : PlatformService, IPlatformService
         IChannelRepository channelRepository,
         IStreamlinkService streamlinkService,
         ITwitchAPI twitchAPI,
-        IABSService aBSService,
+        IStorageService storageService,
         IHttpClientFactory httpClientFactory,
         IOptions<DiscordOption> discordOptions,
         IServiceProvider serviceProvider) : base(channelRepository,
-                                                 aBSService,
+                                                 storageService,
                                                  httpClientFactory,
                                                  logger,
                                                  discordOptions,
@@ -46,7 +46,7 @@ public class TwitchService : PlatformService, IPlatformService
         _videoRepository = videoRepository;
         _streamlinkService = streamlinkService;
         _twitchAPI = twitchAPI;
-        _aBSService = aBSService;
+        _storageService = storageService;
     }
 
     public override async Task UpdateVideosDataAsync(Channel channel, CancellationToken cancellation = default)
@@ -150,8 +150,7 @@ public class TwitchService : PlatformService, IPlatformService
             video.Status = VideoStatus.WaitingToDownload;
         }
 
-        if (await _aBSService.GetVideoBlob(video)
-                             .ExistsAsync(cancellation))
+        if (await _storageService.IsVideoFileExists(video.Filename, cancellation))
         {
             video.Status = VideoStatus.Archived;
             video.Note = null;

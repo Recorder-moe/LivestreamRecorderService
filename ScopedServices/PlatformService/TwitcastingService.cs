@@ -19,7 +19,7 @@ public class TwitcastingService : PlatformService, IPlatformService
     private readonly IUnitOfWork _unitOfWork_Public;
     private readonly IVideoRepository _videoRepository;
     private readonly ITwitcastingRecorderService _twitcastingRecorderService;
-    private readonly IABSService _aBSService;
+    private readonly IStorageService _storageService;
 
     public override string PlatformName => "Twitcasting";
     public override int Interval => 10;
@@ -34,11 +34,11 @@ public class TwitcastingService : PlatformService, IPlatformService
         UnitOfWork_Public unitOfWork_Public,
         IVideoRepository videoRepository,
         ITwitcastingRecorderService twitcastingRecorderService,
-        IABSService aBSService,
+        IStorageService storageService,
         IChannelRepository channelRepository,
         IOptions<DiscordOption> discordOptions,
         IServiceProvider serviceProvider) : base(channelRepository,
-                                                 aBSService,
+                                                 storageService,
                                                  httpClientFactory,
                                                  logger,
                                                  discordOptions,
@@ -49,7 +49,7 @@ public class TwitcastingService : PlatformService, IPlatformService
         _unitOfWork_Public = unitOfWork_Public;
         _videoRepository = videoRepository;
         _twitcastingRecorderService = twitcastingRecorderService;
-        _aBSService = aBSService;
+        _storageService = storageService;
     }
 
     public override async Task UpdateVideosDataAsync(Channel channel, CancellationToken cancellation = default)
@@ -321,8 +321,7 @@ public class TwitcastingService : PlatformService, IPlatformService
             _logger.LogInformation("Twitcasting video {videoId} is not published.", video.id);
         }
 
-        if (await _aBSService.GetVideoBlob(video)
-                             .ExistsAsync(cancellation))
+        if (await _storageService.IsVideoFileExists(video.Filename, cancellation))
         {
             video.Status = VideoStatus.Archived;
             video.Note = null;

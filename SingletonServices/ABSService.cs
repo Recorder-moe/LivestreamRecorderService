@@ -1,12 +1,12 @@
 ﻿using Azure.Storage.Blobs;
-using LivestreamRecorder.DB.Models;
+using Azure.Storage.Blobs.Models;
 using LivestreamRecorderService.Interfaces;
 using LivestreamRecorderService.Models.Options;
 using Microsoft.Extensions.Options;
 
 namespace LivestreamRecorderService.SingletonServices;
 
-public class ABSService : IABSService
+public class ABSService : IStorageService
 {
     private readonly BlobContainerClient _blobContainerClient;
     private readonly BlobContainerClient _blobContainerClient_public;
@@ -19,20 +19,21 @@ public class ABSService : IABSService
         _blobContainerClient_public = blobServiceClient.GetBlobContainerClient(options.Value.AzuerBlobStorage!.BlobContainerNamePublic);
     }
 
-    /// <summary>
-    /// Get the video BlobClient with videoId in the blob container.
-    /// </summary>
-    /// <param name="video"></param>
-    /// <returns></returns>
-    public BlobClient GetVideoBlob(Video video)
-        => _blobContainerClient.GetBlobClient($"videos/{video.Filename}");
+    public async Task<bool> IsVideoFileExists(string? filename, CancellationToken cancellation = default)
+        => !string.IsNullOrEmpty(filename)
+            && (await _blobContainerClient.GetBlobClient($"videos/{filename}")
+                                          .ExistsAsync(cancellation)).Value;
 
-    /// <summary>
-    /// Get the BlobClient by name in the blob container.
-    /// </summary>
-    /// <param name="name"></param>
-    /// <returns></returns>
-    public BlobClient GetPublicBlob(string name)
-        => _blobContainerClient_public.GetBlobClient(name);
+    public async Task<bool> DeleteVideoBlob(string? filename, CancellationToken cancellation = default)
+        => !string.IsNullOrEmpty(filename)
+            && (await _blobContainerClient.GetBlobClient($"videos/{filename}")
+                                          .DeleteIfExistsAsync(snapshotsOption: DeleteSnapshotsOption.IncludeSnapshots,
+                                                               cancellationToken: cancellation)).Value;
 
+    public async Task<BlobContentInfo> UploadVideoFile(string? contentType, string pathInStorage, string tempPath, CancellationToken cancellation = default)
+        => (await _blobContainerClient_public.GetBlobClient(pathInStorage)
+                                             .UploadAsync(path: tempPath,
+                                                          httpHeaders: new BlobHttpHeaders { ContentType = contentType },
+                                                          accessTier: AccessTier.Hot,
+                                                          cancellationToken: cancellation)).Value;
 }

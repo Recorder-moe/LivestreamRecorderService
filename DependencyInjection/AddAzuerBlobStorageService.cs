@@ -25,7 +25,7 @@ namespace LivestreamRecorderService.DependencyInjection
                 services.AddAzureClients(clientsBuilder
                     => clientsBuilder.AddBlobServiceClient(azureOptions.AzuerBlobStorage.ConnectionString));
 
-                services.AddSingleton<IABSService, ABSService>();
+                services.AddSingleton<IStorageService, ABSService>();
                 return services;
             }
             catch (ConfigurationErrorsException)

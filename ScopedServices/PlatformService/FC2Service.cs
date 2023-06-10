@@ -20,7 +20,7 @@ public class FC2Service : PlatformService, IPlatformService
     private readonly IVideoRepository _videoRepository;
     private readonly IChannelRepository _channelRepository;
     private readonly IFC2LiveDLService _fC2LiveDLService;
-    private readonly IABSService _aBSService;
+    private readonly IStorageService _storageService;
     private readonly IHttpClientFactory _httpFactory;
 
     public override string PlatformName => "FC2";
@@ -35,12 +35,12 @@ public class FC2Service : PlatformService, IPlatformService
         IVideoRepository videoRepository,
         IChannelRepository channelRepository,
         IFC2LiveDLService fC2LiveDLService,
-        IABSService aBSService,
+        IStorageService storageService,
         DiscordService discordService,
         IHttpClientFactory httpClientFactory,
         IOptions<DiscordOption> discordOptions,
         IServiceProvider serviceProvider) : base(channelRepository,
-                                                 aBSService,
+                                                 storageService,
                                                  httpClientFactory,
                                                  logger,
                                                  discordOptions,
@@ -51,7 +51,7 @@ public class FC2Service : PlatformService, IPlatformService
         _videoRepository = videoRepository;
         _channelRepository = channelRepository;
         _fC2LiveDLService = fC2LiveDLService;
-        _aBSService = aBSService;
+        _storageService = storageService;
         _httpFactory = httpClientFactory;
     }
 
@@ -217,8 +217,7 @@ public class FC2Service : PlatformService, IPlatformService
             }
         }
 
-        if (await _aBSService.GetVideoBlob(video)
-                             .ExistsAsync(cancellation))
+        if (await _storageService.IsVideoFileExists(video.Filename, cancellation))
         {
             video.Status = VideoStatus.Archived;
             video.Note = null;
