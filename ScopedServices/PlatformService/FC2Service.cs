@@ -90,8 +90,9 @@ public class FC2Service : PlatformService, IPlatformService
                         return;
                     case VideoStatus.Archived:
                     case VideoStatus.PermanentArchived:
-                        _logger.LogWarning("{videoId} is already archived.", video.id);
-                        return;
+                        _logger.LogWarning("{videoId} has already been archived. It is possible that an internet disconnect occurred during the process. Changed its state back to Recording.", video.id);
+                        video.Status = VideoStatus.WaitingToRecord;
+                        break;
                 }
             }
             else
