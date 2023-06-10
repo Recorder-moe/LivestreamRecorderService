@@ -97,11 +97,11 @@ public class YtdlpService : ACIServiceBase, IYtdlpService
                         },
                         storageAccountName = new
                         {
-                            value = _azureOption.AzureFileShare!.StorageAccountName
+                            value = _azureOption.FileShare!.StorageAccountName
                         },
                         storageAccountKey = new
                         {
-                            value = _azureOption.AzureFileShare!.StorageAccountKey
+                            value = _azureOption.FileShare!.StorageAccountKey
                         },
                         fileshareVolumeName = new
                         {

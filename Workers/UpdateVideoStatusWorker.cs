@@ -62,7 +62,7 @@ public class UpdateVideoStatusWorker : BackgroundService
                 videos = videoRepository.Where(p => p.Status >= VideoStatus.Archived
                                                     && p.Status < VideoStatus.Expired)
                                         .ToList()
-                                        // Sort locally to reduce the CPU usage of CosmosDB
+                                        // Sort locally to reduce the CPU usage of CosmosDb
                                         .OrderByDescending(p => p.Timestamps.PublishedAt)
                                         .ToList();
 
@@ -110,7 +110,7 @@ public class UpdateVideoStatusWorker : BackgroundService
 
     private async Task ExpireVideosAsync(VideoService videoService, CancellationToken cancellation)
     {
-        int? retentionDays = _azureOption.AzuerBlobStorage?.RetentionDays;
+        int? retentionDays = _azureOption.BlobStorage?.RetentionDays;
         if (null == retentionDays)
         {
             _logger.LogInformation("The RetentionDays setting is not configured. Videos will be skipped for expiration.");

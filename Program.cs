@@ -52,7 +52,15 @@ try
 
         var serviceOptions = services.BuildServiceProvider().GetRequiredService<IOptions<ServiceOption>>().Value;
 
-        services.AddDatabase(configuration);
+        switch (serviceOptions.DatabaseService)
+        {
+            case ServiceName.AzureCosmosDb:
+                services.AddCosmosDb(configuration);
+                break;
+            default:
+                Log.Fatal("Currently only Azure CosmosDb is supported.");
+                throw new NotImplementedException("Currently only Azure CosmosDb is supported.");
+        }
 
         if (serviceOptions.PersistentVolumeService == ServiceName.AzureFileShare
             && serviceOptions.StorageService == ServiceName.AzureBlobStorage)

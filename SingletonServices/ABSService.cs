@@ -15,8 +15,8 @@ public class ABSService : IStorageService
         BlobServiceClient blobServiceClient,
         IOptions<AzureOption> options)
     {
-        _blobContainerClient = blobServiceClient.GetBlobContainerClient(options.Value.AzuerBlobStorage!.BlobContainerName);
-        _blobContainerClient_public = blobServiceClient.GetBlobContainerClient(options.Value.AzuerBlobStorage!.BlobContainerNamePublic);
+        _blobContainerClient = blobServiceClient.GetBlobContainerClient(options.Value.BlobStorage!.BlobContainerName_Private);
+        _blobContainerClient_public = blobServiceClient.GetBlobContainerClient(options.Value.BlobStorage!.BlobContainerName_Public);
     }
 
     public async Task<bool> IsVideoFileExists(string? filename, CancellationToken cancellation = default)

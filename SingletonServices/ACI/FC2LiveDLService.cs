@@ -72,11 +72,11 @@ public class FC2LiveDLService : ACIServiceBase, IFC2LiveDLService
                         },
                         storageAccountName = new
                         {
-                            value = _azureOption.AzureFileShare!.StorageAccountName
+                            value = _azureOption.FileShare!.StorageAccountName
                         },
                         storageAccountKey = new
                         {
-                            value = _azureOption.AzureFileShare!.StorageAccountKey
+                            value = _azureOption.FileShare!.StorageAccountKey
                         },
                         fileshareVolumeName = new
                         {

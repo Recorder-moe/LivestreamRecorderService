@@ -15,14 +15,14 @@ namespace LivestreamRecorderService.DependencyInjection
             try
             {
                 var azureOptions = services.BuildServiceProvider().GetRequiredService<IOptions<AzureOption>>().Value;
-                if (null == azureOptions.AzureFileShare
-                    || string.IsNullOrEmpty(azureOptions.AzureFileShare.StorageAccountName)
-                    || string.IsNullOrEmpty(azureOptions.AzureFileShare.StorageAccountKey)
-                    || string.IsNullOrEmpty(azureOptions.AzureFileShare.ShareName))
+                if (null == azureOptions.FileShare
+                    || string.IsNullOrEmpty(azureOptions.FileShare.StorageAccountName)
+                    || string.IsNullOrEmpty(azureOptions.FileShare.StorageAccountKey)
+                    || string.IsNullOrEmpty(azureOptions.FileShare.ShareName))
                     throw new ConfigurationErrorsException();
 
                 services.AddAzureClients(clientsBuilder
-                    => clientsBuilder.AddFileServiceClient(azureOptions.AzureFileShare.ConnectionString));
+                    => clientsBuilder.AddFileServiceClient(azureOptions.FileShare.ConnectionString));
                 services.AddSingleton<IPersistentVolumeService, AFSService>();
                 return services;
             }

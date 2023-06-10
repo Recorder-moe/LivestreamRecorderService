@@ -17,16 +17,16 @@ namespace LivestreamRecorderService.DependencyInjection
             try
             {
                 var azureOptions = services.BuildServiceProvider().GetRequiredService<IOptions<AzureOption>>().Value;
-                if (null == azureOptions.AzureContainerInstance
-                    || string.IsNullOrEmpty(azureOptions.AzureContainerInstance.ClientSecret.ClientID)
-                    || string.IsNullOrEmpty(azureOptions.AzureContainerInstance.ClientSecret.ClientSecret))
+                if (null == azureOptions.ContainerInstance
+                    || string.IsNullOrEmpty(azureOptions.ContainerInstance.ClientSecret.ClientID)
+                    || string.IsNullOrEmpty(azureOptions.ContainerInstance.ClientSecret.ClientSecret))
                     throw new ConfigurationErrorsException();
 
                 services.AddAzureClients(clientsBuilder
                     => clientsBuilder.UseCredential((options)
-                        => new ClientSecretCredential(tenantId: azureOptions.AzureContainerInstance.ClientSecret.TenantID,
-                                                      clientId: azureOptions.AzureContainerInstance.ClientSecret.ClientID,
-                                                      clientSecret: azureOptions.AzureContainerInstance.ClientSecret.ClientSecret))
+                        => new ClientSecretCredential(tenantId: azureOptions.ContainerInstance.ClientSecret.TenantID,
+                                                      clientId: azureOptions.ContainerInstance.ClientSecret.ClientID,
+                                                      clientSecret: azureOptions.ContainerInstance.ClientSecret.ClientSecret))
                                      .AddClient<ArmClient, ArmClientOptions>((options, token) => new ArmClient(token)));
 
                 services.AddSingleton<IJobService, ACIService>();

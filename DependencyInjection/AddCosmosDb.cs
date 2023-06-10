@@ -1,28 +1,25 @@
 ﻿using LivestreamRecorder.DB.Core;
-using LivestreamRecorder.DB.Enum;
 using LivestreamRecorder.DB.Interfaces;
 using LivestreamRecorderService.Models.Options;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;
 using Serilog;
+using System.Configuration;
 
 namespace LivestreamRecorderService.DependencyInjection
 {
     public static partial class Extensions
     {
-        public static IServiceCollection AddDatabase(this IServiceCollection services, IConfiguration configuration)
+        public static IServiceCollection AddCosmosDb(this IServiceCollection services, IConfiguration configuration)
         {
-            var serviceOptions = services.BuildServiceProvider().GetRequiredService<IOptions<ServiceOption>>().Value;
-
-            if (serviceOptions.DatabaseService == ServiceName.AzureCosmosDB)
+            try
             {
-                IConfigurationSection config = configuration.GetSection(CosmosDbOptions.ConfigurationSectionName);
-                services.AddOptions<CosmosDbOptions>()
-                    .Bind(config)
-                    .ValidateDataAnnotations()
-                    .ValidateOnStart();
+                var azureOptions = services.BuildServiceProvider().GetRequiredService<IOptions<AzureOption>>().Value;
 
-                var cosmosDbOptions = config.Get<CosmosDbOptions>()!;
+                if (null == azureOptions.CosmosDb
+                    || string.IsNullOrEmpty(configuration.GetConnectionString("Public"))
+                    || string.IsNullOrEmpty(configuration.GetConnectionString("Private")))
+                    throw new ConfigurationErrorsException();
 
                 // Add CosmosDb
                 services.AddDbContext<PublicContext>((options) =>
@@ -30,7 +27,7 @@ namespace LivestreamRecorderService.DependencyInjection
                     options
                         //.EnableSensitiveDataLogging()
                         .UseCosmos(connectionString: configuration.GetConnectionString("Public")!,
-                                   databaseName: cosmosDbOptions.Public.DatabaseName,
+                                   databaseName: azureOptions.CosmosDb.Public.DatabaseName,
                                    cosmosOptionsAction: option => option.GatewayModeMaxConnectionLimit(380));
                 });
                 services.AddDbContext<PrivateContext>((options) =>
@@ -38,7 +35,7 @@ namespace LivestreamRecorderService.DependencyInjection
                     options
                         //.EnableSensitiveDataLogging()
                         .UseCosmos(connectionString: configuration.GetConnectionString("Private")!,
-                                   databaseName: cosmosDbOptions.Private.DatabaseName,
+                                   databaseName: azureOptions.CosmosDb.Private.DatabaseName,
                                    cosmosOptionsAction: option => option.GatewayModeMaxConnectionLimit(380));
                 });
 
@@ -47,13 +44,13 @@ namespace LivestreamRecorderService.DependencyInjection
                 services.AddScoped<IVideoRepository, VideoRepository>();
                 services.AddScoped<IChannelRepository, ChannelRepository>();
                 services.AddScoped<IUserRepository, UserRepository>();
+                return services;
             }
-            else
+            catch (ConfigurationErrorsException)
             {
-                Log.Fatal("Currently only Azure CosmosDB is supported.");
-                throw new NotImplementedException("Currently only Azure CosmosDB is supported.");
+                Log.Fatal("Missing CosmosDb Settings. Please set CosmosDb and ConnectionStrings:Public ConnectionStrings:Private in appsettings.json.");
+                throw new ConfigurationErrorsException("Missing CosmosDb Settings. Please set CosmosDb and ConnectionStrings:Public ConnectionStrings:Private in appsettings.json.");
             }
-            return services;
         }
     }
 }

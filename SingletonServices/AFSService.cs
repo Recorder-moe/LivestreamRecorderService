@@ -18,7 +18,7 @@ public class AFSService : IPersistentVolumeService
         IOptions<AzureOption> options)
     {
         _logger = logger;
-        _shareClient = shareServiceClient.GetShareClient(options.Value.AzureFileShare!.ShareName);
+        _shareClient = shareServiceClient.GetShareClient(options.Value.FileShare!.ShareName);
     }
 
     private async Task<ShareDirectoryClient> GetFileShareClientAsync(CancellationToken cancellation = default)

@@ -15,15 +15,15 @@ namespace LivestreamRecorderService.DependencyInjection
             try
             {
                 var azureOptions = services.BuildServiceProvider().GetRequiredService<IOptions<AzureOption>>().Value;
-                if (null == azureOptions.AzuerBlobStorage
-                    || string.IsNullOrEmpty(azureOptions.AzuerBlobStorage.StorageAccountName)
-                    || string.IsNullOrEmpty(azureOptions.AzuerBlobStorage.StorageAccountKey)
-                    || string.IsNullOrEmpty(azureOptions.AzuerBlobStorage.BlobContainerNamePublic)
-                    || string.IsNullOrEmpty(azureOptions.AzuerBlobStorage.BlobContainerName))
+                if (null == azureOptions.BlobStorage
+                    || string.IsNullOrEmpty(azureOptions.BlobStorage.StorageAccountName)
+                    || string.IsNullOrEmpty(azureOptions.BlobStorage.StorageAccountKey)
+                    || string.IsNullOrEmpty(azureOptions.BlobStorage.BlobContainerName_Public)
+                    || string.IsNullOrEmpty(azureOptions.BlobStorage.BlobContainerName_Private))
                     throw new ConfigurationErrorsException();
 
                 services.AddAzureClients(clientsBuilder
-                    => clientsBuilder.AddBlobServiceClient(azureOptions.AzuerBlobStorage.ConnectionString));
+                    => clientsBuilder.AddBlobServiceClient(azureOptions.BlobStorage.ConnectionString));
 
                 services.AddSingleton<IStorageService, ABSService>();
                 return services;
