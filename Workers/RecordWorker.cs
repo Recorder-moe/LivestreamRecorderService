@@ -91,7 +91,7 @@ public class RecordWorker : BackgroundService
 
                     videoService.AddFilePropertiesToVideo(video, file);
 
-                    tasks.Add(videoService.TransferVideoToBlobStorageAsync(video, file, stoppingToken));
+                    tasks.Add(videoService.TransferVideoFromPVToStorageAsync(video, file, stoppingToken));
 
                     // Avoid concurrency requests
                     await Task.Delay(TimeSpan.FromSeconds(5), stoppingToken);

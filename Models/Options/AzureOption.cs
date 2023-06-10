@@ -6,6 +6,7 @@ public sealed class AzureOption
     public const string ConfigurationSectionName = "Azure";
 #pragma warning restore IDE1006 // 命名樣式
 
+    public string? AzureFileShares2BlobContainers { get; set; } = null;
     public ACIOption? ContainerInstance { get; set; } = null;
     public AFSOption? FileShare { get; set; } = null;
     public ABSOption? BlobStorage { get; set; } = null;

@@ -51,6 +51,7 @@ try
                 .ValidateOnStart();
 
         var serviceOptions = services.BuildServiceProvider().GetRequiredService<IOptions<ServiceOption>>().Value;
+        var azureOptions = services.BuildServiceProvider().GetRequiredService<IOptions<AzureOption>>().Value;
 
         switch (serviceOptions.DatabaseService)
         {
@@ -63,11 +64,12 @@ try
         }
 
         if (serviceOptions.PersistentVolumeService == ServiceName.AzureFileShare
-            && serviceOptions.StorageService == ServiceName.AzureBlobStorage)
+            && serviceOptions.StorageService == ServiceName.AzureBlobStorage
+            && !string.IsNullOrEmpty(azureOptions.AzureFileShares2BlobContainers))
         {
             services.AddHttpClient("AzureFileShares2BlobContainers", client =>
             {
-                client.BaseAddress = new Uri("https://azurefileshares2blobcontainers.azurewebsites.net/");
+                client.BaseAddress = new Uri(azureOptions.AzureFileShares2BlobContainers);
                 // Set this bigger than Azure Function timeout (10min)
                 client.Timeout = TimeSpan.FromMinutes(11);
             });
