@@ -6,7 +6,8 @@ using LivestreamRecorder.DB.Models;
 using LivestreamRecorderService.Interfaces;
 using LivestreamRecorderService.Interfaces.Job;
 using LivestreamRecorderService.Models;
-using LivestreamRecorderService.SingletonServices;
+using LivestreamRecorderService.Models.OptionDiscords;
+using Microsoft.Extensions.Options;
 using Serilog.Context;
 
 namespace LivestreamRecorderService.ScopedServices.PlatformService;
@@ -20,7 +21,6 @@ public class YoutubeService : PlatformService, IPlatformService
     private readonly RSSService _rSSService;
     private readonly IABSService _aBSService;
     private readonly IYtarchiveService _ytarchiveService;
-    private readonly DiscordService _discordService;
 
     public override string PlatformName => "Youtube";
 
@@ -34,8 +34,14 @@ public class YoutubeService : PlatformService, IPlatformService
         RSSService rSSService,
         IABSService aBSService,
         IYtarchiveService ytarchiveService,
-        DiscordService discordService,
-        IHttpClientFactory httpClientFactory) : base(channelRepository, aBSService, httpClientFactory, logger)
+        IHttpClientFactory httpClientFactory,
+        IOptions<DiscordOption> discordOptions,
+        IServiceProvider serviceProvider) : base(channelRepository,
+                                                 aBSService,
+                                                 httpClientFactory,
+                                                 logger,
+                                                 discordOptions,
+                                                 serviceProvider)
     {
         _logger = logger;
         _unitOfWork_Public = unitOfWork_Public;
@@ -44,7 +50,6 @@ public class YoutubeService : PlatformService, IPlatformService
         _rSSService = rSSService;
         _aBSService = aBSService;
         _ytarchiveService = ytarchiveService;
-        _discordService = discordService;
     }
 
     public static string GetRSSFeed(Channel channel)
@@ -178,9 +183,10 @@ public class YoutubeService : PlatformService, IPlatformService
                     {
                         video.Note = $"Video skipped because it is not live stream.";
                         // First detected
-                        if (video.Status != VideoStatus.Skipped)
+                        if (video.Status != VideoStatus.Skipped
+                            && null != discordService)
                         {
-                            await _discordService.SendSkippedMessage(video);
+                            await discordService.SendSkippedMessage(video);
                         }
                         video.Status = VideoStatus.Skipped;
                         _logger.LogInformation("Change video {videoId} status to {videoStatus}", video.id, Enum.GetName(typeof(VideoStatus), video.Status));
@@ -259,9 +265,10 @@ public class YoutubeService : PlatformService, IPlatformService
                 {
                     video.Note = $"Video skipped because it is not live stream.";
                     // First detected
-                    if (video.Status != VideoStatus.Skipped)
+                    if (video.Status != VideoStatus.Skipped
+                        && null != discordService)
                     {
-                        await _discordService.SendSkippedMessage(video);
+                        await discordService.SendSkippedMessage(video);
                     }
                     video.Status = VideoStatus.Skipped;
                     _logger.LogInformation("Change video {videoId} status to {videoStatus}", video.id, Enum.GetName(typeof(VideoStatus), video.Status));
@@ -290,7 +297,10 @@ public class YoutubeService : PlatformService, IPlatformService
                     {
                         // First detected
                         video.SourceStatus = VideoStatus.Deleted;
-                        await _discordService.SendDeletedMessage(video);
+                        if (null != discordService)
+                        {
+                            await discordService.SendDeletedMessage(video);
+                        }
                     }
 
                     video.SourceStatus = VideoStatus.Deleted;
@@ -323,7 +333,10 @@ public class YoutubeService : PlatformService, IPlatformService
             if (video.Status != VideoStatus.Missing)
             {
                 video.SourceStatus = VideoStatus.Missing;
-                await _discordService.SendSkippedMessage(video);
+                if (null != discordService)
+                {
+                    await discordService.SendSkippedMessage(video);
+                }
             }
             video.Status = VideoStatus.Missing;
             _logger.LogInformation("Source removed and not archived, change video status to {status}", Enum.GetName(typeof(VideoStatus), VideoStatus.Missing));
@@ -361,7 +374,10 @@ public class YoutubeService : PlatformService, IPlatformService
                     if (video.SourceStatus != VideoStatus.Edited)
                     {
                         video.SourceStatus = VideoStatus.Edited;
-                        await _discordService.SendDeletedMessage(video);
+                        if (null != discordService)
+                        {
+                            await discordService.SendDeletedMessage(video);
+                        }
                     }
                     video.SourceStatus = VideoStatus.Edited;
                     _logger.LogInformation("Video source is {status} because it has been restored from rejection or deletion.", Enum.GetName(typeof(VideoStatus), video.Status));
@@ -378,9 +394,10 @@ public class YoutubeService : PlatformService, IPlatformService
                 {
                     video.Note = $"Video is Skipped because it is detected access required or copyright notice.";
                     // First detected
-                    if (video.Status != VideoStatus.Skipped)
+                    if (video.Status != VideoStatus.Skipped
+                        && null != discordService)
                     {
-                        await _discordService.SendSkippedMessage(video);
+                        await discordService.SendSkippedMessage(video);
                     }
                     video.Status = VideoStatus.Skipped;
                     _logger.LogInformation("Video is {status} because it is detected access required or copyright notice.", Enum.GetName(typeof(VideoStatus), video.Status));
@@ -390,7 +407,10 @@ public class YoutubeService : PlatformService, IPlatformService
                 {
                     video.SourceStatus = VideoStatus.Reject;
                     video.Note = $"Video source is detected access required or copyright notice.";
-                    await _discordService.SendDeletedMessage(video);
+                    if (null != discordService)
+                    {
+                        await discordService.SendDeletedMessage(video);
+                    }
                 }
 
                 video.SourceStatus = VideoStatus.Reject;
@@ -408,7 +428,10 @@ public class YoutubeService : PlatformService, IPlatformService
 
             video.Status = VideoStatus.Recording;
             _logger.LogInformation("{videoId} is now lived! Start recording.", video.id);
-            await _discordService.SendStartRecordingMessage(video);
+            if (null != discordService)
+            {
+                await discordService.SendStartRecordingMessage(video);
+            }
         }
 
         if (video.Status < 0)

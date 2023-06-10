@@ -4,7 +4,8 @@ using LivestreamRecorder.DB.Interfaces;
 using LivestreamRecorder.DB.Models;
 using LivestreamRecorderService.Interfaces;
 using LivestreamRecorderService.Interfaces.Job;
-using LivestreamRecorderService.SingletonServices;
+using LivestreamRecorderService.Models.OptionDiscords;
+using Microsoft.Extensions.Options;
 using Serilog.Context;
 using TwitchLib.Api.Interfaces;
 
@@ -18,7 +19,6 @@ public class TwitchService : PlatformService, IPlatformService
     private readonly IStreamlinkService _streamlinkService;
     private readonly ITwitchAPI _twitchAPI;
     private readonly IABSService _aBSService;
-    private readonly DiscordService _discordService;
 
     public override string PlatformName => "Twitch";
 
@@ -32,8 +32,14 @@ public class TwitchService : PlatformService, IPlatformService
         IStreamlinkService streamlinkService,
         ITwitchAPI twitchAPI,
         IABSService aBSService,
-        DiscordService discordService,
-        IHttpClientFactory httpClientFactory) : base(channelRepository, aBSService, httpClientFactory, logger)
+        IHttpClientFactory httpClientFactory,
+        IOptions<DiscordOption> discordOptions,
+        IServiceProvider serviceProvider) : base(channelRepository,
+                                                 aBSService,
+                                                 httpClientFactory,
+                                                 logger,
+                                                 discordOptions,
+                                                 serviceProvider)
     {
         _logger = logger;
         _unitOfWork_Public = unitOfWork_Public;
@@ -41,7 +47,6 @@ public class TwitchService : PlatformService, IPlatformService
         _streamlinkService = streamlinkService;
         _twitchAPI = twitchAPI;
         _aBSService = aBSService;
-        _discordService = discordService;
     }
 
     public override async Task UpdateVideosDataAsync(Channel channel, CancellationToken cancellation = default)
@@ -117,7 +122,10 @@ public class TwitchService : PlatformService, IPlatformService
 
                 video.Status = VideoStatus.Recording;
                 _logger.LogInformation("{channelId} is now lived! Start recording.", channel.id);
-                await _discordService.SendStartRecordingMessage(video);
+                if (null != discordService)
+                {
+                    await discordService.SendStartRecordingMessage(video);
+                }
             }
 
             _videoRepository.AddOrUpdate(video);

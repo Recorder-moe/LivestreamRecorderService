@@ -109,7 +109,7 @@ public partial class DiscordService
 
         var componentBuilder = GetComponentBuilder(video);
 
-        return SendMessageWarning(embedBuilder.Build(), componentBuilder.Build(), $"{_discordOption.Mention.Deleted} {video.Note}");
+        return SendMessageWarning(embedBuilder.Build(), componentBuilder.Build(), $"{_discordOption.Mention!.Deleted} {video.Note}");
     }
 
     #region GetEmbedBuilder
@@ -256,8 +256,8 @@ public partial class DiscordService
         {
             RoleIds = new List<string?>()
             {
-                _discordOption.Mention.Deleted,
-                _discordOption.Mention.Channel
+                _discordOption.Mention!.Deleted,
+                _discordOption.Mention!.Channel
             }.Where(p => !string.IsNullOrEmpty(p))
              .Select(input => ulong.Parse(RegexNumbers().Match(input!).Value))
              .ToList()

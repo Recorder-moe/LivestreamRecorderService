@@ -5,7 +5,8 @@ using LivestreamRecorder.DB.Models;
 using LivestreamRecorderService.Interfaces;
 using LivestreamRecorderService.Interfaces.Job;
 using LivestreamRecorderService.Models;
-using LivestreamRecorderService.SingletonServices;
+using LivestreamRecorderService.Models.OptionDiscords;
+using Microsoft.Extensions.Options;
 using Serilog.Context;
 using System.Net.Http.Json;
 
@@ -19,7 +20,6 @@ public class TwitcastingService : PlatformService, IPlatformService
     private readonly IVideoRepository _videoRepository;
     private readonly ITwitcastingRecorderService _twitcastingRecorderService;
     private readonly IABSService _aBSService;
-    private readonly DiscordService _discordService;
 
     public override string PlatformName => "Twitcasting";
     public override int Interval => 10;
@@ -35,8 +35,14 @@ public class TwitcastingService : PlatformService, IPlatformService
         IVideoRepository videoRepository,
         ITwitcastingRecorderService twitcastingRecorderService,
         IABSService aBSService,
-        DiscordService discordService,
-        IChannelRepository channelRepository) : base(channelRepository, aBSService, httpClientFactory, logger)
+        IChannelRepository channelRepository,
+        IOptions<DiscordOption> discordOptions,
+        IServiceProvider serviceProvider) : base(channelRepository,
+                                                 aBSService,
+                                                 httpClientFactory,
+                                                 logger,
+                                                 discordOptions,
+                                                 serviceProvider)
     {
         _logger = logger;
         _httpFactory = httpClientFactory;
@@ -44,7 +50,6 @@ public class TwitcastingService : PlatformService, IPlatformService
         _videoRepository = videoRepository;
         _twitcastingRecorderService = twitcastingRecorderService;
         _aBSService = aBSService;
-        _discordService = discordService;
     }
 
     public override async Task UpdateVideosDataAsync(Channel channel, CancellationToken cancellation = default)
@@ -123,7 +128,11 @@ public class TwitcastingService : PlatformService, IPlatformService
 
                     video.Status = VideoStatus.Recording;
                     _logger.LogInformation("{channelId} is now lived! Start recording.", channel.id);
-                    await _discordService.SendStartRecordingMessage(video);
+
+                    if (null != discordService)
+                    {
+                        await discordService.SendStartRecordingMessage(video);
+                    }
                 }
             }
             else
@@ -285,7 +294,10 @@ public class TwitcastingService : PlatformService, IPlatformService
                 {
                     video.SourceStatus = VideoStatus.Reject;
                     video.Note = $"Video source is detected access required.";
-                    await _discordService.SendDeletedMessage(video);
+                    if (null != discordService)
+                    {
+                        await discordService.SendDeletedMessage(video);
+                    }
                     _logger.LogInformation("Video source is {status} because it is detected access required.", Enum.GetName(typeof(VideoStatus), video.SourceStatus));
                 }
                 video.SourceStatus = VideoStatus.Reject;
@@ -297,8 +309,11 @@ public class TwitcastingService : PlatformService, IPlatformService
                && video.Status == VideoStatus.Archived)
             {
                 video.SourceStatus = VideoStatus.Deleted;
-                // First detected
-                await _discordService.SendDeletedMessage(video);
+                if (null != discordService)
+                {
+                    // First detected
+                    await discordService.SendDeletedMessage(video);
+                }
             }
             video.SourceStatus = VideoStatus.Deleted;
             video.Status = VideoStatus.Missing;

@@ -4,6 +4,9 @@ using LivestreamRecorder.DB.Models;
 using LivestreamRecorderService.Helper;
 using LivestreamRecorderService.Interfaces;
 using LivestreamRecorderService.Models;
+using LivestreamRecorderService.Models.OptionDiscords;
+using LivestreamRecorderService.SingletonServices;
+using Microsoft.Extensions.Options;
 using MimeMapping;
 using System.Configuration;
 using YoutubeDLSharp.Options;
@@ -21,6 +24,7 @@ public abstract class PlatformService : IPlatformService
     public abstract int Interval { get; }
 
     private static readonly Dictionary<string, int> _elapsedTime = new();
+    protected readonly DiscordService? discordService = null;
 
     private string _ffmpegPath = "/usr/bin/ffmpeg";
     private string _ytdlPath = "/usr/bin/yt-dlp";
@@ -29,7 +33,9 @@ public abstract class PlatformService : IPlatformService
         IChannelRepository channelRepository,
         IABSService aBSService,
         IHttpClientFactory httpClientFactory,
-        ILogger<PlatformService> logger)
+        ILogger<PlatformService> logger,
+        IOptions<DiscordOption> discordOptions,
+        IServiceProvider serviceProvider)
     {
         _channelRepository = channelRepository;
         _aBSService = aBSService;
@@ -39,6 +45,9 @@ public abstract class PlatformService : IPlatformService
         {
             _elapsedTime.Add(PlatformName, 0);
         }
+
+        if (discordOptions.Value.Enabled)
+            discordService = serviceProvider.GetRequiredService<DiscordService>();
     }
 
     public List<Channel> GetMonitoringChannels()

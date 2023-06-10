@@ -5,7 +5,9 @@ using LivestreamRecorder.DB.Models;
 using LivestreamRecorderService.Interfaces;
 using LivestreamRecorderService.Interfaces.Job;
 using LivestreamRecorderService.Models;
+using LivestreamRecorderService.Models.OptionDiscords;
 using LivestreamRecorderService.SingletonServices;
+using Microsoft.Extensions.Options;
 using Newtonsoft.Json;
 using Serilog.Context;
 
@@ -19,7 +21,6 @@ public class FC2Service : PlatformService, IPlatformService
     private readonly IChannelRepository _channelRepository;
     private readonly IFC2LiveDLService _fC2LiveDLService;
     private readonly IABSService _aBSService;
-    private readonly DiscordService _discordService;
     private readonly IHttpClientFactory _httpFactory;
 
     public override string PlatformName => "FC2";
@@ -36,7 +37,14 @@ public class FC2Service : PlatformService, IPlatformService
         IFC2LiveDLService fC2LiveDLService,
         IABSService aBSService,
         DiscordService discordService,
-        IHttpClientFactory httpClientFactory) : base(channelRepository, aBSService, httpClientFactory, logger)
+        IHttpClientFactory httpClientFactory,
+        IOptions<DiscordOption> discordOptions,
+        IServiceProvider serviceProvider) : base(channelRepository,
+                                                 aBSService,
+                                                 httpClientFactory,
+                                                 logger,
+                                                 discordOptions,
+                                                 serviceProvider)
     {
         _logger = logger;
         _unitOfWork_Public = unitOfWork_Public;
@@ -44,7 +52,6 @@ public class FC2Service : PlatformService, IPlatformService
         _channelRepository = channelRepository;
         _fC2LiveDLService = fC2LiveDLService;
         _aBSService = aBSService;
-        _discordService = discordService;
         _httpFactory = httpClientFactory;
     }
 
@@ -132,7 +139,10 @@ public class FC2Service : PlatformService, IPlatformService
                     video.Status = VideoStatus.Recording;
                     _logger.LogInformation("{channelId} is now lived! Start recording.", channel.id);
                     _logger.LogDebug("fc2Info: {info}", JsonConvert.SerializeObject(info));
-                    await _discordService.SendStartRecordingMessage(video);
+                    if (null != discordService)
+                    {
+                        await discordService.SendStartRecordingMessage(video);
+                    }
                 }
             }
             else

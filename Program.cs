@@ -3,9 +3,9 @@ using Azure.ResourceManager;
 using LivestreamRecorder.DB.Core;
 using LivestreamRecorder.DB.Enum;
 using LivestreamRecorder.DB.Interfaces;
+using LivestreamRecorderService.DependencyInjection;
 using LivestreamRecorderService.Interfaces;
 using LivestreamRecorderService.Interfaces.Job;
-using LivestreamRecorderService.Models.OptionDiscords;
 using LivestreamRecorderService.Models.Options;
 using LivestreamRecorderService.ScopedServices;
 using LivestreamRecorderService.ScopedServices.PlatformService;
@@ -69,11 +69,6 @@ try
                 .ValidateDataAnnotations()
                 .ValidateOnStart();
 
-        services.AddOptions<DiscordOption>()
-                .Bind(configuration.GetSection(DiscordOption.ConfigurationSectionName))
-                .ValidateDataAnnotations()
-                .ValidateOnStart();
-
         services.AddOptions<HeartbeatOption>()
                 .Bind(configuration.GetSection(HeartbeatOption.ConfigurationSectionName))
                 .ValidateDataAnnotations()
@@ -87,7 +82,6 @@ try
         var azureOptions = services.BuildServiceProvider().GetRequiredService<IOptions<AzureOption>>().Value;
         var cosmosDbOptions = services.BuildServiceProvider().GetRequiredService<IOptions<CosmosDbOptions>>().Value;
         var twitchOptions = services.BuildServiceProvider().GetRequiredService<IOptions<TwitchOption>>().Value;
-        var discordOptions = services.BuildServiceProvider().GetRequiredService<IOptions<DiscordOption>>().Value;
         var serviceOptions = services.BuildServiceProvider().GetRequiredService<IOptions<ServiceOption>>().Value;
 
         if (serviceOptions.DatabaseService == ServiceName.AzureCosmosDB)
@@ -231,21 +225,7 @@ try
                 throw new NotImplementedException("Currently only Azure Container Instance and K8s are supported.");
         }
 
-        if (discordOptions.Enabled)
-        {
-            if (string.IsNullOrEmpty(discordOptions.Webhook)
-                || string.IsNullOrEmpty(discordOptions.WebhookWarning)
-                || string.IsNullOrEmpty(discordOptions.WebhookAdmin)
-                || string.IsNullOrEmpty(discordOptions.FrontEndHost)
-                || null == discordOptions.Mention
-                || null == discordOptions.Emotes
-                )
-            {
-                Log.Fatal("Missing Discord Settings. Please set Discord:Webhook, Discord:WebhookWarning, Discord:WebhookAdmin, Discord:FrontEndHost, Discord:Mention and Discord:Emotes in appsettings.json.");
-                throw new ConfigurationErrorsException("Missing Discord Settings. Please set Discord:Webhook, Discord:WebhookWarning, Discord:WebhookAdmin, Discord:FrontEndHost, Discord:Mention and Discord:Emotes in appsettings.json.");
-            }
-            services.AddSingleton<DiscordService>();
-        }
+        services.AddDiscordService(configuration);
 
         if (twitchOptions.Enabled)
         {
@@ -301,4 +281,3 @@ finally
     Log.Information("Shut down complete");
     Log.CloseAndFlush();
 }
-
