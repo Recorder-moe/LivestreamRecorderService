@@ -11,7 +11,7 @@ public sealed class AzureOption
     public AFSOption? FileShare { get; set; } = null;
     public ABSOption? BlobStorage { get; set; } = null;
     public CosmosDbOptions? CosmosDb { get; set; } = null;
-   }
+}
 
 public class ABSOption
 {

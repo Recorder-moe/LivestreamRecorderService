@@ -19,7 +19,7 @@ public class RecordWorker : BackgroundService
     private readonly ITwitcastingRecorderService _twitcastingRecorderService;
     private readonly IStreamlinkService _streamlinkService;
     private readonly IFC2LiveDLService _fC2LiveDLService;
-    private readonly IPersistentVolumeService _aFSService;
+    private readonly ISharedVolumeService _sharedVolumeService;
     private readonly IServiceProvider _serviceProvider;
 
     public RecordWorker(
@@ -30,7 +30,7 @@ public class RecordWorker : BackgroundService
         ITwitcastingRecorderService twitcastingRecorderService,
         IStreamlinkService streamlinkService,
         IFC2LiveDLService fC2LiveDLService,
-        IPersistentVolumeService aFSService,
+        ISharedVolumeService sharedVolumeService,
         IOptions<AzureOption> options,
         IServiceProvider serviceProvider)
     {
@@ -41,7 +41,7 @@ public class RecordWorker : BackgroundService
         _twitcastingRecorderService = twitcastingRecorderService;
         _streamlinkService = streamlinkService;
         _fC2LiveDLService = fC2LiveDLService;
-        _aFSService = aFSService;
+        _sharedVolumeService = sharedVolumeService;
         _serviceProvider = serviceProvider;
     }
 
@@ -277,7 +277,7 @@ public class RecordWorker : BackgroundService
                 "FC2" => video.ChannelId + (video.Timestamps.ActualStartTime ?? DateTime.Today).ToString("yyyy-MM-dd"),
                 _ => video.id,
             };
-            var file = await _aFSService.GetVideoFileInfoByPrefixAsync(prefix: prefix,
+            var file = await _sharedVolumeService.GetVideoFileInfoByPrefixAsync(prefix: prefix,
                                                                         delay: TimeSpan.FromMinutes(5),
                                                                         cancellation: cancellation);
             if (null != file)

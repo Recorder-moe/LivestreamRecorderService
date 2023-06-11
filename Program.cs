@@ -6,6 +6,7 @@ using LivestreamRecorderService.ScopedServices.PlatformService;
 using LivestreamRecorderService.Workers;
 using Microsoft.Extensions.Options;
 using Serilog;
+using System.Configuration;
 
 #if DEBUG
 Serilog.Debugging.SelfLog.Enable(Console.WriteLine);
@@ -50,8 +51,14 @@ try
                 .ValidateDataAnnotations()
                 .ValidateOnStart();
 
+        services.AddOptions<NFSOption>()
+                .Bind(configuration.GetSection(NFSOption.ConfigurationSectionName))
+                .ValidateDataAnnotations()
+                .ValidateOnStart();
+
         var serviceOptions = services.BuildServiceProvider().GetRequiredService<IOptions<ServiceOption>>().Value;
         var azureOptions = services.BuildServiceProvider().GetRequiredService<IOptions<AzureOption>>().Value;
+        var nfsOption = services.BuildServiceProvider().GetRequiredService<IOptions<NFSOption>>().Value;
 
         switch (serviceOptions.DatabaseService)
         {
@@ -63,38 +70,35 @@ try
                 throw new NotImplementedException("Currently only Azure CosmosDb is supported.");
         }
 
-        if (serviceOptions.PersistentVolumeService == ServiceName.AzureFileShare
-            && serviceOptions.StorageService == ServiceName.AzureBlobStorage
-            && !string.IsNullOrEmpty(azureOptions.AzureFileShares2BlobContainers))
-        {
-            services.AddHttpClient("AzureFileShares2BlobContainers", client =>
-            {
-                client.BaseAddress = new Uri(azureOptions.AzureFileShares2BlobContainers);
-                // Set this bigger than Azure Function timeout (10min)
-                client.Timeout = TimeSpan.FromMinutes(11);
-            });
-        }
-
         switch (serviceOptions.JobService)
         {
             case ServiceName.AzureContainerInstance:
                 services.AddAzureContainerInstanceService();
                 break;
-            case ServiceName.K8s:
-                throw new NotImplementedException("K8s is not implemented yet.");
+            case ServiceName.Kubernetes:
+                services.AddKubernetesService(configuration);
+                break;
             default:
                 Log.Fatal("Currently only Azure Container Instance and K8s are supported.");
                 throw new NotImplementedException("Currently only Azure Container Instance and K8s are supported.");
         }
 
-        switch (serviceOptions.PersistentVolumeService)
+        switch (serviceOptions.SharedVolumeService)
         {
             case ServiceName.AzureFileShare:
                 services.AddAzureFileShareService();
                 break;
+            case ServiceName.NFS:
+                if (string.IsNullOrWhiteSpace(nfsOption.Server)
+                    || string.IsNullOrWhiteSpace(nfsOption.Path))
+                {
+                    Log.Fatal("NFS server and path must be specified.");
+                    throw new ConfigurationErrorsException("NFS server and path must be specified.");
+                }
+                break;
             default:
-                Log.Fatal("Currently only Azure File Share is supported.");
-                throw new NotImplementedException("Currently only Azure File Share is supported.");
+                Log.Fatal("Shared Volume Serivce in limited to Azure File Share or NFS.");
+                throw new ConfigurationErrorsException("Shared Volume Serivce in limited to Azure File Share or NFS.");
         }
 
         switch (serviceOptions.StorageService)
@@ -105,6 +109,19 @@ try
             default:
                 Log.Fatal("Currently only Azure Blob Storage is supported.");
                 throw new NotImplementedException("Currently only Azure Blob Storage is supported.");
+        }
+
+        // AzureFileShares2BlobContainers
+        if (serviceOptions.SharedVolumeService == ServiceName.AzureFileShare
+            && serviceOptions.StorageService == ServiceName.AzureBlobStorage
+            && !string.IsNullOrEmpty(azureOptions.AzureFileShares2BlobContainers))
+        {
+            services.AddHttpClient("AzureFileShares2BlobContainers", client =>
+            {
+                client.BaseAddress = new Uri(azureOptions.AzureFileShares2BlobContainers);
+                // Set this bigger than Azure Function timeout (10min)
+                client.Timeout = TimeSpan.FromMinutes(11);
+            });
         }
 
         services.AddDiscordService(configuration);

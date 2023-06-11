@@ -7,7 +7,7 @@ using FileInfo = LivestreamRecorderService.Models.FileInfo;
 
 namespace LivestreamRecorderService.SingletonServices;
 
-public class AFSService : IPersistentVolumeService
+public class AFSService : ISharedVolumeService
 {
     private readonly ILogger<AFSService> _logger;
     private readonly ShareClient _shareClient;

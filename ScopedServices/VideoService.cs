@@ -89,7 +89,7 @@ public class VideoService
         {
             UpdateVideoStatus(video, VideoStatus.Uploading);
 
-            if (_serviceOptions.PersistentVolumeService == ServiceName.AzureFileShare
+            if (_serviceOptions.SharedVolumeService == ServiceName.AzureFileShare
                 && _serviceOptions.StorageService == ServiceName.AzureBlobStorage
                 && !string.IsNullOrEmpty(_azureOptions.AzureFileShares2BlobContainers))
             {

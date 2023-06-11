@@ -23,7 +23,7 @@ namespace LivestreamRecorderService.DependencyInjection
 
                 services.AddAzureClients(clientsBuilder
                     => clientsBuilder.AddFileServiceClient(azureOptions.FileShare.ConnectionString));
-                services.AddSingleton<IPersistentVolumeService, AFSService>();
+                services.AddSingleton<ISharedVolumeService, AFSService>();
                 return services;
             }
             catch (ConfigurationErrorsException)

@@ -4,10 +4,10 @@ public enum ServiceName
 {
     // Container
     AzureContainerInstance,
-    K8s,
+    Kubernetes,
     Docker,
 
-    // PressistentVolume
+    // SharedVolume
     AzureFileShare,
     NFS,
     DockerVolume,
