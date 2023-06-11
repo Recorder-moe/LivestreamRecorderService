@@ -22,7 +22,7 @@ public class TwitcastingRecorderService : ACIServiceBase, ITwitcastingRecorderSe
         _logger = logger;
     }
 
-    protected override Task<ArmOperation<ArmDeploymentResource>> CreateNewInstance(string id,
+    protected override Task<ArmOperation<ArmDeploymentResource>> CreateNewJobAsync(string id,
                                                                                    string instanceName,
                                                                                    string channelId,
                                                                                    bool useCookiesFile = false,
@@ -41,7 +41,7 @@ public class TwitcastingRecorderService : ACIServiceBase, ITwitcastingRecorderSe
 
         Task<ArmOperation<ArmDeploymentResource>> doWithImage(string imageName)
         {
-            return CreateAzureContainerInstanceAsync(
+            return CreateInstanceAsync(
                     template: "ACI.json",
                     parameters: new
                     {

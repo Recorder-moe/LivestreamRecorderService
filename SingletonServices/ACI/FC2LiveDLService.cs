@@ -22,7 +22,7 @@ public class FC2LiveDLService : ACIServiceBase, IFC2LiveDLService
         _logger = logger;
     }
 
-    protected override Task<ArmOperation<ArmDeploymentResource>> CreateNewInstance(string _,
+    protected override Task<ArmOperation<ArmDeploymentResource>> CreateNewJobAsync(string _,
                                                                                    string instanceName,
                                                                                    string channelId,
                                                                                    bool useCookiesFile = false,
@@ -54,7 +54,7 @@ public class FC2LiveDLService : ACIServiceBase, IFC2LiveDLService
                     $"/venv/bin/fc2-live-dl --latency high --threads 1 -o '%(channel_id)s%(date)s%(time)s.%(ext)s' --log-level trace 'https://live.fc2.com/{channelId}/' && mv *.mp4 /fileshare/"
                 };
 
-            return CreateAzureContainerInstanceAsync(
+            return CreateInstanceAsync(
                     template: "ACI.json",
                     parameters: new
                     {

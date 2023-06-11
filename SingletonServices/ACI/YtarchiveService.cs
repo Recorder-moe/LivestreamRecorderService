@@ -27,7 +27,7 @@ public class YtarchiveService : ACIServiceBase, IYtarchiveService
                                                            bool useCookiesFile = false,
                                                            CancellationToken cancellation = default)
     {
-        if (null != await GetInstanceByVideoIdAsync(videoId, cancellation))
+        if (null != await GetInstanceByKeywordAsync(videoId, cancellation))
         {
             _logger.LogWarning("ACI already exists! Fixed {videoId} status mismatch.", videoId);
             return Task.CompletedTask;
@@ -35,7 +35,7 @@ public class YtarchiveService : ACIServiceBase, IYtarchiveService
         else
         {
             var url = $"https://youtu.be/{videoId}";
-            return CreateNewInstance(id: url,
+            return CreateNewJobAsync(id: url,
                                      instanceName: GetInstanceName(url),
                                      channelId: channelId,
                                      useCookiesFile: useCookiesFile,
@@ -43,7 +43,7 @@ public class YtarchiveService : ACIServiceBase, IYtarchiveService
         }
     }
 
-    protected override Task<ArmOperation<ArmDeploymentResource>> CreateNewInstance(string id,
+    protected override Task<ArmOperation<ArmDeploymentResource>> CreateNewJobAsync(string id,
                                                                                    string instanceName,
                                                                                    string channelId,
                                                                                    bool useCookiesFile,
@@ -79,7 +79,7 @@ public class YtarchiveService : ACIServiceBase, IYtarchiveService
                     $"/ytarchive --add-metadata --merge --retry-frags 30 --thumbnail -o '_%(id)s' '{id}' best && mv *.mp4 /fileshare/"
                 };
 
-            return CreateAzureContainerInstanceAsync(
+            return CreateInstanceAsync(
                     template: "ACI.json",
                     parameters: new
                     {

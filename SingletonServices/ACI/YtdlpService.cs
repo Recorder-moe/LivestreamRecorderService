@@ -26,13 +26,13 @@ public class YtdlpService : ACIServiceBase, IYtdlpService
                                                   string channelId,
                                                   bool useCookiesFile = false,
                                                   CancellationToken cancellation = default)
-        => await CreateNewInstance(id: url,
+        => await CreateNewJobAsync(id: url,
                                    instanceName: GetInstanceName(url),
                                    channelId: channelId,
                                    useCookiesFile: useCookiesFile,
                                    cancellation: cancellation);
 
-    protected override Task<ArmOperation<ArmDeploymentResource>> CreateNewInstance(string id,
+    protected override Task<ArmOperation<ArmDeploymentResource>> CreateNewJobAsync(string id,
                                                                                    string instanceName,
                                                                                    string channelId,
                                                                                    bool useCookiesFile = false,
@@ -79,7 +79,7 @@ public class YtdlpService : ACIServiceBase, IYtdlpService
                 command[4] = command[4].Replace("-o '%(id)s.%(ext)s'", "-o '_%(id)s.%(ext)s'");
             }
 
-            return CreateAzureContainerInstanceAsync(
+            return CreateInstanceAsync(
                     template: "ACI.json",
                     parameters: new
                     {

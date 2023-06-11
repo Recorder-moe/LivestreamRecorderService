@@ -98,7 +98,7 @@ public class ACIService : IJobService
                                     .FirstOrDefault();
     }
 
-    private static string GetInstanceName(string videoId)
+    internal static string GetInstanceName(string videoId)
         => videoId.Split("/").Last()
                               .Split("?").First()
                               .Split(".").First()
