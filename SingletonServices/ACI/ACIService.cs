@@ -1,6 +1,7 @@
 ﻿using Azure.ResourceManager;
 using Azure.ResourceManager.Resources;
 using LivestreamRecorder.DB.Models;
+using LivestreamRecorderService.Helper;
 using LivestreamRecorderService.Interfaces.Job;
 using LivestreamRecorderService.Models.Options;
 using Microsoft.Extensions.Options;
@@ -54,7 +55,7 @@ public class ACIService : IJobService
         }
         else
         {
-            _logger.LogWarning("Failed to get ACI instance for {videoId} {name}. Please check if the ACI exists.", video.id, GetInstanceName(video.id));
+            _logger.LogWarning("Failed to get ACI instance for {videoId} {name}. Please check if the ACI exists.", video.id, NameHelper.GetInstanceName(video.id));
         }
     }
 
@@ -91,20 +92,12 @@ public class ACIService : IJobService
     {
         var resourceGroupResource = await GetResourceGroupAsync(cancellation);
         return resourceGroupResource.GetGenericResources(
-                                        filter: $"substringof('{GetInstanceName(keyword)}', name) and resourceType eq 'microsoft.containerinstance/containergroups'",
+                                        filter: $"substringof('{NameHelper.GetInstanceName(keyword)}', name) and resourceType eq 'microsoft.containerinstance/containergroups'",
                                         expand: "provisioningState",
                                         top: 1,
                                         cancellationToken: cancellation)
                                     .FirstOrDefault();
     }
-
-    internal static string GetInstanceName(string videoId)
-        => videoId.Split("/").Last()
-                              .Split("?").First()
-                              .Split(".").First()
-                              .Replace("_", "")
-                              .Replace(":", "")
-           .ToLower();
 
     private async Task<ResourceGroupResource> GetResourceGroupAsync(CancellationToken cancellation = default)
     {

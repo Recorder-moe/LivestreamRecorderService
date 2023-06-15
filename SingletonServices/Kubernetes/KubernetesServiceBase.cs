@@ -1,6 +1,8 @@
 ﻿using k8s;
 using k8s.Models;
 using LivestreamRecorder.DB.Enum;
+using LivestreamRecorder.DB.Models;
+using LivestreamRecorderService.Helper;
 using LivestreamRecorderService.Interfaces.Job;
 using LivestreamRecorderService.Models.Options;
 using Microsoft.Extensions.Options;
@@ -36,7 +38,7 @@ public abstract class KubernetesServiceBase : IJobServiceBase
         _nfsOption = nfsOptions.Value;
     }
 
-    public virtual async Task<dynamic> InitJobAsync(string videoId, string channelId, bool useCookiesFile = false, CancellationToken cancellation = default)
+    public virtual async Task<dynamic> InitJobAsync(string videoId, Video video, bool useCookiesFile = false, CancellationToken cancellation = default)
     {
         // Warning: Unlike ACI, Kubernetes jobs cannot be rerun.
         var jobName = GetInstanceName(videoId);
@@ -51,7 +53,7 @@ public abstract class KubernetesServiceBase : IJobServiceBase
         _logger.LogInformation("Start new K8s job for {videoId} {name}.", videoId, jobName);
         return await CreateNewJobAsync(id: videoId,
                                        instanceName: jobName,
-                                       channelId: channelId,
+                                       video: video,
                                        useCookiesFile: useCookiesFile,
                                        cancellation: cancellation);
     }
@@ -131,7 +133,7 @@ public abstract class KubernetesServiceBase : IJobServiceBase
                     Path = _nfsOption.Path,
                     ReadOnlyProperty = false,
                 },
-                Secret = new ()
+                Secret = new()
                 {
                     SecretName = KubernetesService._nfsSecretName,
                 }
@@ -140,12 +142,12 @@ public abstract class KubernetesServiceBase : IJobServiceBase
         };
 
     protected string GetInstanceName(string videoId)
-        => (DownloaderName + KubernetesService.GetInstanceName(videoId)).ToLower();
+        => (DownloaderName + NameHelper.GetInstanceName(videoId)).ToLower();
 
     // Must be override
     protected abstract Task<V1Job> CreateNewJobAsync(string id,
                                                      string instanceName,
-                                                     string channelId,
+                                                     Video video,
                                                      bool useCookiesFile = false,
                                                      CancellationToken cancellation = default);
 }

@@ -1,5 +1,7 @@
 ﻿using Azure.ResourceManager;
 using Azure.ResourceManager.Resources;
+using LivestreamRecorder.DB.Models;
+using LivestreamRecorderService.Helper;
 using LivestreamRecorderService.Interfaces.Job;
 using LivestreamRecorderService.Models.Options;
 using Microsoft.Extensions.Options;
@@ -11,7 +13,7 @@ public class StreamlinkService : ACIServiceBase, IStreamlinkService
     private readonly AzureOption _azureOption;
     private readonly ILogger<StreamlinkService> _logger;
 
-    public override string DownloaderName => "streamlink";
+    public override string DownloaderName => IStreamlinkService.downloaderName;
 
     public StreamlinkService(
         ILogger<StreamlinkService> logger,
@@ -24,7 +26,7 @@ public class StreamlinkService : ACIServiceBase, IStreamlinkService
 
     protected override Task<ArmOperation<ArmDeploymentResource>> CreateNewJobAsync(string id,
                                                                                    string instanceName,
-                                                                                   string channelId,
+                                                                                   Video video,
                                                                                    bool useCookiesFile = false,
                                                                                    CancellationToken cancellation = default)
     {
@@ -57,7 +59,7 @@ public class StreamlinkService : ACIServiceBase, IStreamlinkService
                         {
                             value = new string[] {
                                 "/bin/sh", "-c",
-                                $"/usr/local/bin/streamlink --twitch-disable-ads -o '/downloads/{{id}}.mp4' -f 'twitch.tv/{channelId}' best && cd /downloads && for file in *.mp4; do ffmpeg -i \"$file\" -map 0:v:0 -map 0:a:0 -c copy -movflags +faststart 'temp.mp4' && mv 'temp.mp4' \"/fileshare/$file\"; done"
+                                $"/usr/local/bin/streamlink --twitch-disable-ads -o '/downloads/{NameHelper.GetFileName(video, IStreamlinkService.downloaderName)}' -f 'twitch.tv/{video.ChannelId}' best && cd /downloads && for file in *.mp4; do ffmpeg -i \"$file\" -map 0:v:0 -map 0:a:0 -c copy -movflags +faststart 'temp.mp4' && mv 'temp.mp4' \"/fileshare/$file\"; done"
                             }
                         },
                         storageAccountName = new

@@ -1,5 +1,7 @@
 ﻿using Azure.ResourceManager;
 using Azure.ResourceManager.Resources;
+using LivestreamRecorder.DB.Models;
+using LivestreamRecorderService.Helper;
 using LivestreamRecorderService.Interfaces.Job;
 using LivestreamRecorderService.Models.Options;
 using Microsoft.Extensions.Options;
@@ -11,7 +13,7 @@ public class TwitcastingRecorderService : ACIServiceBase, ITwitcastingRecorderSe
     private readonly AzureOption _azureOption;
     private readonly ILogger<TwitcastingRecorderService> _logger;
 
-    public override string DownloaderName => "twitcastingrecorder";
+    public override string DownloaderName => ITwitcastingRecorderService.downloaderName;
 
     public TwitcastingRecorderService(
         ILogger<TwitcastingRecorderService> logger,
@@ -24,7 +26,7 @@ public class TwitcastingRecorderService : ACIServiceBase, ITwitcastingRecorderSe
 
     protected override Task<ArmOperation<ArmDeploymentResource>> CreateNewJobAsync(string id,
                                                                                    string instanceName,
-                                                                                   string channelId,
+                                                                                   Video video,
                                                                                    bool useCookiesFile = false,
                                                                                    CancellationToken cancellation = default)
     {
@@ -58,7 +60,7 @@ public class TwitcastingRecorderService : ACIServiceBase, ITwitcastingRecorderSe
                             value = new string[] {
                                 "/usr/bin/dumb-init", "--",
                                 "/bin/bash", "-c",
-                                $"/bin/bash record_twitcast.sh {channelId} once && mv /download/*.mp4 /fileshare/"
+                                $"/bin/bash record_twitcast.sh {video.ChannelId} once && mv /download/{NameHelper.GetFileName(video, ITwitcastingRecorderService.downloaderName)} /fileshare/{NameHelper.GetFileName(video, ITwitcastingRecorderService.downloaderName)}"
                             }
                         },
                         storageAccountName = new

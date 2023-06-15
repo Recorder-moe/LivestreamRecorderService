@@ -116,7 +116,7 @@ public class TwitchService : PlatformService, IPlatformService
                 || video.Status == VideoStatus.Missing)
             {
                 _ = _streamlinkService.InitJobAsync(url: video.id,
-                                                    channelId: video.ChannelId,
+                                                    video: video,
                                                     useCookiesFile: false,
                                                     cancellation: cancellation);
 

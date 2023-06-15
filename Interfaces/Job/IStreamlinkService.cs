@@ -1,6 +1,6 @@
-﻿namespace LivestreamRecorderService.Interfaces.Job
+﻿namespace LivestreamRecorderService.Interfaces.Job;
+
+public interface IStreamlinkService : IJobServiceBase
 {
-    public interface IStreamlinkService : IJobServiceBase
-    {
-    }
+    public const string downloaderName = "streamlink";
 }

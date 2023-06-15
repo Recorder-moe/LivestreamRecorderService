@@ -1,5 +1,7 @@
 ﻿using Azure.ResourceManager;
 using Azure.ResourceManager.Resources;
+using LivestreamRecorder.DB.Models;
+using LivestreamRecorderService.Helper;
 using LivestreamRecorderService.Interfaces.Job;
 using LivestreamRecorderService.Models.Options;
 using Microsoft.Extensions.Options;
@@ -11,7 +13,7 @@ public class FC2LiveDLService : ACIServiceBase, IFC2LiveDLService
     private readonly AzureOption _azureOption;
     private readonly ILogger<FC2LiveDLService> _logger;
 
-    public override string DownloaderName => "fc2livedl";
+    public override string DownloaderName => IFC2LiveDLService.downloaderName;
 
     public FC2LiveDLService(
         ILogger<FC2LiveDLService> logger,
@@ -24,7 +26,7 @@ public class FC2LiveDLService : ACIServiceBase, IFC2LiveDLService
 
     protected override Task<ArmOperation<ArmDeploymentResource>> CreateNewJobAsync(string _,
                                                                                    string instanceName,
-                                                                                   string channelId,
+                                                                                   Video video,
                                                                                    bool useCookiesFile = false,
                                                                                    CancellationToken cancellation = default)
     {
@@ -46,12 +48,12 @@ public class FC2LiveDLService : ACIServiceBase, IFC2LiveDLService
                 {
                     "/usr/bin/dumb-init", "--",
                     "sh", "-c",
-                    $"/venv/bin/fc2-live-dl --latency high --threads 1 -o '%(channel_id)s%(date)s%(time)s.%(ext)s' --log-level trace --cookies /fileshare/cookies/{channelId}.txt 'https://live.fc2.com/{channelId}/' && mv *.mp4 /fileshare/"
+                    $"/venv/bin/fc2-live-dl --latency high --threads 1 -o '{NameHelper.GetFileName(video, IFC2LiveDLService.downloaderName)}' --log-level trace --cookies /fileshare/cookies/{video}.txt 'https://live.fc2.com/{video.ChannelId}/' && mv *.mp4 /fileshare/"
                 }
                 : new string[] {
                     "/usr/bin/dumb-init", "--",
                     "sh", "-c",
-                    $"/venv/bin/fc2-live-dl --latency high --threads 1 -o '%(channel_id)s%(date)s%(time)s.%(ext)s' --log-level trace 'https://live.fc2.com/{channelId}/' && mv *.mp4 /fileshare/"
+                    $"/venv/bin/fc2-live-dl --latency high --threads 1 -o '{NameHelper.GetFileName(video, IFC2LiveDLService.downloaderName)}' --log-level trace 'https://live.fc2.com/{video.ChannelId}/' && mv *.mp4 /fileshare/"
                 };
 
             return CreateInstanceAsync(

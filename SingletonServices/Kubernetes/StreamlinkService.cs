@@ -1,4 +1,6 @@
 ﻿using k8s.Models;
+using LivestreamRecorder.DB.Models;
+using LivestreamRecorderService.Helper;
 using LivestreamRecorderService.Interfaces.Job;
 using LivestreamRecorderService.Models.Options;
 using Microsoft.Extensions.Options;
@@ -9,7 +11,7 @@ public class StreamlinkService : KubernetesServiceBase, IStreamlinkService
 {
     private readonly ILogger<StreamlinkService> _logger;
 
-    public override string DownloaderName => "streamlink";
+    public override string DownloaderName => IStreamlinkService.downloaderName;
 
     public StreamlinkService(
         ILogger<StreamlinkService> logger,
@@ -22,9 +24,9 @@ public class StreamlinkService : KubernetesServiceBase, IStreamlinkService
         _logger = logger;
     }
 
-    protected override Task<V1Job> CreateNewJobAsync(string id,
+    protected override Task<V1Job> CreateNewJobAsync(string _,
                                                      string instanceName,
-                                                     string channelId,
+                                                     Video video,
                                                      bool useCookiesFile = false,
                                                      CancellationToken cancellation = default)
     {
@@ -56,7 +58,7 @@ public class StreamlinkService : KubernetesServiceBase, IStreamlinkService
                         {
                             value = new string[] {
                                 "/bin/sh", "-c",
-                                $"/usr/local/bin/streamlink --twitch-disable-ads -o '/downloads/{{id}}.mp4' -f 'twitch.tv/{channelId}' best && cd /downloads && for file in *.mp4; do ffmpeg -i \"$file\" -map 0:v:0 -map 0:a:0 -c copy -movflags +faststart 'temp.mp4' && mv 'temp.mp4' \"/fileshare/$file\"; done"
+                                $"/usr/local/bin/streamlink --twitch-disable-ads -o '/downloads/{NameHelper.GetFileName(video, IStreamlinkService.downloaderName)}' -f 'twitch.tv/{video.ChannelId}' best && cd /downloads && for file in *.mp4; do ffmpeg -i \"$file\" -map 0:v:0 -map 0:a:0 -c copy -movflags +faststart 'temp.mp4' && mv 'temp.mp4' \"/fileshare/$file\"; done"
                             }
                         },
                     },

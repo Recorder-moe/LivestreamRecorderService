@@ -2,6 +2,7 @@
 using k8s.Models;
 using LivestreamRecorder.DB.Enum;
 using LivestreamRecorder.DB.Models;
+using LivestreamRecorderService.Helper;
 using LivestreamRecorderService.Interfaces.Job;
 using LivestreamRecorderService.Models.Options;
 using Microsoft.Extensions.Options;
@@ -53,7 +54,7 @@ public class KubernetesService : IJobService
         }
     }
 
-    private bool CheckSecretExists() 
+    private bool CheckSecretExists()
         => _serviceOption.SharedVolumeService switch
         {
             ServiceName.AzureFileShare => _client.ListNamespacedSecret(KubernetesNamespace)
@@ -102,15 +103,6 @@ public class KubernetesService : IJobService
     private async Task<V1Job?> GetJobByKeywordAsync(string keyword, CancellationToken cancellation)
     {
         var jobs = await _client.ListNamespacedJobAsync(KubernetesNamespace, cancellationToken: cancellation);
-        return jobs.Items.FirstOrDefault(p => p.Name().Contains(GetInstanceName(keyword)));
+        return jobs.Items.FirstOrDefault(p => p.Name().Contains(NameHelper.GetInstanceName(keyword)));
     }
-
-    internal static string GetInstanceName(string videoId)
-        => (videoId.Split("/").Last()
-                              .Split("?").First()
-                              .Split(".").First()
-                              .Replace("_", "")
-                              .Replace(":", "")
-           ).ToLower();
-
 }

@@ -1,4 +1,6 @@
 ﻿using k8s.Models;
+using LivestreamRecorder.DB.Models;
+using LivestreamRecorderService.Helper;
 using LivestreamRecorderService.Interfaces.Job;
 using LivestreamRecorderService.Models.Options;
 using Microsoft.Extensions.Options;
@@ -9,7 +11,7 @@ public class YtdlpService : KubernetesServiceBase, IYtdlpService
 {
     private readonly ILogger<YtdlpService> _logger;
 
-    public override string DownloaderName => "ytdlp";
+    public override string DownloaderName => IYtdlpService.downloaderName;
 
     public YtdlpService(
         ILogger<YtdlpService> logger,
@@ -22,9 +24,9 @@ public class YtdlpService : KubernetesServiceBase, IYtdlpService
         _logger = logger;
     }
 
-    protected override Task<V1Job> CreateNewJobAsync(string id,
+    protected override Task<V1Job> CreateNewJobAsync(string url,
                                                      string instanceName,
-                                                     string channelId,
+                                                     Video video,
                                                      bool useCookiesFile = false,
                                                      CancellationToken cancellation = default)
     {
@@ -46,25 +48,25 @@ public class YtdlpService : KubernetesServiceBase, IYtdlpService
                 {
                     "dumb-init", "--",
                     "sh", "-c",
-                    $"yt-dlp --ignore-config --retries 30 --concurrent-fragments 16 --merge-output-format mp4 -S '+codec:h264' --embed-thumbnail --embed-metadata --no-part --cookies /sharedvolume/cookies/{channelId}.txt -o '%(id)s.%(ext)s' '{id}' && mv *.mp4 /sharedvolume/"
+                    $"yt-dlp --ignore-config --retries 30 --concurrent-fragments 16 --merge-output-format mp4 -S '+codec:h264' --embed-thumbnail --embed-metadata --no-part --cookies /sharedvolume/cookies/{video.ChannelId}.txt -o '{NameHelper.GetFileName(video, IYtdlpService.downloaderName)}' '{url}' && mv *.mp4 /sharedvolume/"
                 }
                 : new string[]
                 {
                     "dumb-init", "--",
                     "sh", "-c",
-                    $"yt-dlp --ignore-config --retries 30 --concurrent-fragments 16 --merge-output-format mp4 -S '+codec:h264' --embed-thumbnail --embed-metadata --no-part -o '%(id)s.%(ext)s' '{id}' && mv *.mp4 /sharedvolume/"
+                    $"yt-dlp --ignore-config --retries 30 --concurrent-fragments 16 --merge-output-format mp4 -S '+codec:h264' --embed-thumbnail --embed-metadata --no-part -o '{NameHelper.GetFileName(video, IYtdlpService.downloaderName)}' '{url}' && mv *.mp4 /sharedvolume/"
                 };
 
             // Workground for twitcasting ERROR: Initialization fragment found after media fragments, unable to download
             // https://github.com/yt-dlp/yt-dlp/issues/5497
-            if (id.Contains("twitcasting.tv"))
+            if (url.Contains("twitcasting.tv"))
             {
                 command[4] = command[4].Replace("--ignore-config --retries 30", "--ignore-config --retries 30 --downloader ffmpeg");
             }
 
             // It is possible for Youtube to use "-" at the beginning of an id, which can cause errors when using the id as a file name.
             // Therefore, we add "_" before the file name to avoid such issues.
-            if (id.Contains("youtu"))
+            if (url.Contains("youtu"))
             {
                 command[4] = command[4].Replace("-o '%(id)s.%(ext)s'", "-o '_%(id)s.%(ext)s'");
             }

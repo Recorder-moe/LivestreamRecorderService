@@ -1,6 +1,6 @@
-﻿namespace LivestreamRecorderService.Interfaces.Job
+﻿namespace LivestreamRecorderService.Interfaces.Job;
+
+public interface IYtdlpService : IJobServiceBase
 {
-    public interface IYtdlpService : IJobServiceBase
-    {
-    }
+    public const string downloaderName = "ytdlp";
 }

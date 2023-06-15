@@ -122,7 +122,7 @@ public class TwitcastingService : PlatformService, IPlatformService
                                || video.Status == VideoStatus.Missing))
                 {
                     _ = _twitcastingRecorderService.InitJobAsync(url: videoId,
-                                                                          channelId: video.ChannelId,
+                                                                          video: video,
                                                                           useCookiesFile: false,
                                                                           cancellation: cancellation);
 

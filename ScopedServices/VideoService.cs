@@ -70,13 +70,11 @@ public class VideoService
         _logger.LogDebug("Update Video {videoId} note", video.id);
     }
 
-    public void AddFilePropertiesToVideo(Video video, FileInfo file)
+    public void UpdateVideoArchivedTime(Video video)
     {
         video = _videoRepository.GetById(video.id);
         _videoRepository.LoadRelatedData(video);
 
-        video.Size = file.FileSize;
-        video.Filename = file.Name;
         video.ArchivedTime = DateTime.UtcNow;
 
         _videoRepository.Update(video);

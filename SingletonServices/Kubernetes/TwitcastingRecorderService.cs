@@ -1,4 +1,6 @@
 ﻿using k8s.Models;
+using LivestreamRecorder.DB.Models;
+using LivestreamRecorderService.Helper;
 using LivestreamRecorderService.Interfaces.Job;
 using LivestreamRecorderService.Models.Options;
 using Microsoft.Extensions.Options;
@@ -9,7 +11,7 @@ public class TwitcastingRecorderService : KubernetesServiceBase, ITwitcastingRec
 {
     private readonly ILogger<TwitcastingRecorderService> _logger;
 
-    public override string DownloaderName => "twitcastingrecorder";
+    public override string DownloaderName => ITwitcastingRecorderService.downloaderName;
 
     public TwitcastingRecorderService(
         ILogger<TwitcastingRecorderService> logger,
@@ -22,9 +24,9 @@ public class TwitcastingRecorderService : KubernetesServiceBase, ITwitcastingRec
         _logger = logger;
     }
 
-    protected override Task<V1Job> CreateNewJobAsync(string id,
+    protected override Task<V1Job> CreateNewJobAsync(string _,
                                                      string instanceName,
-                                                     string channelId,
+                                                     Video video,
                                                      bool useCookiesFile = false,
                                                      CancellationToken cancellation = default)
     {
@@ -57,7 +59,7 @@ public class TwitcastingRecorderService : KubernetesServiceBase, ITwitcastingRec
                             value = new string[] {
                                 "/usr/bin/dumb-init", "--",
                                 "/bin/bash", "-c",
-                                $"/bin/bash record_twitcast.sh {channelId} once && mv /download/*.mp4 /fileshare/"
+                                $"/bin/bash record_twitcast.sh {video.ChannelId} once && mv /download/{NameHelper.GetFileName(video, ITwitcastingRecorderService.downloaderName)} /fileshare/{NameHelper.GetFileName(video, ITwitcastingRecorderService.downloaderName)}"
                             }
                         },
                     },

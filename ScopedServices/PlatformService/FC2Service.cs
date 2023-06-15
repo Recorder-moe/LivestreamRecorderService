@@ -133,7 +133,7 @@ public class FC2Service : PlatformService, IPlatformService
                                || video.Status == VideoStatus.Missing))
                 {
                     _ = _fC2LiveDLService.InitJobAsync(url: $"https://live.fc2.com/{channel.id}/",
-                                                                channelId: video.ChannelId,
+                                                                video: video,
                                                                 useCookiesFile: channel.UseCookiesFile == true,
                                                                 cancellation: cancellation);
 

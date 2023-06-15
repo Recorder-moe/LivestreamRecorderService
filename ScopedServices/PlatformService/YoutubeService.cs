@@ -426,7 +426,7 @@ public class YoutubeService : PlatformService, IPlatformService
         if (video.Status == VideoStatus.WaitingToRecord)
         {
             _ = _ytarchiveService.InitJobAsync(url: video.id,
-                                                        channelId: video.ChannelId,
+                                                        video: video,
                                                         useCookiesFile: video.Channel?.UseCookiesFile ?? false,
                                                         cancellation: cancellation);
 

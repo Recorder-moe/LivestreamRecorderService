@@ -166,27 +166,27 @@ public class RecordWorker : BackgroundService
             {
                 case "Youtube":
                     await _ytarchiveService.InitJobAsync(url: video.id,
-                                                                  channelId: video.ChannelId,
-                                                                  useCookiesFile: video.Channel?.UseCookiesFile == true,
-                                                                  cancellation: stoppingToken);
+                                                         video: video,
+                                                         useCookiesFile: video.Channel?.UseCookiesFile == true,
+                                                         cancellation: stoppingToken);
                     break;
                 case "Twitcasting":
                     await _twitcastingRecorderService.InitJobAsync(url: video.id,
-                                                                            channelId: video.ChannelId,
-                                                                            useCookiesFile: false,
-                                                                            cancellation: stoppingToken);
-                    break;
-                case "Twitch":
-                    await _streamlinkService.InitJobAsync(url: video.id,
-                                                                   channelId: video.ChannelId,
+                                                                   video: video,
                                                                    useCookiesFile: false,
                                                                    cancellation: stoppingToken);
                     break;
+                case "Twitch":
+                    await _streamlinkService.InitJobAsync(url: video.id,
+                                                          video: video,
+                                                          useCookiesFile: false,
+                                                          cancellation: stoppingToken);
+                    break;
                 case "FC2":
                     await _fC2LiveDLService.InitJobAsync(url: video.id,
-                                                                  channelId: video.ChannelId,
-                                                                  useCookiesFile: video.Channel?.UseCookiesFile == true,
-                                                                  cancellation: stoppingToken);
+                                                         video: video,
+                                                         useCookiesFile: video.Channel?.UseCookiesFile == true,
+                                                         cancellation: stoppingToken);
                     break;
 
                 default:
@@ -218,14 +218,14 @@ public class RecordWorker : BackgroundService
                 case "Youtube":
                     await _ytdlpService.InitJobAsync(
                         url: $"https://youtu.be/{video.id}",
-                        channelId: video.ChannelId,
+                        video: video,
                         useCookiesFile: video.Channel?.UseCookiesFile == true,
                         cancellation: stoppingToken);
                     break;
                 case "Twitcasting":
                     await _ytdlpService.InitJobAsync(
                         url: $"https://twitcasting.tv/{video.ChannelId}/movie/{video.id}",
-                        channelId: video.ChannelId,
+                        video: video,
                         useCookiesFile: false,
                         cancellation: stoppingToken);
                     break;
@@ -233,14 +233,14 @@ public class RecordWorker : BackgroundService
                     var id = video.id.TrimStart('v');
                     await _ytdlpService.InitJobAsync(
                         url: $"https://www.twitch.tv/videos/{id}",
-                        channelId: video.ChannelId,
+                        video: video,
                         useCookiesFile: false,
                         cancellation: stoppingToken);
                     break;
                 case "FC2":
                     await _ytdlpService.InitJobAsync(
                         url: $"https://video.fc2.com/content/{video.id}",
-                        channelId: video.ChannelId,
+                        video: video,
                         useCookiesFile: video.Channel?.UseCookiesFile == true,
                         cancellation: stoppingToken);
                     break;

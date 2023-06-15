@@ -3,6 +3,8 @@ using Azure.ResourceManager;
 using Azure.ResourceManager.ContainerInstance;
 using Azure.ResourceManager.Resources;
 using Azure.ResourceManager.Resources.Models;
+using LivestreamRecorder.DB.Models;
+using LivestreamRecorderService.Helper;
 using LivestreamRecorderService.Interfaces.Job;
 using LivestreamRecorderService.Models.Options;
 using Microsoft.Extensions.Options;
@@ -32,31 +34,30 @@ public abstract class ACIServiceBase : IJobServiceBase
     public abstract string DownloaderName { get; }
 
     public virtual async Task<dynamic> InitJobAsync(string videoId,
-                                                          string channelId,
-                                                          bool useCookiesFile = false,
-                                                          CancellationToken cancellation = default)
+                                                    Video video,
+                                                    bool useCookiesFile = false,
+                                                    CancellationToken cancellation = default)
     {
         // ACI部署上需要時間，啟動已存在的Instance較省時
         // 同時需注意 BUG#97 的狀況，在「已啟動」的時候部署新的Instance，在「已停止」時直接啟動舊的Instance
         // 使用的ChannelId來做為預設InstanceName
-        var instanceNameChannelId = GetInstanceName(channelId);
+        var instanceNameChannelId = GetInstanceName(video.ChannelId);
         var instanceNameVideoId = GetInstanceName(videoId);
 
-        var instance = await GetInstanceByKeywordAsync(channelId, cancellation);
+        var instance = await GetInstanceByKeywordAsync(video.ChannelId, cancellation);
         if (null != instance && instance.HasData)
         {
             return instance.Data.ProvisioningState switch
             {
                 // 啟動舊的預設Instance
                 "Succeeded" or "Failed" or "Stopped" => await StartOldJob(instance: instance,
-                                                                          channelId: channelId,
-                                                                          videoId: videoId,
+                                                                          video: video,
                                                                           useCookiesFile: useCookiesFile,
                                                                           cancellation: cancellation),
                 // 啟動新的Instance
                 _ => await CreateNewJobAsync(id: videoId,
                                              instanceName: instanceNameVideoId,
-                                             channelId: channelId,
+                                             video: video,
                                              useCookiesFile: useCookiesFile,
                                              cancellation: cancellation),
             };
@@ -67,7 +68,7 @@ public abstract class ACIServiceBase : IJobServiceBase
             // 啟動新的預設Instance
             return await CreateNewJobAsync(id: videoId,
                                            instanceName: instanceNameChannelId,
-                                           channelId: channelId,
+                                           video: video,
                                            useCookiesFile: useCookiesFile,
                                            cancellation: cancellation);
         }
@@ -96,7 +97,7 @@ public abstract class ACIServiceBase : IJobServiceBase
     // Must be override.
     protected abstract Task<ArmOperation<ArmDeploymentResource>> CreateNewJobAsync(string id,
                                                                                    string instanceName,
-                                                                                   string channelId,
+                                                                                   Video video,
                                                                                    bool useCookiesFile, CancellationToken cancellation);
 
     protected async Task<GenericResource?> GetInstanceByKeywordAsync(string keyword, CancellationToken cancellation = default)
@@ -111,24 +112,23 @@ public abstract class ACIServiceBase : IJobServiceBase
     }
 
     protected string GetInstanceName(string videoId)
-        => (DownloaderName + ACIService.GetInstanceName(videoId)).ToLower();
+        => (DownloaderName + NameHelper.GetInstanceName(videoId)).ToLower();
 
     protected async Task<dynamic> StartOldJob(GenericResource instance,
-                                              string channelId,
-                                              string videoId,
+                                              Video video,
                                               string? newInstanceName = null,
                                               int retry = 0,
                                               bool useCookiesFile = false,
                                               CancellationToken cancellation = default)
     {
-        newInstanceName ??= GetInstanceName(channelId);
+        newInstanceName ??= GetInstanceName(video.ChannelId);
 
         if (retry > 3)
         {
-            _logger.LogError("Retry too many times for {videoId} {ACIName}, create new instance.", videoId, instance.Id);
-            return await CreateNewJobAsync(id: videoId,
+            _logger.LogError("Retry too many times for {videoId} {ACIName}, create new instance.", video.id, instance.Id);
+            return await CreateNewJobAsync(id: video.id,
                                            instanceName: newInstanceName,
-                                           channelId: channelId,
+                                           video: video,
                                            useCookiesFile: useCookiesFile,
                                            cancellation: cancellation);
         }
@@ -142,8 +142,7 @@ public abstract class ACIServiceBase : IJobServiceBase
         {
             _logger.LogWarning(e, "Start ACI {ACIName} failed, retry {retry}", instance.Id, ++retry);
             return await StartOldJob(instance: instance,
-                                     channelId: channelId,
-                                     videoId: videoId,
+                                     video: video,
                                      newInstanceName: newInstanceName,
                                      retry: retry,
                                      useCookiesFile: useCookiesFile,

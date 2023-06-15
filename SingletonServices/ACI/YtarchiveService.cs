@@ -1,5 +1,7 @@
 ﻿using Azure.ResourceManager;
 using Azure.ResourceManager.Resources;
+using LivestreamRecorder.DB.Models;
+using LivestreamRecorderService.Helper;
 using LivestreamRecorderService.Interfaces.Job;
 using LivestreamRecorderService.Models.Options;
 using Microsoft.Extensions.Options;
@@ -11,7 +13,7 @@ public class YtarchiveService : ACIServiceBase, IYtarchiveService
     private readonly ILogger<YtarchiveService> _logger;
     private readonly AzureOption _azureOption;
 
-    public override string DownloaderName => "ytarchive";
+    public override string DownloaderName => IYtarchiveService.downloaderName;
 
     public YtarchiveService(
         ILogger<YtarchiveService> logger,
@@ -23,9 +25,9 @@ public class YtarchiveService : ACIServiceBase, IYtarchiveService
     }
 
     public override async Task<dynamic> InitJobAsync(string videoId,
-                                                           string channelId,
-                                                           bool useCookiesFile = false,
-                                                           CancellationToken cancellation = default)
+                                                     Video video,
+                                                     bool useCookiesFile = false,
+                                                     CancellationToken cancellation = default)
     {
         if (null != await GetInstanceByKeywordAsync(videoId, cancellation))
         {
@@ -35,17 +37,17 @@ public class YtarchiveService : ACIServiceBase, IYtarchiveService
         else
         {
             var url = $"https://youtu.be/{videoId}";
-            return CreateNewJobAsync(id: url,
+            return CreateNewJobAsync(url: url,
                                      instanceName: GetInstanceName(url),
-                                     channelId: channelId,
+                                     video: video,
                                      useCookiesFile: useCookiesFile,
                                      cancellation: cancellation);
         }
     }
 
-    protected override Task<ArmOperation<ArmDeploymentResource>> CreateNewJobAsync(string id,
+    protected override Task<ArmOperation<ArmDeploymentResource>> CreateNewJobAsync(string url,
                                                                                    string instanceName,
-                                                                                   string channelId,
+                                                                                   Video video,
                                                                                    bool useCookiesFile,
                                                                                    CancellationToken cancellation)
     {
@@ -69,14 +71,14 @@ public class YtarchiveService : ACIServiceBase, IYtarchiveService
                     "sh", "-c",
                     // It is possible for Youtube to use "-" at the beginning of an id, which can cause errors when using the id as a file name.
                     // Therefore, we add "_" before the file name to avoid such issues.
-                    $"/ytarchive --add-metadata --merge --retry-frags 30 --thumbnail -o '_%(id)s' -c /fileshare/cookies/{channelId}.txt '{id}' best && mv *.mp4 /fileshare/"
+                    $"/ytarchive --add-metadata --merge --retry-frags 30 --thumbnail -o '_{NameHelper.GetFileName(video, IYtarchiveService.downloaderName).Replace(".mp4", "")}' -c /fileshare/cookies/{video.ChannelId}.txt '{url}' best && mv *.mp4 /fileshare/"
                 }
                 : new string[] {
                     "/usr/bin/dumb-init", "--",
                     "sh", "-c",
                     // It is possible for Youtube to use "-" at the beginning of an id, which can cause errors when using the id as a file name.
                     // Therefore, we add "_" before the file name to avoid such issues.
-                    $"/ytarchive --add-metadata --merge --retry-frags 30 --thumbnail -o '_%(id)s' '{id}' best && mv *.mp4 /fileshare/"
+                    $"/ytarchive --add-metadata --merge --retry-frags 30 --thumbnail -o '_{NameHelper.GetFileName(video, IYtarchiveService.downloaderName).Replace(".mp4", "")}' '{url}' best && mv *.mp4 /fileshare/"
                 };
 
             return CreateInstanceAsync(

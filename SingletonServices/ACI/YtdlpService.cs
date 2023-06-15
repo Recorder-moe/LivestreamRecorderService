@@ -1,5 +1,7 @@
 ﻿using Azure.ResourceManager;
 using Azure.ResourceManager.Resources;
+using LivestreamRecorder.DB.Models;
+using LivestreamRecorderService.Helper;
 using LivestreamRecorderService.Interfaces.Job;
 using LivestreamRecorderService.Models.Options;
 using Microsoft.Extensions.Options;
@@ -11,7 +13,7 @@ public class YtdlpService : ACIServiceBase, IYtdlpService
     private readonly AzureOption _azureOption;
     private readonly ILogger<YtdlpService> _logger;
 
-    public override string DownloaderName => "ytdlp";
+    public override string DownloaderName => IYtdlpService.downloaderName;
 
     public YtdlpService(
         ILogger<YtdlpService> logger,
@@ -23,18 +25,18 @@ public class YtdlpService : ACIServiceBase, IYtdlpService
     }
 
     public override async Task<dynamic> InitJobAsync(string url,
-                                                  string channelId,
-                                                  bool useCookiesFile = false,
-                                                  CancellationToken cancellation = default)
-        => await CreateNewJobAsync(id: url,
+                                                     Video video,
+                                                     bool useCookiesFile = false,
+                                                     CancellationToken cancellation = default)
+        => await CreateNewJobAsync(url: url,
                                    instanceName: GetInstanceName(url),
-                                   channelId: channelId,
+                                   video: video,
                                    useCookiesFile: useCookiesFile,
                                    cancellation: cancellation);
 
-    protected override Task<ArmOperation<ArmDeploymentResource>> CreateNewJobAsync(string id,
+    protected override Task<ArmOperation<ArmDeploymentResource>> CreateNewJobAsync(string url,
                                                                                    string instanceName,
-                                                                                   string channelId,
+                                                                                   Video video,
                                                                                    bool useCookiesFile = false,
                                                                                    CancellationToken cancellation = default)
     {
@@ -56,25 +58,25 @@ public class YtdlpService : ACIServiceBase, IYtdlpService
                 {
                     "dumb-init", "--",
                     "sh", "-c",
-                    $"yt-dlp --ignore-config --retries 30 --concurrent-fragments 16 --merge-output-format mp4 -S '+codec:h264' --embed-thumbnail --embed-metadata --no-part --cookies /fileshare/cookies/{channelId}.txt -o '%(id)s.%(ext)s' '{id}' && mv *.mp4 /fileshare/"
+                    $"yt-dlp --ignore-config --retries 30 --concurrent-fragments 16 --merge-output-format mp4 -S '+codec:h264' --embed-thumbnail --embed-metadata --no-part --cookies /sharedvolume/cookies/{video.ChannelId}.txt -o '{NameHelper.GetFileName(video, video.Source)}' '{url}' && mv *.mp4 /sharedvolume/"
                 }
                 : new string[]
                 {
                     "dumb-init", "--",
                     "sh", "-c",
-                    $"yt-dlp --ignore-config --retries 30 --concurrent-fragments 16 --merge-output-format mp4 -S '+codec:h264' --embed-thumbnail --embed-metadata --no-part -o '%(id)s.%(ext)s' '{id}' && mv *.mp4 /fileshare/"
+                    $"yt-dlp --ignore-config --retries 30 --concurrent-fragments 16 --merge-output-format mp4 -S '+codec:h264' --embed-thumbnail --embed-metadata --no-part -o '{NameHelper.GetFileName(video, video.Source)}' '{url}' && mv *.mp4 /sharedvolume/"
                 };
 
             // Workground for twitcasting ERROR: Initialization fragment found after media fragments, unable to download
             // https://github.com/yt-dlp/yt-dlp/issues/5497
-            if (id.Contains("twitcasting.tv"))
+            if (url.Contains("twitcasting.tv"))
             {
                 command[4] = command[4].Replace("--ignore-config --retries 30", "--ignore-config --retries 30 --downloader ffmpeg");
             }
 
             // It is possible for Youtube to use "-" at the beginning of an id, which can cause errors when using the id as a file name.
             // Therefore, we add "_" before the file name to avoid such issues.
-            if (id.Contains("youtu"))
+            if (url.Contains("youtu"))
             {
                 command[4] = command[4].Replace("-o '%(id)s.%(ext)s'", "-o '_%(id)s.%(ext)s'");
             }
