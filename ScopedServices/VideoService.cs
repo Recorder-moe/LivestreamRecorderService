@@ -139,5 +139,10 @@ public class VideoService
             .ToList()
             .ForEach(p => UpdateVideoStatus(p, VideoStatus.Recording));
 
-    public void DeleteVideo(Video video) => _videoRepository.Delete(video);
+    public void DeleteVideo(Video video)
+    {
+        _videoRepository.Delete(video);
+        _unitOfWork_Public.Commit();
+        _logger.LogDebug("Delete Video {videoId}", video.id);
+    }
 }
