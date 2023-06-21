@@ -1,8 +1,12 @@
 ﻿using Azure.Identity;
 using Azure.ResourceManager;
 using LivestreamRecorderService.Interfaces.Job;
+using LivestreamRecorderService.Interfaces.Job.Downloader;
+using LivestreamRecorderService.Interfaces.Job.Uploader;
 using LivestreamRecorderService.Models.Options;
 using LivestreamRecorderService.SingletonServices.ACI;
+using LivestreamRecorderService.SingletonServices.ACI.Downloader;
+using LivestreamRecorderService.SingletonServices.ACI.Uploader;
 using Microsoft.Extensions.Azure;
 using Microsoft.Extensions.Options;
 using Serilog;
@@ -36,6 +40,8 @@ namespace LivestreamRecorderService.DependencyInjection
                 services.AddSingleton<IStreamlinkService, StreamlinkService>();
                 services.AddSingleton<ITwitcastingRecorderService, TwitcastingRecorderService>();
                 services.AddSingleton<IFC2LiveDLService, FC2LiveDLService>();
+
+                services.AddSingleton<IAzureUploaderService, AzureUploaderService>();
 
                 return services;
             }

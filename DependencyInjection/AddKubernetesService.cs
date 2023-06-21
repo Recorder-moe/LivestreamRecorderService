@@ -1,8 +1,12 @@
 ﻿using k8s;
 using LivestreamRecorder.DB.Enum;
 using LivestreamRecorderService.Interfaces.Job;
+using LivestreamRecorderService.Interfaces.Job.Downloader;
+using LivestreamRecorderService.Interfaces.Job.Uploader;
 using LivestreamRecorderService.Models.Options;
 using LivestreamRecorderService.SingletonServices.Kubernetes;
+using LivestreamRecorderService.SingletonServices.Kubernetes.Downloader;
+using LivestreamRecorderService.SingletonServices.Kubernetes.Uploader;
 using Microsoft.Extensions.Options;
 using Serilog;
 using System.Configuration;
@@ -51,6 +55,8 @@ namespace LivestreamRecorderService.DependencyInjection
                 services.AddSingleton<IStreamlinkService, StreamlinkService>();
                 services.AddSingleton<ITwitcastingRecorderService, TwitcastingRecorderService>();
                 services.AddSingleton<IFC2LiveDLService, FC2LiveDLService>();
+
+                services.AddSingleton<IAzureUploaderService, AzureUploaderService>();
 
                 return services;
             }

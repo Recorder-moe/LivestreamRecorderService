@@ -28,15 +28,33 @@ public abstract class ACIServiceBase : IJobServiceBase
         _resourceGroupName = options.Value.ContainerInstance!.ResourceGroupName;
     }
 
-    /// <summary>
-    /// [a-z0-9]([-a-z0-9]*[a-z0-9])?
-    /// </summary>
-    public abstract string DownloaderName { get; }
+    public abstract string Name { get; }
 
-    public virtual async Task<dynamic> InitJobAsync(string videoId,
-                                                    Video video,
-                                                    bool useCookiesFile = false,
-                                                    CancellationToken cancellation = default)
+    public virtual async Task InitJobAsync(string videoId,
+                                           Video video,
+                                           bool useCookiesFile = false,
+                                           CancellationToken cancellation = default)
+    {
+        var jobName = GetInstanceName(videoId);
+        var job = await GetJobByKeywordAsync(jobName, cancellation);
+        if (null != job && !job.HasData)
+        {
+            _logger.LogWarning("An active job already exists! Fixed {videoId} status mismatch.", videoId);
+            return;
+        }
+
+        _logger.LogInformation("Start new ACI job for {videoId} {name}.", videoId, jobName);
+        await CreateNewJobAsync(id: videoId,
+                                jobName: jobName,
+                                video: video,
+                                useCookiesFile: useCookiesFile,
+                                cancellation: cancellation);
+    }
+
+    protected async Task InitJobAsyncWithChannelName(string videoId,
+                                                     Video video,
+                                                     bool useCookiesFile = false,
+                                                     CancellationToken cancellation = default)
     {
         // ACI部署上需要時間，啟動已存在的Instance較省時
         // 同時需注意 BUG#97 的狀況，在「已啟動」的時候部署新的Instance，在「已停止」時直接啟動舊的Instance
@@ -44,44 +62,59 @@ public abstract class ACIServiceBase : IJobServiceBase
         var instanceNameChannelId = GetInstanceName(video.ChannelId);
         var instanceNameVideoId = GetInstanceName(videoId);
 
-        var instance = await GetInstanceByKeywordAsync(video.ChannelId, cancellation);
-        if (null != instance && instance.HasData)
+        var job = await GetJobByKeywordAsync(video.ChannelId, cancellation);
+        if (null == job || !job.HasData)
         {
-            return instance.Data.ProvisioningState switch
-            {
-                // 啟動舊的預設Instance
-                "Succeeded" or "Failed" or "Stopped" => await StartOldJob(instance: instance,
-                                                                          video: video,
-                                                                          useCookiesFile: useCookiesFile,
-                                                                          cancellation: cancellation),
-                // 啟動新的Instance
-                _ => await CreateNewJobAsync(id: videoId,
-                                             instanceName: instanceNameVideoId,
-                                             video: video,
-                                             useCookiesFile: useCookiesFile,
-                                             cancellation: cancellation),
-            };
+            _logger.LogWarning("Does not get ACI instance for {videoId} {name}. A new instance will now be created.", videoId, instanceNameChannelId);
+            // 啟動新的Channel Instance
+            await CreateNewJobAsync(id: videoId,
+                                    jobName: instanceNameChannelId,
+                                    video: video,
+                                    useCookiesFile: useCookiesFile,
+                                    cancellation: cancellation);
+            return;
         }
-        else
+
+        switch (job.Data.ProvisioningState)
         {
-            _logger.LogWarning("Failed to get ACI instance for {videoId} {name}. A new instance will now be created.", videoId, instanceNameChannelId);
-            // 啟動新的預設Instance
-            return await CreateNewJobAsync(id: videoId,
-                                           instanceName: instanceNameChannelId,
-                                           video: video,
-                                           useCookiesFile: useCookiesFile,
-                                           cancellation: cancellation);
-        }
+            case "Succeeded":
+            case "Failed":
+            case "Stopped":
+                // 啟動舊的Channel Instance
+                await StartOldJob(job: job,
+                                  video: video,
+                                  useCookiesFile: useCookiesFile,
+                                  cancellation: cancellation);
+                break;
+
+            default:
+                // 啟動新的Video Instance
+                await CreateNewJobAsync(id: string.Empty,
+                                        jobName: instanceNameVideoId,
+                                        video: video,
+                                        useCookiesFile: useCookiesFile,
+                                        cancellation: cancellation);
+                break;
+        };
     }
 
-    protected async Task<ArmOperation<ArmDeploymentResource>> CreateInstanceAsync(
-        string template,
+    // Must be override.
+    protected abstract Task<ArmOperation<ArmDeploymentResource>> CreateNewJobAsync(
+        string id,
+        string jobName,
+        Video video,
+        bool useCookiesFile,
+        CancellationToken cancellation);
+
+    protected async Task<ArmOperation<ArmDeploymentResource>> CreateResourceAsync(
         dynamic parameters,
         string deploymentName,
+        Dictionary<string, string>? environment = null,
         CancellationToken cancellation = default)
     {
         var resourceGroupResource = await GetResourceGroupAsync(cancellation);
         var armDeploymentCollection = resourceGroupResource.GetArmDeployments();
+        var template = "ACI.json";
         var templateContent = (await File.ReadAllTextAsync(Path.Combine("ARMTemplate", template), cancellation)).TrimEnd();
         var deploymentContent = new ArmDeploymentContent(new ArmDeploymentProperties(ArmDeploymentMode.Incremental)
         {
@@ -94,13 +127,7 @@ public abstract class ACIServiceBase : IJobServiceBase
                                                                  cancellationToken: cancellation);
     }
 
-    // Must be override.
-    protected abstract Task<ArmOperation<ArmDeploymentResource>> CreateNewJobAsync(string id,
-                                                                                   string instanceName,
-                                                                                   Video video,
-                                                                                   bool useCookiesFile, CancellationToken cancellation);
-
-    protected async Task<GenericResource?> GetInstanceByKeywordAsync(string keyword, CancellationToken cancellation = default)
+    protected async Task<GenericResource?> GetJobByKeywordAsync(string keyword, CancellationToken cancellation = default)
     {
         var resourceGroupResource = await GetResourceGroupAsync(cancellation);
         return resourceGroupResource.GetGenericResources(
@@ -111,42 +138,39 @@ public abstract class ACIServiceBase : IJobServiceBase
                                     .FirstOrDefault();
     }
 
-    protected string GetInstanceName(string videoId)
-        => (DownloaderName + NameHelper.GetInstanceName(videoId)).ToLower();
+    public string GetInstanceName(string videoId)
+        => (Name + NameHelper.GetInstanceName(videoId)).ToLower();
 
-    protected async Task<dynamic> StartOldJob(GenericResource instance,
-                                              Video video,
-                                              string? newInstanceName = null,
-                                              int retry = 0,
-                                              bool useCookiesFile = false,
-                                              CancellationToken cancellation = default)
+    private async Task StartOldJob(GenericResource job,
+                                   Video video,
+                                   int retry = 0,
+                                   bool useCookiesFile = false,
+                                   CancellationToken cancellation = default)
     {
-        newInstanceName ??= GetInstanceName(video.ChannelId);
-
         if (retry > 3)
         {
-            _logger.LogError("Retry too many times for {videoId} {ACIName}, create new instance.", video.id, instance.Id);
-            return await CreateNewJobAsync(id: video.id,
-                                           instanceName: newInstanceName,
-                                           video: video,
-                                           useCookiesFile: useCookiesFile,
-                                           cancellation: cancellation);
+            _logger.LogError("Retry too many times for {videoId} {ACIName}, create new resource.", video.id, job.Id);
+            await CreateNewJobAsync(id: video.id,
+                                    jobName: GetInstanceName(video.id),
+                                    video: video,
+                                    useCookiesFile: useCookiesFile,
+                                    cancellation: cancellation);
+            return;
         }
 
         try
         {
-            _logger.LogInformation("Detect ACI {ACIName} ProvisioningState as {ProvisioningState}", instance.Id, instance.Data.ProvisioningState);
-            return await _armClient.GetContainerGroupResource(instance.Id).StartAsync(WaitUntil.Started, cancellation);
+            _logger.LogInformation("Detect ACI {ACIName} ProvisioningState as {ProvisioningState}", job.Id, job.Data.ProvisioningState);
+            await _armClient.GetContainerGroupResource(job.Id).StartAsync(WaitUntil.Started, cancellation);
         }
         catch (RequestFailedException e)
         {
-            _logger.LogWarning(e, "Start ACI {ACIName} failed, retry {retry}", instance.Id, ++retry);
-            return await StartOldJob(instance: instance,
-                                     video: video,
-                                     newInstanceName: newInstanceName,
-                                     retry: retry,
-                                     useCookiesFile: useCookiesFile,
-                                     cancellation: cancellation);
+            _logger.LogWarning(e, "Start ACI {ACIName} failed, retry {retry}", job.Id, ++retry);
+            await StartOldJob(job: job,
+                              video: video,
+                              retry: retry,
+                              useCookiesFile: useCookiesFile,
+                              cancellation: cancellation);
         }
     }
 

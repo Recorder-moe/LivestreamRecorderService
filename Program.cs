@@ -86,19 +86,31 @@ try
         switch (serviceOptions.SharedVolumeService)
         {
             case ServiceName.AzureFileShare:
-                services.AddAzureFileShareService();
-                break;
-            case ServiceName.NFS:
-                if (string.IsNullOrWhiteSpace(nfsOption.Server)
-                    || string.IsNullOrWhiteSpace(nfsOption.Path))
+                if (null == azureOptions.FileShare
+                    || string.IsNullOrEmpty(azureOptions.FileShare.StorageAccountName)
+                    || string.IsNullOrEmpty(azureOptions.FileShare.StorageAccountKey)
+                    || string.IsNullOrEmpty(azureOptions.FileShare.ShareName))
                 {
-                    Log.Fatal("NFS server and path must be specified.");
-                    throw new ConfigurationErrorsException("NFS server and path must be specified.");
+                    Log.Fatal("AzureFileShare StorageAccountName, StorageAccountKey, ShareName must be specified.");
+                    throw new ConfigurationErrorsException("AzureFileShare StorageAccountName, StorageAccountKey, ShareName must be specified.");
                 }
                 break;
+            case ServiceName.DockerVolume:
+                Log.Fatal("Currently only AzureFileShare is supported.");
+                throw new NotImplementedException("Currently only AzureFileShare is supported.");
+            case ServiceName.NFS:
+                goto case ServiceName.DockerVolume;
+
+                //if (string.IsNullOrWhiteSpace(nfsOption.Server)
+                //    || string.IsNullOrWhiteSpace(nfsOption.Path))
+                //{
+                //    Log.Fatal("NFS server and path must be specified.");
+                //    throw new ConfigurationErrorsException("NFS server and path must be specified.");
+                //}
+                //break;
             default:
-                Log.Fatal("Shared Volume Serivce in limited to Azure File Share or NFS.");
-                throw new ConfigurationErrorsException("Shared Volume Serivce in limited to Azure File Share or NFS.");
+                Log.Fatal("Shared Volume Serivce is limited to Azure File Share, DockerVolume or NFS.");
+                throw new ConfigurationErrorsException("Shared Volume Serivce is limited to Azure File Share, DockerVolume or NFS.");
         }
 
         switch (serviceOptions.StorageService)
@@ -111,17 +123,7 @@ try
                 throw new NotImplementedException("Currently only Azure Blob Storage is supported.");
         }
 
-        // AzureFileShares2BlobContainers
-        if (serviceOptions.SharedVolumeService == ServiceName.AzureFileShare
-            && serviceOptions.StorageService == ServiceName.AzureBlobStorage
-            && !string.IsNullOrEmpty(azureOptions.AzureFileShares2BlobContainers))
         {
-            services.AddHttpClient("AzureFileShares2BlobContainers", client =>
-            {
-                client.BaseAddress = new Uri(azureOptions.AzureFileShares2BlobContainers);
-                // Set this bigger than Azure Function timeout (10min)
-                client.Timeout = TimeSpan.FromMinutes(11);
-            });
         }
 
         services.AddDiscordService(configuration);

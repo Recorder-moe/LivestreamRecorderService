@@ -1,17 +1,17 @@
 ﻿using k8s.Models;
 using LivestreamRecorder.DB.Models;
 using LivestreamRecorderService.Helper;
-using LivestreamRecorderService.Interfaces.Job;
+using LivestreamRecorderService.Interfaces.Job.Downloader;
 using LivestreamRecorderService.Models.Options;
 using Microsoft.Extensions.Options;
 
-namespace LivestreamRecorderService.SingletonServices.Kubernetes;
+namespace LivestreamRecorderService.SingletonServices.Kubernetes.Downloader;
 
 public class TwitcastingRecorderService : KubernetesServiceBase, ITwitcastingRecorderService
 {
     private readonly ILogger<TwitcastingRecorderService> _logger;
 
-    public override string DownloaderName => ITwitcastingRecorderService.downloaderName;
+    public override string Name => ITwitcastingRecorderService.name;
 
     public TwitcastingRecorderService(
         ILogger<TwitcastingRecorderService> logger,
@@ -59,7 +59,7 @@ public class TwitcastingRecorderService : KubernetesServiceBase, ITwitcastingRec
                             value = new string[] {
                                 "/usr/bin/dumb-init", "--",
                                 "/bin/bash", "-c",
-                                $"/bin/bash record_twitcast.sh {video.ChannelId} once && mv /download/{NameHelper.GetFileName(video, ITwitcastingRecorderService.downloaderName)} /fileshare/{NameHelper.GetFileName(video, ITwitcastingRecorderService.downloaderName)}"
+                                $"/bin/bash record_twitcast.sh {video.ChannelId} once && mv /download/{NameHelper.GetFileName(video, ITwitcastingRecorderService.name)} /fileshare/{NameHelper.GetFileName(video, ITwitcastingRecorderService.name)}"
                             }
                         },
                     },

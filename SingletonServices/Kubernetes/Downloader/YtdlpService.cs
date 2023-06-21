@@ -1,17 +1,17 @@
 ﻿using k8s.Models;
 using LivestreamRecorder.DB.Models;
 using LivestreamRecorderService.Helper;
-using LivestreamRecorderService.Interfaces.Job;
+using LivestreamRecorderService.Interfaces.Job.Downloader;
 using LivestreamRecorderService.Models.Options;
 using Microsoft.Extensions.Options;
 
-namespace LivestreamRecorderService.SingletonServices.Kubernetes;
+namespace LivestreamRecorderService.SingletonServices.Kubernetes.Downloader;
 
 public class YtdlpService : KubernetesServiceBase, IYtdlpService
 {
     private readonly ILogger<YtdlpService> _logger;
 
-    public override string DownloaderName => IYtdlpService.downloaderName;
+    public override string Name => IYtdlpService.name;
 
     public YtdlpService(
         ILogger<YtdlpService> logger,
@@ -48,13 +48,13 @@ public class YtdlpService : KubernetesServiceBase, IYtdlpService
                 {
                     "dumb-init", "--",
                     "sh", "-c",
-                    $"yt-dlp --ignore-config --retries 30 --concurrent-fragments 16 --merge-output-format mp4 -S '+codec:h264' --embed-thumbnail --embed-metadata --no-part --cookies /sharedvolume/cookies/{video.ChannelId}.txt -o '{NameHelper.GetFileName(video, IYtdlpService.downloaderName)}' '{url}' && mv *.mp4 /sharedvolume/"
+                    $"yt-dlp --ignore-config --retries 30 --concurrent-fragments 16 --merge-output-format mp4 -S '+codec:h264' --embed-thumbnail --embed-metadata --no-part --cookies /sharedvolume/cookies/{video.ChannelId}.txt -o '{NameHelper.GetFileName(video, IYtdlpService.name)}' '{url}' && mv *.mp4 /sharedvolume/"
                 }
                 : new string[]
                 {
                     "dumb-init", "--",
                     "sh", "-c",
-                    $"yt-dlp --ignore-config --retries 30 --concurrent-fragments 16 --merge-output-format mp4 -S '+codec:h264' --embed-thumbnail --embed-metadata --no-part -o '{NameHelper.GetFileName(video, IYtdlpService.downloaderName)}' '{url}' && mv *.mp4 /sharedvolume/"
+                    $"yt-dlp --ignore-config --retries 30 --concurrent-fragments 16 --merge-output-format mp4 -S '+codec:h264' --embed-thumbnail --embed-metadata --no-part -o '{NameHelper.GetFileName(video, IYtdlpService.name)}' '{url}' && mv *.mp4 /sharedvolume/"
                 };
 
             // Workground for twitcasting ERROR: Initialization fragment found after media fragments, unable to download

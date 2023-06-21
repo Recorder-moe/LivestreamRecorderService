@@ -2,21 +2,21 @@
 using Azure.ResourceManager.Resources;
 using LivestreamRecorder.DB.Models;
 using LivestreamRecorderService.Helper;
-using LivestreamRecorderService.Interfaces.Job;
+using LivestreamRecorderService.Interfaces.Job.Downloader;
 using LivestreamRecorderService.Models.Options;
 using Microsoft.Extensions.Options;
 
-namespace LivestreamRecorderService.SingletonServices.ACI;
+namespace LivestreamRecorderService.SingletonServices.ACI.Downloader;
 
-public class TwitcastingRecorderService : ACIServiceBase, ITwitcastingRecorderService
+public class StreamlinkService : ACIServiceBase, IStreamlinkService
 {
     private readonly AzureOption _azureOption;
-    private readonly ILogger<TwitcastingRecorderService> _logger;
+    private readonly ILogger<StreamlinkService> _logger;
 
-    public override string DownloaderName => ITwitcastingRecorderService.downloaderName;
+    public override string Name => IStreamlinkService.name;
 
-    public TwitcastingRecorderService(
-        ILogger<TwitcastingRecorderService> logger,
+    public StreamlinkService(
+        ILogger<StreamlinkService> logger,
         ArmClient armClient,
         IOptions<AzureOption> options) : base(logger, armClient, options)
     {
@@ -24,27 +24,36 @@ public class TwitcastingRecorderService : ACIServiceBase, ITwitcastingRecorderSe
         _logger = logger;
     }
 
-    protected override Task<ArmOperation<ArmDeploymentResource>> CreateNewJobAsync(string id,
-                                                                                   string instanceName,
-                                                                                   Video video,
-                                                                                   bool useCookiesFile = false,
-                                                                                   CancellationToken cancellation = default)
+    public override Task InitJobAsync(string videoId,
+                                      Video video,
+                                      bool useCookiesFile = false,
+                                      CancellationToken cancellation = default)
+        => InitJobAsyncWithChannelName(videoId: videoId,
+                                       video: video,
+                                       useCookiesFile: useCookiesFile,
+                                       cancellation: cancellation);
+
+    protected override Task<ArmOperation<ArmDeploymentResource>> CreateNewJobAsync(
+        string id,
+        string instanceName,
+        Video video,
+        bool useCookiesFile = false,
+        CancellationToken cancellation = default)
     {
         try
         {
-            return doWithImage("ghcr.io/recorder-moe/twitcasting-recorder:latest");
+            return doWithImage("ghcr.io/recorder-moe/streamlink:5.3.1");
         }
         catch (Exception)
         {
             // Use DockerHub as fallback
             _logger.LogWarning("Failed once, try docker hub as fallback.");
-            return doWithImage("recordermoe/twitcasting-recorder:latest");
+            return doWithImage("recordermoe/streamlink:5.3.1");
         }
 
         Task<ArmOperation<ArmDeploymentResource>> doWithImage(string imageName)
         {
-            return CreateInstanceAsync(
-                    template: "ACI.json",
+            return CreateResourceAsync(
                     parameters: new
                     {
                         dockerImageName = new
@@ -58,9 +67,8 @@ public class TwitcastingRecorderService : ACIServiceBase, ITwitcastingRecorderSe
                         commandOverrideArray = new
                         {
                             value = new string[] {
-                                "/usr/bin/dumb-init", "--",
-                                "/bin/bash", "-c",
-                                $"/bin/bash record_twitcast.sh {video.ChannelId} once && mv /download/{NameHelper.GetFileName(video, ITwitcastingRecorderService.downloaderName)} /fileshare/{NameHelper.GetFileName(video, ITwitcastingRecorderService.downloaderName)}"
+                                "/bin/sh", "-c",
+                                $"/usr/local/bin/streamlink --twitch-disable-ads -o '/downloads/{NameHelper.GetFileName(video, IStreamlinkService.name)}' -f 'twitch.tv/{video.ChannelId}' best && cd /downloads && for file in *.mp4; do ffmpeg -i \"$file\" -map 0:v:0 -map 0:a:0 -c copy -movflags +faststart 'temp.mp4' && mv 'temp.mp4' \"/fileshare/$file\"; done"
                             }
                         },
                         storageAccountName = new

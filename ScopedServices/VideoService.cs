@@ -2,14 +2,11 @@
 using LivestreamRecorder.DB.Enum;
 using LivestreamRecorder.DB.Interfaces;
 using LivestreamRecorder.DB.Models;
-using LivestreamRecorderService.Models;
+using LivestreamRecorderService.Interfaces.Job;
+using LivestreamRecorderService.Interfaces.Job.Uploader;
 using LivestreamRecorderService.Models.Options;
 using LivestreamRecorderService.SingletonServices;
 using Microsoft.Extensions.Options;
-using Newtonsoft.Json;
-using System.Net;
-using System.Web;
-using FileInfo = LivestreamRecorderService.Models.FileInfo;
 
 namespace LivestreamRecorderService.ScopedServices;
 
@@ -20,8 +17,12 @@ public class VideoService
     private readonly IVideoRepository _videoRepository;
     private readonly DiscordService _discordService;
     private readonly IHttpClientFactory _httpFactory;
+    private readonly IAzureUploaderService _azureUploaderService;
+    private readonly IJobService _jobService;
     private readonly AzureOption _azureOptions;
     private readonly ServiceOption _serviceOptions;
+
+    private const int _timeoutMinutes = 15;
 
     public VideoService(
         ILogger<VideoService> logger,
@@ -30,13 +31,17 @@ public class VideoService
         DiscordService discordService,
         IHttpClientFactory httpFactory,
         IOptions<AzureOption> azureOptions,
-        IOptions<ServiceOption> serviceOptions)
+        IOptions<ServiceOption> serviceOptions,
+        IAzureUploaderService azureUploaderService,
+        IJobService jobService)
     {
         _logger = logger;
         _unitOfWork_Public = unitOfWork_Public;
         _videoRepository = videoRepository;
         _discordService = discordService;
         _httpFactory = httpFactory;
+        _azureUploaderService = azureUploaderService;
+        _jobService = jobService;
         _azureOptions = azureOptions.Value;
         _serviceOptions = serviceOptions.Value;
     }
@@ -81,59 +86,62 @@ public class VideoService
         _unitOfWork_Public.Commit();
     }
 
-    public async Task TransferVideoFromPVToStorageAsync(Video video, FileInfo file, CancellationToken cancellation = default)
+    public async Task TransferVideoFromShareVolumeToStorageAsync(Video video, CancellationToken cancellation = default)
     {
         try
         {
             UpdateVideoStatus(video, VideoStatus.Uploading);
 
-            if (_serviceOptions.SharedVolumeService == ServiceName.AzureFileShare
-                && _serviceOptions.StorageService == ServiceName.AzureBlobStorage
-                && !string.IsNullOrEmpty(_azureOptions.AzureFileShares2BlobContainers))
+            string instanceName;
+            switch (_serviceOptions.StorageService)
             {
-                _logger.LogInformation("Call Azure Function to transfer video to blob storage: {videoId}", video.id);
-                using var client = _httpFactory.CreateClient("AzureFileShares2BlobContainers");
+                case ServiceName.AzureBlobStorage:
+                    instanceName = _azureUploaderService.GetInstanceName(video.id);
+                    await _azureUploaderService.InitJobAsync(url: video.id,
+                                                             video: video,
+                                                             cancellation: cancellation);
+                    break;
+                case ServiceName.S3:
+                case ServiceName.NFS:
+                    throw new NotImplementedException(nameof(TransferVideoFromShareVolumeToStorageAsync));
+                default:
+                    throw new NotSupportedException($"StorageService {_serviceOptions.StorageService} is not supported.");
+            }
 
-                // https://learn.microsoft.com/zh-tw/azure/azure-functions/durable/durable-functions-overview?tabs=csharp-inproc#async-http
-                // https://learn.microsoft.com/en-us/azure/azure-functions/durable/durable-functions-http-api#start-orchestration
-                var startResponse = await client.PostAsync("api/AzureFileShares2BlobContainers?filename=" + HttpUtility.UrlEncode(file.Name), null, cancellation);
-                startResponse.EnsureSuccessStatusCode();
-                var responseContent = await startResponse.Content.ReadAsStringAsync(cancellation);
-                var deserializedResponse = JsonConvert.DeserializeObject<AcceptedResponse>(responseContent);
+            var successfullyFinished = false;
+            var delay = 30;
+            var retry = (_timeoutMinutes * 60 / delay) - 1; // A little bit less than _timeoutMinutes
+            while (!successfullyFinished)
+            {
+                _logger.LogInformation("Video {videoId} is uploading to Storage.", video.id);
+                await Task.Delay(TimeSpan.FromSeconds(delay), cancellation);
+                successfullyFinished = await _jobService.IsJobSucceededAsync(instanceName, cancellation)
+                                       & !await _jobService.IsJobFailedAsync(instanceName, cancellation);
 
-                if (null == deserializedResponse) throw new Exception("Failed to serialize response from Durable Function start.");
+                if (successfullyFinished) break;
 
-                var statusUri = deserializedResponse.StatusQueryGetUri + "&returnInternalServerErrorOnFailure=true";
-                var statusResponse = await client.GetAsync(statusUri, cancellation);
-
-                while (statusResponse.StatusCode == HttpStatusCode.Accepted)
+                if (retry-- <= 0)
                 {
-                    await Task.Delay(TimeSpan.FromSeconds(10), cancellation);
-                    statusResponse = await client.GetAsync(statusUri, cancellation);
+                    throw new TimeoutException($"Timeout while uploading video {video.id} to storage!");
                 }
-                statusResponse.EnsureSuccessStatusCode();
+            }
 
-                _logger.LogInformation("Video {videoId} is uploaded to Azure Storage.", video.id);
-                UpdateVideoStatus(video, VideoStatus.Archived);
-                await _discordService.SendArchivedMessage(video);
-            }
-            else
-            {
-                throw new NotImplementedException(nameof(TransferVideoFromPVToStorageAsync));
-            }
+            _logger.LogInformation("Video {videoId} is uploaded to Storage.", video.id);
+            UpdateVideoStatus(video, VideoStatus.Archived);
+            await _discordService.SendArchivedMessage(video);
         }
         catch (Exception e)
         {
             UpdateVideoStatus(video, VideoStatus.Error);
-            UpdateVideoNote(video, $"Exception happened when calling Azure Function to transfer files to blob storage. Please contact admin if you see this message.");
-            _logger.LogError("Exception happened when calling Azure Function to transfer files to blob storage: {videoId}, {error}, {message}", video.id, e, e.Message);
+            UpdateVideoNote(video, $"Exception happened when uploading files to storage. Please contact admin if you see this message.");
+            _logger.LogError("Exception happened when uploading files to storage: {videoId}, {error}, {message}", video.id, e, e.Message);
         }
     }
 
     public void RollbackVideosStatusStuckAtUploading()
         => GetVideosByStatus(VideoStatus.Uploading)
             .Where(p => p.ArchivedTime.HasValue
-                        && p.ArchivedTime.Value.AddMinutes(15) < DateTime.UtcNow)
+                        && p.ArchivedTime.Value.AddMinutes(_timeoutMinutes) < DateTime.UtcNow)
             .ToList()
             .ForEach(p => UpdateVideoStatus(p, VideoStatus.Recording));
 

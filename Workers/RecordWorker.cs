@@ -1,12 +1,11 @@
 ﻿using LivestreamRecorder.DB.Enum;
 using LivestreamRecorder.DB.Models;
-using LivestreamRecorderService.Interfaces;
 using LivestreamRecorderService.Interfaces.Job;
+using LivestreamRecorderService.Interfaces.Job.Downloader;
 using LivestreamRecorderService.Models.Options;
 using LivestreamRecorderService.ScopedServices;
 using Microsoft.Extensions.Options;
 using Serilog.Context;
-using FileInfo = LivestreamRecorderService.Models.FileInfo;
 
 namespace LivestreamRecorderService.Workers;
 
@@ -19,7 +18,6 @@ public class RecordWorker : BackgroundService
     private readonly ITwitcastingRecorderService _twitcastingRecorderService;
     private readonly IStreamlinkService _streamlinkService;
     private readonly IFC2LiveDLService _fC2LiveDLService;
-    private readonly ISharedVolumeService _sharedVolumeService;
     private readonly IServiceProvider _serviceProvider;
 
     public RecordWorker(
@@ -30,7 +28,6 @@ public class RecordWorker : BackgroundService
         ITwitcastingRecorderService twitcastingRecorderService,
         IStreamlinkService streamlinkService,
         IFC2LiveDLService fC2LiveDLService,
-        ISharedVolumeService sharedVolumeService,
         IOptions<AzureOption> options,
         IServiceProvider serviceProvider)
     {
@@ -41,7 +38,6 @@ public class RecordWorker : BackgroundService
         _twitcastingRecorderService = twitcastingRecorderService;
         _streamlinkService = streamlinkService;
         _fC2LiveDLService = fC2LiveDLService;
-        _sharedVolumeService = sharedVolumeService;
         _serviceProvider = serviceProvider;
     }
 
@@ -71,10 +67,8 @@ public class RecordWorker : BackgroundService
                 videoService.RollbackVideosStatusStuckAtUploading();
 
                 var finished = await MonitorRecordingVideosAsync(videoService, stoppingToken);
-                List<Task> tasks = new();
-                foreach (var kvp in finished)
+                foreach (var video in finished)
                 {
-                    var (video, file) = (kvp.Key, kvp.Value);
                     using var ___ = LogContext.PushProperty("videoId", video.id);
 
                     try
@@ -84,19 +78,19 @@ public class RecordWorker : BackgroundService
                     catch (Exception)
                     {
                         videoService.UpdateVideoStatus(video, VideoStatus.Error);
-                        videoService.UpdateVideoNote(video, $"This recording FAILED! Please contact admin if you see this message.");
+                        videoService.UpdateVideoNote(video, $"This recording is FAILED! Please contact admin if you see this message.");
                     }
 
                     channelService.UpdateChannelLatestVideo(video);
 
-                    videoService.AddFilePropertiesToVideo(video, file);
+                    videoService.UpdateVideoArchivedTime(video);
 
-                    tasks.Add(videoService.TransferVideoFromPVToStorageAsync(video, file, stoppingToken));
+                    // Fire and forget
+                    _ = videoService.TransferVideoFromShareVolumeToStorageAsync(video, stoppingToken).ConfigureAwait(false);
 
                     // Avoid concurrency requests
-                    await Task.Delay(TimeSpan.FromSeconds(5), stoppingToken);
+                    await Task.Delay(TimeSpan.FromSeconds(10), stoppingToken);
                 }
-                await Task.WhenAll(tasks);
             }
 
             _logger.LogTrace("{Worker} ends. Sleep 5 minutes.", nameof(RecordWorker));
@@ -260,9 +254,9 @@ public class RecordWorker : BackgroundService
     /// </summary>
     /// <param name="videoService"></param>
     /// <returns>Videos that finish recording.</returns>
-    private async Task<Dictionary<Video, FileInfo>> MonitorRecordingVideosAsync(VideoService videoService, CancellationToken cancellation = default)
+    private async Task<List<Video>> MonitorRecordingVideosAsync(VideoService videoService, CancellationToken cancellation = default)
     {
-        var finishedRecordingVideos = new Dictionary<Video, FileInfo>();
+        var finishedRecordingVideos = new List<Video>();
         var videos = videoService.GetVideosByStatus(VideoStatus.Recording)
              .Concat(videoService.GetVideosByStatus(VideoStatus.Downloading));
         foreach (var video in videos)
@@ -277,13 +271,11 @@ public class RecordWorker : BackgroundService
                 "FC2" => video.ChannelId + (video.Timestamps.ActualStartTime ?? DateTime.Today).ToString("yyyy-MM-dd"),
                 _ => video.id,
             };
-            var file = await _sharedVolumeService.GetVideoFileInfoByPrefixAsync(prefix: prefix,
-                                                                        delay: TimeSpan.FromMinutes(5),
-                                                                        cancellation: cancellation);
-            if (null != file)
+            var successed = await _jobService.IsJobSucceededAsync(prefix, cancellation);
+            if (successed)
             {
                 _logger.LogInformation("Video recording finish {videoId}", video.id);
-                finishedRecordingVideos.Add(video, file.Value);
+                finishedRecordingVideos.Add(video);
             }
         }
         return finishedRecordingVideos;

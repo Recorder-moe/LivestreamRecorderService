@@ -2,21 +2,22 @@
 using Azure.ResourceManager.Resources;
 using LivestreamRecorder.DB.Models;
 using LivestreamRecorderService.Helper;
-using LivestreamRecorderService.Interfaces.Job;
+using LivestreamRecorderService.Interfaces.Job.Uploader;
 using LivestreamRecorderService.Models.Options;
+using LivestreamRecorderService.SingletonServices.ACI.Downloader;
 using Microsoft.Extensions.Options;
+using System.Configuration;
 
-namespace LivestreamRecorderService.SingletonServices.ACI;
+namespace LivestreamRecorderService.SingletonServices.ACI.Uploader;
 
-public class StreamlinkService : ACIServiceBase, IStreamlinkService
+public class AzureUploaderService : ACIServiceBase, IAzureUploaderService
 {
+    private readonly ILogger<YtdlpService> _logger;
+
+    public override string Name => IAzureUploaderService.name;
     private readonly AzureOption _azureOption;
-    private readonly ILogger<StreamlinkService> _logger;
-
-    public override string DownloaderName => IStreamlinkService.downloaderName;
-
-    public StreamlinkService(
-        ILogger<StreamlinkService> logger,
+    public AzureUploaderService(
+        ILogger<YtdlpService> logger,
         ArmClient armClient,
         IOptions<AzureOption> options) : base(logger, armClient, options)
     {
@@ -24,27 +25,28 @@ public class StreamlinkService : ACIServiceBase, IStreamlinkService
         _logger = logger;
     }
 
-    protected override Task<ArmOperation<ArmDeploymentResource>> CreateNewJobAsync(string id,
-                                                                                   string instanceName,
-                                                                                   Video video,
-                                                                                   bool useCookiesFile = false,
-                                                                                   CancellationToken cancellation = default)
+
+    protected override Task<ArmOperation<ArmDeploymentResource>> CreateNewJobAsync(
+        string _,
+        string instanceName,
+        Video video,
+        bool useCookiesFile = false,
+        CancellationToken cancellation = default)
     {
         try
         {
-            return doWithImage("ghcr.io/recorder-moe/streamlink:5.3.1");
+            return doWithImage("ghcr.io/recorder-moe/azure-uploader:latest");
         }
         catch (Exception)
         {
             // Use DockerHub as fallback
             _logger.LogWarning("Failed once, try docker hub as fallback.");
-            return doWithImage("recordermoe/streamlink:5.3.1");
+            return doWithImage("recordermoe/azure-uploader:latest");
         }
 
         Task<ArmOperation<ArmDeploymentResource>> doWithImage(string imageName)
         {
-            return CreateInstanceAsync(
-                    template: "ACI.json",
+            return CreateResourceAsync(
                     parameters: new
                     {
                         dockerImageName = new
@@ -57,10 +59,7 @@ public class StreamlinkService : ACIServiceBase, IStreamlinkService
                         },
                         commandOverrideArray = new
                         {
-                            value = new string[] {
-                                "/bin/sh", "-c",
-                                $"/usr/local/bin/streamlink --twitch-disable-ads -o '/downloads/{NameHelper.GetFileName(video, IStreamlinkService.downloaderName)}' -f 'twitch.tv/{video.ChannelId}' best && cd /downloads && for file in *.mp4; do ffmpeg -i \"$file\" -map 0:v:0 -map 0:a:0 -c copy -movflags +faststart 'temp.mp4' && mv 'temp.mp4' \"/fileshare/$file\"; done"
-                            }
+                            value = new string[] { NameHelper.GetFileName(video, video.Source).Replace(".mp4", "") }
                         },
                         storageAccountName = new
                         {
@@ -72,10 +71,17 @@ public class StreamlinkService : ACIServiceBase, IStreamlinkService
                         },
                         fileshareVolumeName = new
                         {
-                            value = "livestream-recorder"
+                            value = _azureOption.FileShare.ShareName
                         }
                     },
                     deploymentName: instanceName,
+                    environment: new Dictionary<string, string>()
+                    {
+                        {"STORAGE_ACCOUNT_NAME", _azureOption.BlobStorage!.StorageAccountName },
+                        {"STORAGE_ACCOUNT_KEY", _azureOption.BlobStorage!.StorageAccountKey },
+                        {"CONTAINER_NAME", _azureOption.BlobStorage!.BlobContainerName_Private },
+                        {"DESTINATION_DIRECTORY", "/videos" },
+                    },
                     cancellation: cancellation);
         }
     }

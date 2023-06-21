@@ -1,20 +1,20 @@
 ﻿using k8s.Models;
 using LivestreamRecorder.DB.Models;
 using LivestreamRecorderService.Helper;
-using LivestreamRecorderService.Interfaces.Job;
+using LivestreamRecorderService.Interfaces.Job.Downloader;
 using LivestreamRecorderService.Models.Options;
 using Microsoft.Extensions.Options;
 
-namespace LivestreamRecorderService.SingletonServices.Kubernetes;
+namespace LivestreamRecorderService.SingletonServices.Kubernetes.Downloader;
 
-public class StreamlinkService : KubernetesServiceBase, IStreamlinkService
+public class FC2LiveDLService : KubernetesServiceBase, IFC2LiveDLService
 {
-    private readonly ILogger<StreamlinkService> _logger;
+    private readonly ILogger<FC2LiveDLService> _logger;
 
-    public override string DownloaderName => IStreamlinkService.downloaderName;
+    public override string Name => IFC2LiveDLService.name;
 
-    public StreamlinkService(
-        ILogger<StreamlinkService> logger,
+    public FC2LiveDLService(
+        ILogger<FC2LiveDLService> logger,
         k8s.Kubernetes kubernetes,
         IOptions<KubernetesOption> options,
         IOptions<ServiceOption> serviceOptions,
@@ -32,17 +32,30 @@ public class StreamlinkService : KubernetesServiceBase, IStreamlinkService
     {
         try
         {
-            return doWithImage("ghcr.io/recorder-moe/streamlink:5.3.1");
+            return doWithImage("ghcr.io/recorder-moe/fc2-live-dl:2.1.3");
         }
         catch (Exception)
         {
             // Use DockerHub as fallback
             _logger.LogWarning("Failed once, try docker hub as fallback.");
-            return doWithImage("recordermoe/streamlink:5.3.1");
+            return doWithImage("recordermoe/fc2-live-dl:2.1.3");
         }
 
         Task<V1Job> doWithImage(string imageName)
         {
+            string[] command = useCookiesFile
+                ? new string[]
+                {
+                    "/usr/bin/dumb-init", "--",
+                    "sh", "-c",
+                    $"/venv/bin/fc2-live-dl --latency high --threads 1 -o '{NameHelper.GetFileName(video, IFC2LiveDLService.name)}' --log-level trace --cookies /fileshare/cookies/{video}.txt 'https://live.fc2.com/{video.ChannelId}/' && mv *.mp4 /fileshare/"
+                }
+                : new string[] {
+                    "/usr/bin/dumb-init", "--",
+                    "sh", "-c",
+                    $"/venv/bin/fc2-live-dl --latency high --threads 1 -o '{NameHelper.GetFileName(video, IFC2LiveDLService.name)}' --log-level trace 'https://live.fc2.com/{video.ChannelId}/' && mv *.mp4 /fileshare/"
+                };
+
             return CreateInstanceAsync(
                     parameters: new
                     {
@@ -56,10 +69,7 @@ public class StreamlinkService : KubernetesServiceBase, IStreamlinkService
                         },
                         commandOverrideArray = new
                         {
-                            value = new string[] {
-                                "/bin/sh", "-c",
-                                $"/usr/local/bin/streamlink --twitch-disable-ads -o '/downloads/{NameHelper.GetFileName(video, IStreamlinkService.downloaderName)}' -f 'twitch.tv/{video.ChannelId}' best && cd /downloads && for file in *.mp4; do ffmpeg -i \"$file\" -map 0:v:0 -map 0:a:0 -c copy -movflags +faststart 'temp.mp4' && mv 'temp.mp4' \"/fileshare/$file\"; done"
-                            }
+                            value = command
                         },
                     },
                     deploymentName: instanceName,

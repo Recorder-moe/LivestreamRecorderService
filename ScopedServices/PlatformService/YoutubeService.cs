@@ -4,7 +4,7 @@ using LivestreamRecorder.DB.Enum;
 using LivestreamRecorder.DB.Interfaces;
 using LivestreamRecorder.DB.Models;
 using LivestreamRecorderService.Interfaces;
-using LivestreamRecorderService.Interfaces.Job;
+using LivestreamRecorderService.Interfaces.Job.Downloader;
 using LivestreamRecorderService.Models;
 using LivestreamRecorderService.Models.OptionDiscords;
 using Microsoft.Extensions.Options;
@@ -425,10 +425,10 @@ public class YoutubeService : PlatformService, IPlatformService
 
         if (video.Status == VideoStatus.WaitingToRecord)
         {
-            _ = _ytarchiveService.InitJobAsync(url: video.id,
-                                                        video: video,
-                                                        useCookiesFile: video.Channel?.UseCookiesFile ?? false,
-                                                        cancellation: cancellation);
+            await _ytarchiveService.InitJobAsync(url: video.id,
+                                                 video: video,
+                                                 useCookiesFile: video.Channel?.UseCookiesFile ?? false,
+                                                 cancellation: cancellation);
 
             video.Status = VideoStatus.Recording;
             _logger.LogInformation("{videoId} is now lived! Start recording.", video.id);

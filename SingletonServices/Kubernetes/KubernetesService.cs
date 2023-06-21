@@ -37,21 +37,49 @@ public class KubernetesService : IJobService
         if (!CheckSecretExists()) CreateSecret();
     }
 
-    public async Task<bool> IsJobFailedAsync(Video video, CancellationToken cancellation = default)
+    public Task<bool> IsJobSucceededAsync(Video video, CancellationToken cancellation = default)
+        => IsJobSucceededAsync(NameHelper.GetInstanceName(video.id), cancellation);
+
+    public async Task<bool> IsJobSucceededAsync(string keyword, CancellationToken cancellation = default)
     {
-        var job = await GetJobByKeywordAsync(video.id, cancellation);
+        var job = await GetJobByKeywordAsync(keyword, cancellation);
+        return null != job && job.Status.Active == 0 && job.Status.Succeeded > 0;
+    }
+
+    public Task<bool> IsJobFailedAsync(Video video, CancellationToken cancellation = default)
+        => IsJobFailedAsync(NameHelper.GetInstanceName(video.id), cancellation);
+
+    public async Task<bool> IsJobFailedAsync(string keyword, CancellationToken cancellation = default)
+    {
+        var job = await GetJobByKeywordAsync(keyword, cancellation);
         return null == job || job.Status.Failed > 0;
     }
 
     public async Task RemoveCompletedJobsAsync(Video video, CancellationToken cancellation = default)
     {
         var job = await GetJobByKeywordAsync(video.id, cancellation);
-        var status = await _client.DeleteNamespacedJobAsync(job.Name(), job.Namespace(), cancellationToken: cancellation);
+        if (null == job)
+        {
+            _logger.LogError("Failed to get K8s job for {videoId} when removing completed job. Please check if the job exists.", video.id);
+            return;
+        }
+
+        string jobName = job.Name();
+        if (await IsJobFailedAsync(video, cancellation))
+        {
+            _logger.LogError("K8s job status FAILED! {videoId} {jobName}", video.id, jobName);
+            throw new Exception($"K8s job status FAILED! {jobName}");
+        }
+
+        var status = await _client.DeleteNamespacedJobAsync(name: jobName,
+                                                            namespaceParameter: job.Namespace(),
+                                                            cancellationToken: cancellation);
         if (status.Status == "Failure")
         {
-            _logger.LogError("Failed to delete job {jobName} {videoId} {status}", job.Name(), video.id, status);
-            throw new Exception($"Failed to delete job {job.Name()} {video.id} {status}");
+            _logger.LogError("Failed to delete job {jobName} {videoId} {status}", jobName, video.id, status.Message);
+            throw new Exception($"Failed to delete job {jobName} {video.id} {status.Message}");
         }
+        _logger.LogInformation("K8s job {jobName} {videoId} removed", jobName, video.id);
     }
 
     private bool CheckSecretExists()

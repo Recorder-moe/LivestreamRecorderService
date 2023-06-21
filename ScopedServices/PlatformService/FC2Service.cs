@@ -3,7 +3,7 @@ using LivestreamRecorder.DB.Enum;
 using LivestreamRecorder.DB.Interfaces;
 using LivestreamRecorder.DB.Models;
 using LivestreamRecorderService.Interfaces;
-using LivestreamRecorderService.Interfaces.Job;
+using LivestreamRecorderService.Interfaces.Job.Downloader;
 using LivestreamRecorderService.Models;
 using LivestreamRecorderService.Models.OptionDiscords;
 using LivestreamRecorderService.SingletonServices;
@@ -132,10 +132,10 @@ public class FC2Service : PlatformService, IPlatformService
                 if (isLive && (video.Status < VideoStatus.Recording
                                || video.Status == VideoStatus.Missing))
                 {
-                    _ = _fC2LiveDLService.InitJobAsync(url: $"https://live.fc2.com/{channel.id}/",
-                                                                video: video,
-                                                                useCookiesFile: channel.UseCookiesFile == true,
-                                                                cancellation: cancellation);
+                    await _fC2LiveDLService.InitJobAsync(url: $"https://live.fc2.com/{channel.id}/",
+                                                         video: video,
+                                                         useCookiesFile: channel.UseCookiesFile == true,
+                                                         cancellation: cancellation);
 
                     video.Status = VideoStatus.Recording;
                     _logger.LogInformation("{channelId} is now lived! Start recording.", channel.id);

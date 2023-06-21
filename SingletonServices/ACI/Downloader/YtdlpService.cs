@@ -2,18 +2,18 @@
 using Azure.ResourceManager.Resources;
 using LivestreamRecorder.DB.Models;
 using LivestreamRecorderService.Helper;
-using LivestreamRecorderService.Interfaces.Job;
+using LivestreamRecorderService.Interfaces.Job.Downloader;
 using LivestreamRecorderService.Models.Options;
 using Microsoft.Extensions.Options;
 
-namespace LivestreamRecorderService.SingletonServices.ACI;
+namespace LivestreamRecorderService.SingletonServices.ACI.Downloader;
 
 public class YtdlpService : ACIServiceBase, IYtdlpService
 {
     private readonly AzureOption _azureOption;
     private readonly ILogger<YtdlpService> _logger;
 
-    public override string DownloaderName => IYtdlpService.downloaderName;
+    public override string Name => IYtdlpService.name;
 
     public YtdlpService(
         ILogger<YtdlpService> logger,
@@ -24,21 +24,12 @@ public class YtdlpService : ACIServiceBase, IYtdlpService
         _logger = logger;
     }
 
-    public override async Task<dynamic> InitJobAsync(string url,
-                                                     Video video,
-                                                     bool useCookiesFile = false,
-                                                     CancellationToken cancellation = default)
-        => await CreateNewJobAsync(url: url,
-                                   instanceName: GetInstanceName(url),
-                                   video: video,
-                                   useCookiesFile: useCookiesFile,
-                                   cancellation: cancellation);
-
-    protected override Task<ArmOperation<ArmDeploymentResource>> CreateNewJobAsync(string url,
-                                                                                   string instanceName,
-                                                                                   Video video,
-                                                                                   bool useCookiesFile = false,
-                                                                                   CancellationToken cancellation = default)
+    protected override Task<ArmOperation<ArmDeploymentResource>> CreateNewJobAsync(
+        string url,
+        string instanceName,
+        Video video,
+        bool useCookiesFile = false,
+        CancellationToken cancellation = default)
     {
         try
         {
@@ -81,8 +72,7 @@ public class YtdlpService : ACIServiceBase, IYtdlpService
                 command[4] = command[4].Replace("-o '%(id)s.%(ext)s'", "-o '_%(id)s.%(ext)s'");
             }
 
-            return CreateInstanceAsync(
-                    template: "ACI.json",
+            return CreateResourceAsync(
                     parameters: new
                     {
                         dockerImageName = new

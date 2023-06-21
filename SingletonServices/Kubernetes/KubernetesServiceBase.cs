@@ -19,7 +19,7 @@ public abstract class KubernetesServiceBase : IJobServiceBase
     private readonly AzureOption _azureOption;
     private readonly NFSOption _nfsOption;
 
-    public abstract string DownloaderName { get; }
+    public abstract string Name { get; }
     protected static string KubernetesNamespace => KubernetesService.KubernetesNamespace;
 
     public KubernetesServiceBase(
@@ -38,24 +38,23 @@ public abstract class KubernetesServiceBase : IJobServiceBase
         _nfsOption = nfsOptions.Value;
     }
 
-    public virtual async Task<dynamic> InitJobAsync(string videoId, Video video, bool useCookiesFile = false, CancellationToken cancellation = default)
+    public virtual async Task InitJobAsync(string videoId, Video video, bool useCookiesFile = false, CancellationToken cancellation = default)
     {
-        // Warning: Unlike ACI, Kubernetes jobs cannot be rerun.
         var jobName = GetInstanceName(videoId);
 
         var job = await GetJobByKeywordAsync(jobName, cancellation);
         if (null != job && job.Status.Active != 0)
         {
-            _logger.LogWarning("An already active job not found for {videoId} {name}!! A new job will now be created with different name. Please pay attention if this happens repeatedly.", videoId, jobName);
+            _logger.LogWarning("An already active job found for {videoId} {name}!! A new job will now be created with different name. Please pay attention if this happens repeatedly.", videoId, jobName);
             jobName += DateTimeOffset.UtcNow.ToUnixTimeMilliseconds();
         }
 
         _logger.LogInformation("Start new K8s job for {videoId} {name}.", videoId, jobName);
-        return await CreateNewJobAsync(id: videoId,
-                                       instanceName: jobName,
-                                       video: video,
-                                       useCookiesFile: useCookiesFile,
-                                       cancellation: cancellation);
+        await CreateNewJobAsync(id: videoId,
+                                instanceName: jobName,
+                                video: video,
+                                useCookiesFile: useCookiesFile,
+                                cancellation: cancellation);
     }
 
     protected async Task<V1Job?> GetJobByKeywordAsync(string keyword, CancellationToken cancellation)
@@ -64,7 +63,7 @@ public abstract class KubernetesServiceBase : IJobServiceBase
         return jobs.Items.FirstOrDefault(p => p.Name().Contains(GetInstanceName(keyword)));
     }
 
-    protected Task<V1Job> CreateInstanceAsync(dynamic parameters, string deploymentName, CancellationToken cancellation = default)
+    protected Task<V1Job> CreateInstanceAsync(dynamic parameters, string deploymentName, IDictionary<string, string>? environment = null, CancellationToken cancellation = default)
     {
         V1Job job = new()
         {
@@ -106,6 +105,11 @@ public abstract class KubernetesServiceBase : IJobServiceBase
             }
         };
 
+        if (null != environment && environment.Count > 0)
+        {
+            job.Spec.Template.Spec.Containers[0].Env = environment.Select(p => new V1EnvVar(p.Key, p.Value)).ToList();
+        }
+
         return _client.CreateNamespacedJobAsync(body: job,
                                                 namespaceParameter: KubernetesNamespace,
                                                 cancellationToken: cancellation);
@@ -141,8 +145,8 @@ public abstract class KubernetesServiceBase : IJobServiceBase
             _ => throw new ConfigurationErrorsException($"ShareVolume Service {Enum.GetName(typeof(ServiceName), _serviceOption.SharedVolumeService)} not supported for Kubernetes.")
         };
 
-    protected string GetInstanceName(string videoId)
-        => (DownloaderName + NameHelper.GetInstanceName(videoId)).ToLower();
+    public string GetInstanceName(string videoId)
+        => (Name + NameHelper.GetInstanceName(videoId)).ToLower();
 
     // Must be override
     protected abstract Task<V1Job> CreateNewJobAsync(string id,

@@ -1,0 +1,82 @@
+﻿using k8s.Models;
+using LivestreamRecorder.DB.Models;
+using LivestreamRecorderService.Helper;
+using LivestreamRecorderService.Interfaces.Job.Uploader;
+using LivestreamRecorderService.Models.Options;
+using LivestreamRecorderService.SingletonServices.Kubernetes.Downloader;
+using Microsoft.Extensions.Options;
+using System.Configuration;
+
+namespace LivestreamRecorderService.SingletonServices.Kubernetes.Uploader;
+
+public class AzureUploaderService : KubernetesServiceBase, IAzureUploaderService
+{
+    private readonly ILogger<YtdlpService> _logger;
+
+    public override string Name => IAzureUploaderService.name;
+    private readonly AzureOption _azureOption;
+
+    public AzureUploaderService(
+        ILogger<YtdlpService> logger,
+        k8s.Kubernetes kubernetes,
+        IOptions<KubernetesOption> options,
+        IOptions<ServiceOption> serviceOptions,
+        IOptions<AzureOption> azureOptions,
+        IOptions<NFSOption> nfsOptions) : base(logger, kubernetes, options, serviceOptions, azureOptions, nfsOptions)
+    {
+        _logger = logger;
+        _azureOption = azureOptions.Value;
+        if (null == _azureOption.BlobStorage
+           || string.IsNullOrEmpty(_azureOption.BlobStorage.BlobContainerName_Private))
+        {
+            throw new ConfigurationErrorsException("Azure Blob Storage is not configured.");
+        }
+    }
+
+    protected override Task<V1Job> CreateNewJobAsync(string _,
+                                                     string instanceName,
+                                                     Video video,
+                                                     bool useCookiesFile = false,
+                                                     CancellationToken cancellation = default)
+    {
+        try
+        {
+            return doWithImage("ghcr.io/recorder-moe/azure-uploader:latest");
+        }
+        catch (Exception)
+        {
+            // Use DockerHub as fallback
+            _logger.LogWarning("Failed once, try docker hub as fallback.");
+            return doWithImage("recordermoe/azure-uploader:latest");
+        }
+
+        Task<V1Job> doWithImage(string imageName)
+        {
+            return CreateInstanceAsync(
+                    parameters: new
+                    {
+                        dockerImageName = new
+                        {
+                            value = imageName
+                        },
+                        containerName = new
+                        {
+                            value = instanceName
+                        },
+                        commandOverrideArray = new
+                        {
+                            value = new string[] { NameHelper.GetFileName(video, video.Source).Replace(".mp4", "") }
+                        }
+                    },
+                    deploymentName: instanceName,
+                    environment: new Dictionary<string, string>()
+                    {
+                        {"STORAGE_ACCOUNT_NAME", _azureOption.BlobStorage!.StorageAccountName },
+                        {"STORAGE_ACCOUNT_KEY", _azureOption.BlobStorage!.StorageAccountKey },
+                        {"CONTAINER_NAME", _azureOption.BlobStorage!.BlobContainerName_Private },
+                        {"DESTINATION_DIRECTORY", "/videos" },
+                    },
+                    cancellation: cancellation);
+        }
+    }
+}
