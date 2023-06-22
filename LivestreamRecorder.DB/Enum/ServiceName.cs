@@ -18,6 +18,6 @@ public enum ServiceName
     // NFS,
 
     // Database
-    AzureCosmosDb,
-    CouchDB
+    AzureCosmosDB,
+    ApacheCouchDB
 }
