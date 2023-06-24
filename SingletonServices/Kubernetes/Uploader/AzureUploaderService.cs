@@ -66,7 +66,10 @@ public class AzureUploaderService : KubernetesServiceBase, IAzureUploaderService
                         },
                         commandOverrideArray = new
                         {
-                            value = new string[] { NameHelper.GetFileName(video, video.Source).Replace(".mp4", "") }
+                            value = new string[] {
+                                "/bin/sh", "-c",
+                                $"/app/azure-uploader.sh {NameHelper.GetFileName(video, video.Source).Replace(".mp4", "")}"
+                            }
                         }
                     },
                     deploymentName: instanceName,

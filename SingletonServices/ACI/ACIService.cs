@@ -3,6 +3,7 @@ using Azure.ResourceManager.Resources;
 using LivestreamRecorder.DB.Models;
 using LivestreamRecorderService.Helper;
 using LivestreamRecorderService.Interfaces.Job;
+using LivestreamRecorderService.Interfaces.Job.Uploader;
 using LivestreamRecorderService.Models.Options;
 using Microsoft.Extensions.Options;
 
@@ -62,7 +63,7 @@ public class ACIService : IJobService
                 _logger.LogError("Failed to get ACI instance for {videoId} when removing completed jobs. Please check if the ACI exists.", video.id);
                 return;
             }
-            else if (video.Source is "Twitcasting" or "Twitch" or "FC2")
+            else if (video.Source is "Twitcasting" or "Twitch" or "FC2" && !resource.Data.Name.StartsWith(IAzureUploaderService.name))
             {
                 _logger.LogInformation("Keep ACI {jobName} for video {videoId} platform {platform}", resource.Data.Name, video.id, video.Source);
                 return;
