@@ -3,6 +3,7 @@ using LivestreamRecorderService.DependencyInjection;
 using LivestreamRecorderService.Models.Options;
 using LivestreamRecorderService.ScopedServices;
 using LivestreamRecorderService.ScopedServices.PlatformService;
+using LivestreamRecorderService.SingletonServices;
 using LivestreamRecorderService.Workers;
 using Microsoft.Extensions.Options;
 using Serilog;
@@ -36,6 +37,8 @@ try
     .ConfigureServices((context, services) =>
     {
         var configuration = context.Configuration;
+        services.AddHttpClient();
+
         services.AddOptions<AzureOption>()
                 .Bind(configuration.GetSection(AzureOption.ConfigurationSectionName))
                 .ValidateDataAnnotations()
@@ -131,6 +134,7 @@ try
         services.AddDiscordService(configuration);
 
         services.AddHostedService<RecordWorker>();
+        services.AddSingleton<RecordService>();
         services.AddHostedService<MonitorWorker>();
         services.AddHostedService<UpdateChannelInfoWorker>();
         services.AddHostedService<UpdateVideoStatusWorker>();
