@@ -32,13 +32,13 @@ public class YtdlpService : KubernetesServiceBase, IYtdlpService
     {
         try
         {
-            return doWithImage("ghcr.io/recorder-moe/yt-dlp:2023.03.04");
+            return doWithImage("ghcr.io/recorder-moe/yt-dlp:2023.06.22");
         }
         catch (Exception)
         {
             // Use DockerHub as fallback
             _logger.LogWarning("Failed once, try docker hub as fallback.");
-            return doWithImage("recordermoe/yt-dlp:2023.03.04");
+            return doWithImage("recordermoe/yt-dlp:2023.06.22");
         }
 
         Task<V1Job> doWithImage(string imageName)
