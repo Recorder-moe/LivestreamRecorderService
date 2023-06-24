@@ -4,6 +4,7 @@ using LivestreamRecorder.DB.Enum;
 using LivestreamRecorder.DB.Models;
 using LivestreamRecorderService.Helper;
 using LivestreamRecorderService.Interfaces.Job;
+using LivestreamRecorderService.Models;
 using LivestreamRecorderService.Models.Options;
 using Microsoft.Extensions.Options;
 using System.Configuration;
@@ -63,7 +64,10 @@ public abstract class KubernetesServiceBase : IJobServiceBase
         return jobs.Items.FirstOrDefault(p => p.Name().Contains(GetInstanceName(keyword)));
     }
 
-    protected Task<V1Job> CreateInstanceAsync(dynamic parameters, string deploymentName, IDictionary<string, string>? environment = null, CancellationToken cancellation = default)
+    protected Task<V1Job> CreateInstanceAsync(dynamic parameters,
+                                              string deploymentName,
+                                              IList<EnvironmentVariable>? environment = null,
+                                              CancellationToken cancellation = default)
     {
         V1Job job = new()
         {
@@ -107,7 +111,7 @@ public abstract class KubernetesServiceBase : IJobServiceBase
 
         if (null != environment && environment.Count > 0)
         {
-            job.Spec.Template.Spec.Containers[0].Env = environment.Select(p => new V1EnvVar(p.Key, p.Value)).ToList();
+            job.Spec.Template.Spec.Containers[0].Env = environment.Select(p => new V1EnvVar(p.Name, p.Value ?? p.SecureValue)).ToList();
         }
 
         return _client.CreateNamespacedJobAsync(body: job,

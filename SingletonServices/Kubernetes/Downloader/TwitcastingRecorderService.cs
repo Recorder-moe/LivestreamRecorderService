@@ -59,7 +59,7 @@ public class TwitcastingRecorderService : KubernetesServiceBase, ITwitcastingRec
                             value = new string[] {
                                 "/usr/bin/dumb-init", "--",
                                 "/bin/bash", "-c",
-                                $"/bin/bash record_twitcast.sh {video.ChannelId} once && mv /download/{NameHelper.GetFileName(video, ITwitcastingRecorderService.name)} /fileshare/{NameHelper.GetFileName(video, ITwitcastingRecorderService.name)}"
+                                $"/bin/bash record_twitcast.sh {video.ChannelId} once && mv /download/{NameHelper.GetFileName(video, ITwitcastingRecorderService.name)} /sharedvolume/{NameHelper.GetFileName(video, ITwitcastingRecorderService.name)}"
                             }
                         },
                     },

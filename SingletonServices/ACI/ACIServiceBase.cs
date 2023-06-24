@@ -109,19 +109,19 @@ public abstract class ACIServiceBase : IJobServiceBase
     protected async Task<ArmOperation<ArmDeploymentResource>> CreateResourceAsync(
         dynamic parameters,
         string deploymentName,
-        Dictionary<string, string>? environment = null,
+        string? templateName = null,
         CancellationToken cancellation = default)
     {
         var resourceGroupResource = await GetResourceGroupAsync(cancellation);
         var armDeploymentCollection = resourceGroupResource.GetArmDeployments();
-        var template = "ACI.json";
-        var templateContent = (await File.ReadAllTextAsync(Path.Combine("ARMTemplate", template), cancellation)).TrimEnd();
+        templateName ??= "ACI.json";
+        var templateContent = (await File.ReadAllTextAsync(Path.Combine("ARMTemplate", templateName), cancellation)).TrimEnd();
         var deploymentContent = new ArmDeploymentContent(new ArmDeploymentProperties(ArmDeploymentMode.Incremental)
         {
             Template = BinaryData.FromString(templateContent),
             Parameters = BinaryData.FromObjectAsJson(parameters),
         });
-        return await armDeploymentCollection.CreateOrUpdateAsync(waitUntil: WaitUntil.Completed,
+        return await armDeploymentCollection.CreateOrUpdateAsync(waitUntil: WaitUntil.Started,
                                                                  deploymentName: $"{deploymentName}",
                                                                  content: deploymentContent,
                                                                  cancellationToken: cancellation);

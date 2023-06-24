@@ -16,7 +16,6 @@ public class VideoService
     private readonly IUnitOfWork _unitOfWork_Public;
     private readonly IVideoRepository _videoRepository;
     private readonly DiscordService _discordService;
-    private readonly IHttpClientFactory _httpFactory;
     private readonly IAzureUploaderService _azureUploaderService;
     private readonly IJobService _jobService;
     private readonly AzureOption _azureOptions;
@@ -29,7 +28,6 @@ public class VideoService
         UnitOfWork_Public unitOfWork_Public,
         IVideoRepository videoRepository,
         DiscordService discordService,
-        IHttpClientFactory httpFactory,
         IOptions<AzureOption> azureOptions,
         IOptions<ServiceOption> serviceOptions,
         IAzureUploaderService azureUploaderService,
@@ -39,7 +37,6 @@ public class VideoService
         _unitOfWork_Public = unitOfWork_Public;
         _videoRepository = videoRepository;
         _discordService = discordService;
-        _httpFactory = httpFactory;
         _azureUploaderService = azureUploaderService;
         _jobService = jobService;
         _azureOptions = azureOptions.Value;
@@ -86,7 +83,7 @@ public class VideoService
         _unitOfWork_Public.Commit();
     }
 
-    public async Task TransferVideoFromShareVolumeToStorageAsync(Video video, CancellationToken cancellation = default)
+    public async Task TransferVideoFromSharedVolumeToStorageAsync(Video video, CancellationToken cancellation = default)
     {
         try
         {
@@ -103,32 +100,10 @@ public class VideoService
                     break;
                 case ServiceName.S3:
                 case ServiceName.NFS:
-                    throw new NotImplementedException(nameof(TransferVideoFromShareVolumeToStorageAsync));
+                    throw new NotImplementedException(nameof(TransferVideoFromSharedVolumeToStorageAsync));
                 default:
                     throw new NotSupportedException($"StorageService {_serviceOptions.StorageService} is not supported.");
             }
-
-            var successfullyFinished = false;
-            var delay = 30;
-            var retry = (_timeoutMinutes * 60 / delay) - 1; // A little bit less than _timeoutMinutes
-            while (!successfullyFinished)
-            {
-                _logger.LogInformation("Video {videoId} is uploading to Storage.", video.id);
-                await Task.Delay(TimeSpan.FromSeconds(delay), cancellation);
-                successfullyFinished = await _jobService.IsJobSucceededAsync(instanceName, cancellation)
-                                       & !await _jobService.IsJobFailedAsync(instanceName, cancellation);
-
-                if (successfullyFinished) break;
-
-                if (retry-- <= 0)
-                {
-                    throw new TimeoutException($"Timeout while uploading video {video.id} to storage!");
-                }
-            }
-
-            _logger.LogInformation("Video {videoId} is uploaded to Storage.", video.id);
-            UpdateVideoStatus(video, VideoStatus.Archived);
-            await _discordService.SendArchivedMessage(video);
         }
         catch (Exception e)
         {
@@ -137,13 +112,6 @@ public class VideoService
             _logger.LogError("Exception happened when uploading files to storage: {videoId}, {error}, {message}", video.id, e, e.Message);
         }
     }
-
-    public void RollbackVideosStatusStuckAtUploading()
-        => GetVideosByStatus(VideoStatus.Uploading)
-            .Where(p => p.ArchivedTime.HasValue
-                        && p.ArchivedTime.Value.AddMinutes(_timeoutMinutes) < DateTime.UtcNow)
-            .ToList()
-            .ForEach(p => UpdateVideoStatus(p, VideoStatus.Recording));
 
     public void DeleteVideo(Video video)
     {

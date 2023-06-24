@@ -3,10 +3,10 @@ using Azure.ResourceManager.Resources;
 using LivestreamRecorder.DB.Models;
 using LivestreamRecorderService.Helper;
 using LivestreamRecorderService.Interfaces.Job.Uploader;
+using LivestreamRecorderService.Models;
 using LivestreamRecorderService.Models.Options;
 using LivestreamRecorderService.SingletonServices.ACI.Downloader;
 using Microsoft.Extensions.Options;
-using System.Configuration;
 
 namespace LivestreamRecorderService.SingletonServices.ACI.Uploader;
 
@@ -72,16 +72,20 @@ public class AzureUploaderService : ACIServiceBase, IAzureUploaderService
                         fileshareVolumeName = new
                         {
                             value = _azureOption.FileShare.ShareName
+                        },
+                        environmentVariables = new
+                        {
+                            value = new List<EnvironmentVariable>
+                            {
+                                new EnvironmentVariable("STORAGE_ACCOUNT_NAME", _azureOption.BlobStorage!.StorageAccountName, null),
+                                new EnvironmentVariable("STORAGE_ACCOUNT_KEY", null, _azureOption.BlobStorage.StorageAccountKey),
+                                new EnvironmentVariable("CONTAINER_NAME", _azureOption.BlobStorage.BlobContainerName_Private, null),
+                                new EnvironmentVariable("DESTINATION_DIRECTORY", null, "/videos")
+                            }
                         }
                     },
                     deploymentName: instanceName,
-                    environment: new Dictionary<string, string>()
-                    {
-                        {"STORAGE_ACCOUNT_NAME", _azureOption.BlobStorage!.StorageAccountName },
-                        {"STORAGE_ACCOUNT_KEY", _azureOption.BlobStorage!.StorageAccountKey },
-                        {"CONTAINER_NAME", _azureOption.BlobStorage!.BlobContainerName_Private },
-                        {"DESTINATION_DIRECTORY", "/videos" },
-                    },
+                    templateName: "ACI_env.json",
                     cancellation: cancellation);
         }
     }

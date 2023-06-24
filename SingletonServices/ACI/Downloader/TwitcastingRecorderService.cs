@@ -69,7 +69,7 @@ public class TwitcastingRecorderService : ACIServiceBase, ITwitcastingRecorderSe
                             value = new string[] {
                                 "/usr/bin/dumb-init", "--",
                                 "/bin/bash", "-c",
-                                $"/bin/bash record_twitcast.sh {video.ChannelId} once && mv /download/{NameHelper.GetFileName(video, ITwitcastingRecorderService.name)} /fileshare/{NameHelper.GetFileName(video, ITwitcastingRecorderService.name)}"
+                                $"/bin/bash record_twitcast.sh {video.ChannelId} once && mv /download/{NameHelper.GetFileName(video, ITwitcastingRecorderService.name)} /sharedvolume/{NameHelper.GetFileName(video, ITwitcastingRecorderService.name)}"
                             }
                         },
                         storageAccountName = new
@@ -82,7 +82,7 @@ public class TwitcastingRecorderService : ACIServiceBase, ITwitcastingRecorderSe
                         },
                         fileshareVolumeName = new
                         {
-                            value = "livestream-recorder"
+                            value = _azureOption.FileShare!.ShareName
                         }
                     },
                     deploymentName: instanceName,

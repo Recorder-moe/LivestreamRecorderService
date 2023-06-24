@@ -2,6 +2,7 @@
 using LivestreamRecorder.DB.Models;
 using LivestreamRecorderService.Helper;
 using LivestreamRecorderService.Interfaces.Job.Uploader;
+using LivestreamRecorderService.Models;
 using LivestreamRecorderService.Models.Options;
 using LivestreamRecorderService.SingletonServices.Kubernetes.Downloader;
 using Microsoft.Extensions.Options;
@@ -69,12 +70,12 @@ public class AzureUploaderService : KubernetesServiceBase, IAzureUploaderService
                         }
                     },
                     deploymentName: instanceName,
-                    environment: new Dictionary<string, string>()
+                    environment: new List<EnvironmentVariable>
                     {
-                        {"STORAGE_ACCOUNT_NAME", _azureOption.BlobStorage!.StorageAccountName },
-                        {"STORAGE_ACCOUNT_KEY", _azureOption.BlobStorage!.StorageAccountKey },
-                        {"CONTAINER_NAME", _azureOption.BlobStorage!.BlobContainerName_Private },
-                        {"DESTINATION_DIRECTORY", "/videos" },
+                        new EnvironmentVariable("STORAGE_ACCOUNT_NAME", _azureOption.BlobStorage!.StorageAccountName, null),
+                        new EnvironmentVariable("STORAGE_ACCOUNT_KEY", null, _azureOption.BlobStorage.StorageAccountKey),
+                        new EnvironmentVariable("CONTAINER_NAME", _azureOption.BlobStorage.BlobContainerName_Private, null),
+                        new EnvironmentVariable("DESTINATION_DIRECTORY", null, "/videos")
                     },
                     cancellation: cancellation);
         }
