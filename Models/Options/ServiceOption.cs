@@ -1,4 +1,4 @@
-﻿using LivestreamRecorder.DB.Enum;
+﻿using LivestreamRecorderService.Enums;
 
 namespace LivestreamRecorderService.Models.Options;
 

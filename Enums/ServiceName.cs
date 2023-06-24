@@ -1,4 +1,4 @@
-﻿namespace LivestreamRecorder.DB.Enum;
+﻿namespace LivestreamRecorderService.Enums;
 
 public enum ServiceName
 {

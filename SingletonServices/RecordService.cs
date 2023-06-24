@@ -1,4 +1,4 @@
-﻿using LivestreamRecorder.DB.Enum;
+﻿using LivestreamRecorder.DB.Enums;
 using LivestreamRecorder.DB.Models;
 using LivestreamRecorderService.Interfaces.Job;
 using LivestreamRecorderService.Interfaces.Job.Downloader;

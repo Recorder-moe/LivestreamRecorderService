@@ -1,4 +1,4 @@
-﻿namespace LivestreamRecorder.DB.Enum;
+﻿namespace LivestreamRecorder.DB.Enums;
 
 /// <summary>
 /// 交易狀態

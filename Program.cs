@@ -1,5 +1,5 @@
-using LivestreamRecorder.DB.Enum;
 using LivestreamRecorderService.DependencyInjection;
+using LivestreamRecorderService.Enums;
 using LivestreamRecorderService.Models.Options;
 using LivestreamRecorderService.ScopedServices;
 using LivestreamRecorderService.ScopedServices.PlatformService;
@@ -92,13 +92,13 @@ try
             case ServiceName.NFS:
                 goto case ServiceName.DockerVolume;
 
-                //if (string.IsNullOrWhiteSpace(nfsOption.Server)
-                //    || string.IsNullOrWhiteSpace(nfsOption.Path))
-                //{
-                //    Log.Fatal("NFS server and path must be specified.");
-                //    throw new ConfigurationErrorsException("NFS server and path must be specified.");
-                //}
-                //break;
+            //if (string.IsNullOrWhiteSpace(nfsOption.Server)
+            //    || string.IsNullOrWhiteSpace(nfsOption.Path))
+            //{
+            //    Log.Fatal("NFS server and path must be specified.");
+            //    throw new ConfigurationErrorsException("NFS server and path must be specified.");
+            //}
+            //break;
             default:
                 Log.Fatal("Shared Volume Serivce is limited to Azure File Share, DockerVolume or NFS.");
                 throw new ConfigurationErrorsException("Shared Volume Serivce is limited to Azure File Share, DockerVolume or NFS.");

@@ -1,7 +1,8 @@
 ﻿using LivestreamRecorder.DB.Core;
-using LivestreamRecorder.DB.Enum;
+using LivestreamRecorder.DB.Enums;
 using LivestreamRecorder.DB.Interfaces;
 using LivestreamRecorder.DB.Models;
+using LivestreamRecorderService.Enums;
 using LivestreamRecorderService.Interfaces.Job;
 using LivestreamRecorderService.Interfaces.Job.Uploader;
 using LivestreamRecorderService.Models.Options;

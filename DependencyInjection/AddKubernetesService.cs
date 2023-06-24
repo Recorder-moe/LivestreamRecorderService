@@ -1,5 +1,5 @@
 ﻿using k8s;
-using LivestreamRecorder.DB.Enum;
+using LivestreamRecorderService.Enums;
 using LivestreamRecorderService.Interfaces.Job;
 using LivestreamRecorderService.Interfaces.Job.Downloader;
 using LivestreamRecorderService.Interfaces.Job.Uploader;
@@ -35,7 +35,7 @@ namespace LivestreamRecorderService.DependencyInjection
                         .ValidateDataAnnotations()
                         .ValidateOnStart();
 
-                KubernetesClientConfiguration k8sConfig = 
+                KubernetesClientConfiguration k8sConfig =
                     kubernetesOptions.UseTheSameCluster
                     ? KubernetesClientConfiguration.InClusterConfig()
                     : !string.IsNullOrWhiteSpace(kubernetesOptions.ConfigFile)

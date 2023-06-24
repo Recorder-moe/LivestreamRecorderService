@@ -1,4 +1,4 @@
-﻿namespace LivestreamRecorder.DB.Enum;
+﻿namespace LivestreamRecorder.DB.Enums;
 
 public enum VideoStatus
 {

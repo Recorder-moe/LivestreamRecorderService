@@ -1,7 +1,7 @@
 ﻿using k8s;
 using k8s.Models;
-using LivestreamRecorder.DB.Enum;
 using LivestreamRecorder.DB.Models;
+using LivestreamRecorderService.Enums;
 using LivestreamRecorderService.Helper;
 using LivestreamRecorderService.Interfaces.Job;
 using LivestreamRecorderService.Models;
