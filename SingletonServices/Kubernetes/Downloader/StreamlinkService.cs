@@ -43,6 +43,8 @@ public class StreamlinkService : KubernetesServiceBase, IStreamlinkService
 
         Task<V1Job> doWithImage(string imageName)
         {
+            string filename = NameHelper.GetFileName(video, IStreamlinkService.name);
+            video.Filename = filename;
             return CreateInstanceAsync(
                     parameters: new
                     {
@@ -58,7 +60,7 @@ public class StreamlinkService : KubernetesServiceBase, IStreamlinkService
                         {
                             value = new string[] {
                                 "/bin/sh", "-c",
-                                $"/usr/local/bin/streamlink --twitch-disable-ads -o '/downloads/{NameHelper.GetFileName(video, IStreamlinkService.name)}' -f 'twitch.tv/{video.ChannelId}' best && cd /downloads && for file in *.mp4; do ffmpeg -i \"$file\" -map 0:v:0 -map 0:a:0 -c copy -movflags +faststart 'temp.mp4' && mv 'temp.mp4' \"/sharedvolume/$file\"; done"
+                                $"/usr/local/bin/streamlink --twitch-disable-ads -o '/downloads/{filename}' -f 'twitch.tv/{video.ChannelId}' best && cd /downloads && for file in *.mp4; do ffmpeg -i \"$file\" -map 0:v:0 -map 0:a:0 -c copy -movflags +faststart 'temp.mp4' && mv 'temp.mp4' \"/sharedvolume/$file\"; done"
                             }
                         },
                     },

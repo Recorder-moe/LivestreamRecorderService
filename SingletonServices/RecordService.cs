@@ -139,6 +139,10 @@ public class RecordService
                         _logger.LogError("Job deployment FAILED, Source not support: {source}", video.Source);
                         throw new NotSupportedException($"Source {video.Source} not supported");
                 }
+
+                var filename = video.Filename;
+
+                videoService.UpdateVideoFilename(video, filename);
                 videoService.UpdateVideoStatus(video, VideoStatus.Recording);
 
                 _logger.LogInformation("Job deployed: {videoId} ", video.id);
@@ -211,7 +215,12 @@ public class RecordService
                         _logger.LogError("Job deployment FAILED, Source not support: {source}", video.Source);
                         throw new NotSupportedException($"Source {video.Source} not supported");
                 }
+
+                var filename = video.Filename;
+
+                videoService.UpdateVideoFilename(video, filename);
                 videoService.UpdateVideoStatus(video, VideoStatus.Downloading);
+
                 _logger.LogInformation("Job deployed: {videoId} ", video.id);
                 _logger.LogInformation("Start to download {videoId}", video.id);
             }

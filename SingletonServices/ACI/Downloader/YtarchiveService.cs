@@ -44,6 +44,8 @@ public class YtarchiveService : ACIServiceBase, IYtarchiveService
 
         Task<ArmOperation<ArmDeploymentResource>> doWithImage(string imageName)
         {
+            string filename = NameHelper.GetFileName(video, IYtarchiveService.name);
+            video.Filename = filename;
             string[] command = useCookiesFile
                 ? new string[]
                 {
@@ -51,14 +53,14 @@ public class YtarchiveService : ACIServiceBase, IYtarchiveService
                     "sh", "-c",
                     // It is possible for Youtube to use "-" at the beginning of an id, which can cause errors when using the id as a file name.
                     // Therefore, we add "_" before the file name to avoid such issues.
-                    $"/ytarchive --add-metadata --merge --retry-frags 30 --thumbnail -o '_{NameHelper.GetFileName(video, IYtarchiveService.name).Replace(".mp4", "")}' -c /sharedvolume/cookies/{video.ChannelId}.txt '{url}' best && mv *.mp4 /sharedvolume/"
+                    $"/ytarchive --add-metadata --merge --retry-frags 30 --thumbnail -o '{filename.Replace(".mp4", "")}' -c /sharedvolume/cookies/{video.ChannelId}.txt '{url}' best && mv *.mp4 /sharedvolume/"
                 }
                 : new string[] {
                     "/usr/bin/dumb-init", "--",
                     "sh", "-c",
                     // It is possible for Youtube to use "-" at the beginning of an id, which can cause errors when using the id as a file name.
                     // Therefore, we add "_" before the file name to avoid such issues.
-                    $"/ytarchive --add-metadata --merge --retry-frags 30 --thumbnail -o '_{NameHelper.GetFileName(video, IYtarchiveService.name).Replace(".mp4", "")}' '{url}' best && mv *.mp4 /sharedvolume/"
+                    $"/ytarchive --add-metadata --merge --retry-frags 30 --thumbnail -o '{filename.Replace(".mp4", "")}' '{url}' best && mv *.mp4 /sharedvolume/"
                 };
 
             return CreateResourceAsync(

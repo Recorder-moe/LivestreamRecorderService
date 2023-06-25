@@ -55,6 +55,15 @@ public class VideoService
     public Video LoadRelatedData(Video video)
         => _videoRepository.LoadRelatedData(video);
 
+    public void UpdateVideoFilename(Video video, string? filename)
+    {
+        _unitOfWork_Public.ReloadEntityFromDB(video);
+        video.Filename = filename;
+        _videoRepository.Update(video);
+        _unitOfWork_Public.Commit();
+        _logger.LogDebug("Update Video {videoId} filename to {filename}", video.id, filename);
+    }
+
     public void UpdateVideoStatus(Video video, VideoStatus status)
     {
         _unitOfWork_Public.ReloadEntityFromDB(video);

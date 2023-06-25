@@ -43,6 +43,8 @@ public class TwitcastingRecorderService : KubernetesServiceBase, ITwitcastingRec
 
         Task<V1Job> doWithImage(string imageName)
         {
+            string filename = NameHelper.GetFileName(video, ITwitcastingRecorderService.name);
+            video.Filename = filename;
             return CreateInstanceAsync(
                     parameters: new
                     {
@@ -59,7 +61,7 @@ public class TwitcastingRecorderService : KubernetesServiceBase, ITwitcastingRec
                             value = new string[] {
                                 "/usr/bin/dumb-init", "--",
                                 "/bin/bash", "-c",
-                                $"/bin/bash record_twitcast.sh {video.ChannelId} once && mv /download/{NameHelper.GetFileName(video, ITwitcastingRecorderService.name)} /sharedvolume/{NameHelper.GetFileName(video, ITwitcastingRecorderService.name)}"
+                                $"/bin/bash record_twitcast.sh {video.ChannelId} once && mv /download/*.mp4 /sharedvolume/"
                             }
                         },
                     },

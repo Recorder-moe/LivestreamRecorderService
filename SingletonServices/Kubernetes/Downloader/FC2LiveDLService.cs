@@ -43,17 +43,19 @@ public class FC2LiveDLService : KubernetesServiceBase, IFC2LiveDLService
 
         Task<V1Job> doWithImage(string imageName)
         {
+            string filename = NameHelper.GetFileName(video, IFC2LiveDLService.name);
+            video.Filename = filename;
             string[] command = useCookiesFile
                 ? new string[]
                 {
                     "/usr/bin/dumb-init", "--",
                     "sh", "-c",
-                    $"/venv/bin/fc2-live-dl --latency high --threads 1 -o '{NameHelper.GetFileName(video, IFC2LiveDLService.name)}' --log-level trace --cookies /sharedvolume/cookies/{video}.txt 'https://live.fc2.com/{video.ChannelId}/' && mv *.mp4 /sharedvolume/"
+                    $"/venv/bin/fc2-live-dl --latency high --threads 1 -o '{filename}' --log-level trace --cookies /sharedvolume/cookies/{video}.txt 'https://live.fc2.com/{video.ChannelId}/' && mv *.mp4 /sharedvolume/"
                 }
                 : new string[] {
                     "/usr/bin/dumb-init", "--",
                     "sh", "-c",
-                    $"/venv/bin/fc2-live-dl --latency high --threads 1 -o '{NameHelper.GetFileName(video, IFC2LiveDLService.name)}' --log-level trace 'https://live.fc2.com/{video.ChannelId}/' && mv *.mp4 /sharedvolume/"
+                    $"/venv/bin/fc2-live-dl --latency high --threads 1 -o '{filename}' --log-level trace 'https://live.fc2.com/{video.ChannelId}/' && mv *.mp4 /sharedvolume/"
                 };
 
             return CreateInstanceAsync(

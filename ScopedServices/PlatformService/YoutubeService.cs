@@ -75,7 +75,6 @@ public class YoutubeService : PlatformService, IPlatformService
         {
             await AddOrUpdateVideoAsync(channel, item, cancellation);
         }
-        _unitOfWork_Public.Commit();
     }
 
     private Task<YtdlpVideoData?> GetChannelInfoByYtdlpAsync(string ChannelId, CancellationToken cancellation = default)
@@ -104,7 +103,6 @@ public class YoutubeService : PlatformService, IPlatformService
             return;
         }
 
-        bool isNewVideo = false;
         if (null == video)
         {
             video = new Video()
@@ -122,27 +120,13 @@ public class YoutubeService : PlatformService, IPlatformService
                 },
             };
             _logger.LogInformation("Found a new Video {videoId} from {channelId}", videoId, channel.id);
-            isNewVideo = true;
         }
         else
         {
             _videoRepository.LoadRelatedData(video);
         }
 
-        await UpdateVideoDataWithoutCommitAsync(video!, cancellation);
-
-        if (isNewVideo)
-            _videoRepository.Add(video);
-        else
-            _videoRepository.Update(video);
-    }
-
-    public override async Task UpdateVideoDataAsync(Video video, CancellationToken cancellation = default)
-    {
-        _unitOfWork_Public.ReloadEntityFromDB(video);
-        await UpdateVideoDataWithoutCommitAsync(video, cancellation);
-        _videoRepository.Update(video);
-        _unitOfWork_Public.Commit();
+        await UpdateVideoDataAsync(video, cancellation);
     }
 
     /// <summary>
@@ -152,7 +136,7 @@ public class YoutubeService : PlatformService, IPlatformService
     /// <param name="video"></param>
     /// <param name="cancellation"></param>
     /// <returns></returns>
-    public async Task UpdateVideoDataWithoutCommitAsync(Video video, CancellationToken cancellation = default)
+    public override async Task UpdateVideoDataAsync(Video video, CancellationToken cancellation = default)
     {
         using var __ = LogContext.PushProperty("videoId", video.id);
         YtdlpVideoData? videoData = await GetVideoInfoByYtdlpAsync($"https://youtu.be/{video.id}", cancellation);
@@ -440,6 +424,9 @@ public class YoutubeService : PlatformService, IPlatformService
 
         if (video.Status < 0)
             _logger.LogError("Video {videoId} has a Unknown status!", video.id);
+
+        _videoRepository.AddOrUpdate(video);
+        _unitOfWork_Public.Commit();
     }
 
     public override async Task UpdateChannelDataAsync(Channel channel, CancellationToken cancellation)
