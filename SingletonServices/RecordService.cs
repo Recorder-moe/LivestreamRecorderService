@@ -266,7 +266,7 @@ public class RecordService
             var successed = await _jobService.IsJobSucceededAsync(video, cancellation);
             if (successed)
             {
-                _logger.LogInformation("Video recording finish {videoId}", video.id);
+                _logger.LogInformation("Video uploaded finish {videoId}", video.id);
                 result.Add(video);
             }
         }
@@ -314,7 +314,7 @@ public class RecordService
         }
 
         await _discordService.SendArchivedMessage(video);
-        _logger.LogInformation("Video {videoId} is uploaded to Storage.", video.id);
+        _logger.LogInformation("Video {videoId} is successfully uploaded to Storage.", video.id);
         videoService.UpdateVideoStatus(video, VideoStatus.Archived);
     }
 
