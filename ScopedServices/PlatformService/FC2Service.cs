@@ -218,16 +218,20 @@ public class FC2Service : PlatformService, IPlatformService
             }
         }
 
-        if (await _storageService.IsVideoFileExists(video.Filename, cancellation))
+        if (!await _storageService.IsVideoFileExists(video.Filename, cancellation))
+        {
+            if (video.Status >= VideoStatus.Archived && video.Status < VideoStatus.Expired)
+            {
+                video.Status = VideoStatus.Missing;
+                video.Note = $"Video missing because archived not found.";
+                _logger.LogInformation("Can not found archived, change video status to {status}", Enum.GetName(typeof(VideoStatus), video.Status));
+            }
+        }
+        else if (video.Status < VideoStatus.Archived || video.Status >= VideoStatus.Expired)
         {
             video.Status = VideoStatus.Archived;
             video.Note = null;
-        }
-        else if (video.Status == VideoStatus.Archived)
-        {
-            video.Status = VideoStatus.Expired;
-            video.Note = $"Video expired because archived not found.";
-            _logger.LogInformation("Can not found archived, change video status to {status}", Enum.GetName(typeof(VideoStatus), VideoStatus.Expired));
+            _logger.LogInformation("Correct video status to {status} because archived is exists.", Enum.GetName(typeof(VideoStatus), video.Status));
         }
 
         _videoRepository.Update(video);

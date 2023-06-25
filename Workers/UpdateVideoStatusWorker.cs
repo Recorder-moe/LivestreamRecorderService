@@ -125,7 +125,7 @@ public class UpdateVideoStatusWorker : BackgroundService
         foreach (var video in videos)
         {
             if (video.SourceStatus == VideoStatus.Deleted
-                && video.SourceStatus == VideoStatus.Reject)
+                || video.SourceStatus == VideoStatus.Reject)
             {
                 _logger.LogWarning("The video {videoId} that has expired does not exist on the source platform!!", video.id);
             }
