@@ -1,8 +1,14 @@
-﻿namespace LivestreamRecorderService.Interfaces.Job;
+﻿using LivestreamRecorder.DB.Models;
+
+namespace LivestreamRecorderService.Interfaces.Job;
 
 public interface IJobServiceBase
 {
-    string DownloaderName { get; }
+    /// <summary>
+    /// [a-z0-9]([-a-z0-9]*[a-z0-9])?
+    /// </summary>
+    string Name { get; }
 
-    Task<dynamic> InitJobAsync(string url, string channelId, bool useCookiesFile = false, CancellationToken cancellation = default);
+    string GetInstanceName(string videoId);
+    Task InitJobAsync(string url, Video video, bool useCookiesFile = false, CancellationToken cancellation = default);
 }

@@ -20,7 +20,11 @@ namespace LivestreamRecorder.DB.Core
 
         public T ReloadEntityFromDB<T>(T entity) where T : Entity
         {
-            Context.Entry(entity).Reload();
+            try
+            {
+                Context.Entry(entity).Reload();
+            }
+            catch (NullReferenceException) { }
             return entity;
         }
 

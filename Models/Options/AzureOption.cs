@@ -10,8 +10,8 @@ public sealed class AzureOption
     public ACIOption? ContainerInstance { get; set; } = null;
     public AFSOption? FileShare { get; set; } = null;
     public ABSOption? BlobStorage { get; set; } = null;
-    public CosmosDbOptions? CosmosDb { get; set; } = null;
-   }
+    public CosmosDBOptions? CosmosDB { get; set; } = null;
+}
 
 public class ABSOption
 {
@@ -44,7 +44,7 @@ public class ClientSecretTenant
     public required string ClientSecret { get; set; }
 }
 
-public class CosmosDbOptions
+public class CosmosDBOptions
 {
     public required ContextInfo Public { get; set; }
     public required ContextInfo Private { get; set; }

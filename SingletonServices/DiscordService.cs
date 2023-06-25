@@ -1,6 +1,6 @@
 ﻿using Discord;
 using Discord.Webhook;
-using LivestreamRecorder.DB.Enum;
+using LivestreamRecorder.DB.Enums;
 using LivestreamRecorder.DB.Models;
 using LivestreamRecorderService.Models.OptionDiscords;
 using LivestreamRecorderService.Models.Options;

@@ -1,17 +1,19 @@
 ﻿using Azure.ResourceManager;
 using Azure.ResourceManager.Resources;
-using LivestreamRecorderService.Interfaces.Job;
+using LivestreamRecorder.DB.Models;
+using LivestreamRecorderService.Helper;
+using LivestreamRecorderService.Interfaces.Job.Downloader;
 using LivestreamRecorderService.Models.Options;
 using Microsoft.Extensions.Options;
 
-namespace LivestreamRecorderService.SingletonServices.ACI;
+namespace LivestreamRecorderService.SingletonServices.ACI.Downloader;
 
 public class FC2LiveDLService : ACIServiceBase, IFC2LiveDLService
 {
     private readonly AzureOption _azureOption;
     private readonly ILogger<FC2LiveDLService> _logger;
 
-    public override string DownloaderName => "fc2livedl";
+    public override string Name => IFC2LiveDLService.name;
 
     public FC2LiveDLService(
         ILogger<FC2LiveDLService> logger,
@@ -22,11 +24,21 @@ public class FC2LiveDLService : ACIServiceBase, IFC2LiveDLService
         _logger = logger;
     }
 
-    protected override Task<ArmOperation<ArmDeploymentResource>> CreateNewJobAsync(string _,
-                                                                                   string instanceName,
-                                                                                   string channelId,
-                                                                                   bool useCookiesFile = false,
-                                                                                   CancellationToken cancellation = default)
+    public override Task InitJobAsync(string videoId,
+                                      Video video,
+                                      bool useCookiesFile = false,
+                                      CancellationToken cancellation = default)
+        => InitJobAsyncWithChannelName(videoId: videoId,
+                                       video: video,
+                                       useCookiesFile: useCookiesFile,
+                                       cancellation: cancellation);
+
+    protected override Task<ArmOperation<ArmDeploymentResource>> CreateNewJobAsync(
+        string _,
+        string instanceName,
+        Video video,
+        bool useCookiesFile = false,
+        CancellationToken cancellation = default)
     {
         try
         {
@@ -46,16 +58,15 @@ public class FC2LiveDLService : ACIServiceBase, IFC2LiveDLService
                 {
                     "/usr/bin/dumb-init", "--",
                     "sh", "-c",
-                    $"/venv/bin/fc2-live-dl --latency high --threads 1 -o '%(channel_id)s%(date)s%(time)s.%(ext)s' --log-level trace --cookies /fileshare/cookies/{channelId}.txt 'https://live.fc2.com/{channelId}/' && mv *.mp4 /fileshare/"
+                    $"/venv/bin/fc2-live-dl --latency high --threads 1 -o '{NameHelper.GetFileName(video, IFC2LiveDLService.name)}' --log-level trace --cookies /sharedvolume/cookies/{video}.txt 'https://live.fc2.com/{video.ChannelId}/' && mv *.mp4 /sharedvolume/"
                 }
                 : new string[] {
                     "/usr/bin/dumb-init", "--",
                     "sh", "-c",
-                    $"/venv/bin/fc2-live-dl --latency high --threads 1 -o '%(channel_id)s%(date)s%(time)s.%(ext)s' --log-level trace 'https://live.fc2.com/{channelId}/' && mv *.mp4 /fileshare/"
+                    $"/venv/bin/fc2-live-dl --latency high --threads 1 -o '{NameHelper.GetFileName(video, IFC2LiveDLService.name)}' --log-level trace 'https://live.fc2.com/{video.ChannelId}/' && mv *.mp4 /sharedvolume/"
                 };
 
-            return CreateInstanceAsync(
-                    template: "ACI.json",
+            return CreateResourceAsync(
                     parameters: new
                     {
                         dockerImageName = new
@@ -80,7 +91,7 @@ public class FC2LiveDLService : ACIServiceBase, IFC2LiveDLService
                         },
                         fileshareVolumeName = new
                         {
-                            value = "livestream-recorder"
+                            value = _azureOption.FileShare.ShareName
                         }
                     },
                     deploymentName: instanceName,

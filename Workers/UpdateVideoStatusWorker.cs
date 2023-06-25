@@ -1,4 +1,4 @@
-﻿using LivestreamRecorder.DB.Enum;
+﻿using LivestreamRecorder.DB.Enums;
 using LivestreamRecorder.DB.Interfaces;
 using LivestreamRecorder.DB.Models;
 using LivestreamRecorderService.Interfaces;
@@ -62,7 +62,7 @@ public class UpdateVideoStatusWorker : BackgroundService
                 videos = videoRepository.Where(p => p.Status >= VideoStatus.Archived
                                                     && p.Status < VideoStatus.Expired)
                                         .ToList()
-                                        // Sort locally to reduce the CPU usage of CosmosDb
+                                        // Sort locally to reduce the CPU usage of CosmosDB
                                         .OrderByDescending(p => p.Timestamps.PublishedAt)
                                         .ToList();
 

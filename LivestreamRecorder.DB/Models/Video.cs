@@ -1,4 +1,4 @@
-﻿using LivestreamRecorder.DB.Enum;
+﻿using LivestreamRecorder.DB.Enums;
 using System.ComponentModel.DataAnnotations.Schema;
 
 namespace LivestreamRecorder.DB.Models;

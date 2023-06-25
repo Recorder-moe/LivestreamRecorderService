@@ -1,11 +1,13 @@
-using LivestreamRecorder.DB.Enum;
 using LivestreamRecorderService.DependencyInjection;
+using LivestreamRecorderService.Enums;
 using LivestreamRecorderService.Models.Options;
 using LivestreamRecorderService.ScopedServices;
 using LivestreamRecorderService.ScopedServices.PlatformService;
+using LivestreamRecorderService.SingletonServices;
 using LivestreamRecorderService.Workers;
 using Microsoft.Extensions.Options;
 using Serilog;
+using System.Configuration;
 
 #if DEBUG
 Serilog.Debugging.SelfLog.Enable(Console.WriteLine);
@@ -28,11 +30,6 @@ Log.Logger = new LoggerConfiguration().ReadFrom.Configuration(configuration)
 
 Log.Information("Starting up...");
 
-//#if DEBUG
-//#warning The debug build will print the connection string to the log for debugging purposes.
-//Log.Debug(configuration.GetConnectionString("DefaultConnection"));
-//#endif
-
 try
 {
     IHost host = Host.CreateDefaultBuilder(args)
@@ -40,6 +37,8 @@ try
     .ConfigureServices((context, services) =>
     {
         var configuration = context.Configuration;
+        services.AddHttpClient();
+
         services.AddOptions<AzureOption>()
                 .Bind(configuration.GetSection(AzureOption.ConfigurationSectionName))
                 .ValidateDataAnnotations()
@@ -50,51 +49,63 @@ try
                 .ValidateDataAnnotations()
                 .ValidateOnStart();
 
+        services.AddOptions<NFSOption>()
+                .Bind(configuration.GetSection(NFSOption.ConfigurationSectionName))
+                .ValidateDataAnnotations()
+                .ValidateOnStart();
+
         var serviceOptions = services.BuildServiceProvider().GetRequiredService<IOptions<ServiceOption>>().Value;
         var azureOptions = services.BuildServiceProvider().GetRequiredService<IOptions<AzureOption>>().Value;
-
-        switch (serviceOptions.DatabaseService)
-        {
-            case ServiceName.AzureCosmosDb:
-                services.AddCosmosDb(configuration);
-                break;
-            default:
-                Log.Fatal("Currently only Azure CosmosDb is supported.");
-                throw new NotImplementedException("Currently only Azure CosmosDb is supported.");
-        }
-
-        if (serviceOptions.PersistentVolumeService == ServiceName.AzureFileShare
-            && serviceOptions.StorageService == ServiceName.AzureBlobStorage
-            && !string.IsNullOrEmpty(azureOptions.AzureFileShares2BlobContainers))
-        {
-            services.AddHttpClient("AzureFileShares2BlobContainers", client =>
-            {
-                client.BaseAddress = new Uri(azureOptions.AzureFileShares2BlobContainers);
-                // Set this bigger than Azure Function timeout (10min)
-                client.Timeout = TimeSpan.FromMinutes(11);
-            });
-        }
+        var nfsOption = services.BuildServiceProvider().GetRequiredService<IOptions<NFSOption>>().Value;
 
         switch (serviceOptions.JobService)
         {
             case ServiceName.AzureContainerInstance:
                 services.AddAzureContainerInstanceService();
                 break;
-            case ServiceName.K8s:
-                throw new NotImplementedException("K8s is not implemented yet.");
-            default:
+            case ServiceName.Kubernetes:
+                services.AddKubernetesService(configuration);
+                break;
+            case ServiceName.Docker:
                 Log.Fatal("Currently only Azure Container Instance and K8s are supported.");
                 throw new NotImplementedException("Currently only Azure Container Instance and K8s are supported.");
+            default:
+                Log.Fatal("Job Serivce is limited to Azure Container Instance, Kubernetes or Docker.");
+                throw new ConfigurationErrorsException("Job Serivce is limited to Azure Container Instance, Kubernetes or Docker.");
         }
 
-        switch (serviceOptions.PersistentVolumeService)
+        switch (serviceOptions.SharedVolumeService)
         {
             case ServiceName.AzureFileShare:
-                services.AddAzureFileShareService();
+                if (null == azureOptions.FileShare
+                    || string.IsNullOrEmpty(azureOptions.FileShare.StorageAccountName)
+                    || string.IsNullOrEmpty(azureOptions.FileShare.StorageAccountKey)
+                    || string.IsNullOrEmpty(azureOptions.FileShare.ShareName))
+                {
+                    Log.Fatal("AzureFileShare StorageAccountName, StorageAccountKey, ShareName must be specified.");
+                    throw new ConfigurationErrorsException("AzureFileShare StorageAccountName, StorageAccountKey, ShareName must be specified.");
+                }
+                if (serviceOptions.JobService == ServiceName.Kubernetes)
+                {
+                    Log.Warning("If you are using Azure File Share with Kubernetes other than AKS, ensure that you have set up the Azure File CSI Driver.");
+                }
                 break;
+            case ServiceName.DockerVolume:
+                Log.Fatal("Currently only AzureFileShare is supported.");
+                throw new NotImplementedException("Currently only AzureFileShare is supported.");
+            case ServiceName.NFS:
+                goto case ServiceName.DockerVolume;
+
+            //if (string.IsNullOrWhiteSpace(nfsOption.Server)
+            //    || string.IsNullOrWhiteSpace(nfsOption.Path))
+            //{
+            //    Log.Fatal("NFS server and path must be specified.");
+            //    throw new ConfigurationErrorsException("NFS server and path must be specified.");
+            //}
+            //break;
             default:
-                Log.Fatal("Currently only Azure File Share is supported.");
-                throw new NotImplementedException("Currently only Azure File Share is supported.");
+                Log.Fatal("Shared Volume Serivce is limited to Azure File Share, DockerVolume or NFS.");
+                throw new ConfigurationErrorsException("Shared Volume Serivce is limited to Azure File Share, DockerVolume or NFS.");
         }
 
         switch (serviceOptions.StorageService)
@@ -102,14 +113,32 @@ try
             case ServiceName.AzureBlobStorage:
                 services.AddAzuerBlobStorageService();
                 break;
-            default:
+            case ServiceName.NFS:
+            case ServiceName.S3:
                 Log.Fatal("Currently only Azure Blob Storage is supported.");
                 throw new NotImplementedException("Currently only Azure Blob Storage is supported.");
+            default:
+                Log.Fatal("Storage Serivce is limited to Azure Blob Storage, NFS or S3.");
+                throw new ConfigurationErrorsException("Storage Serivce is limited to Azure Blob Storage, NFS or S3.");
+        }
+
+        switch (serviceOptions.DatabaseService)
+        {
+            case ServiceName.AzureCosmosDB:
+                services.AddCosmosDB(configuration);
+                break;
+            case ServiceName.ApacheCouchDB:
+                Log.Fatal("Currently only Azure CosmosDB is supported.");
+                throw new NotImplementedException("Currently only Azure CosmosDB is supported.");
+            default:
+                Log.Fatal("Database Serivce is limited to Azure CosmosDB or Apache CouchDB.");
+                throw new ConfigurationErrorsException("Database Serivce is limited to Azure CosmosDB or Apache CouchDB.");
         }
 
         services.AddDiscordService(configuration);
 
         services.AddHostedService<RecordWorker>();
+        services.AddSingleton<RecordService>();
         services.AddHostedService<MonitorWorker>();
         services.AddHostedService<UpdateChannelInfoWorker>();
         services.AddHostedService<UpdateVideoStatusWorker>();

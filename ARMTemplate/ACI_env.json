@@ -19,6 +19,9 @@
         },
         "storageAccountKey": {
             "type": "securestring"
+        },
+        "environmentVariables": {
+            "type": "array"
         }
     },
     "resources": [
@@ -53,7 +56,8 @@
                                     "name": "sharedvolume",
                                     "mountPath": "/sharedvolume"
                                 }
-                            ]
+                            ],
+                            "environmentVariables": "[parameters('environmentVariables')]"
                         }
                     }
                 ],

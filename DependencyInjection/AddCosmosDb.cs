@@ -10,24 +10,24 @@ namespace LivestreamRecorderService.DependencyInjection
 {
     public static partial class Extensions
     {
-        public static IServiceCollection AddCosmosDb(this IServiceCollection services, IConfiguration configuration)
+        public static IServiceCollection AddCosmosDB(this IServiceCollection services, IConfiguration configuration)
         {
             try
             {
                 var azureOptions = services.BuildServiceProvider().GetRequiredService<IOptions<AzureOption>>().Value;
 
-                if (null == azureOptions.CosmosDb
+                if (null == azureOptions.CosmosDB
                     || string.IsNullOrEmpty(configuration.GetConnectionString("Public"))
                     || string.IsNullOrEmpty(configuration.GetConnectionString("Private")))
                     throw new ConfigurationErrorsException();
 
-                // Add CosmosDb
+                // Add CosmosDB
                 services.AddDbContext<PublicContext>((options) =>
                 {
                     options
                         //.EnableSensitiveDataLogging()
                         .UseCosmos(connectionString: configuration.GetConnectionString("Public")!,
-                                   databaseName: azureOptions.CosmosDb.Public.DatabaseName,
+                                   databaseName: azureOptions.CosmosDB.Public.DatabaseName,
                                    cosmosOptionsAction: option => option.GatewayModeMaxConnectionLimit(380));
                 });
                 services.AddDbContext<PrivateContext>((options) =>
@@ -35,7 +35,7 @@ namespace LivestreamRecorderService.DependencyInjection
                     options
                         //.EnableSensitiveDataLogging()
                         .UseCosmos(connectionString: configuration.GetConnectionString("Private")!,
-                                   databaseName: azureOptions.CosmosDb.Private.DatabaseName,
+                                   databaseName: azureOptions.CosmosDB.Private.DatabaseName,
                                    cosmosOptionsAction: option => option.GatewayModeMaxConnectionLimit(380));
                 });
 
@@ -48,8 +48,8 @@ namespace LivestreamRecorderService.DependencyInjection
             }
             catch (ConfigurationErrorsException)
             {
-                Log.Fatal("Missing CosmosDb Settings. Please set CosmosDb and ConnectionStrings:Public ConnectionStrings:Private in appsettings.json.");
-                throw new ConfigurationErrorsException("Missing CosmosDb Settings. Please set CosmosDb and ConnectionStrings:Public ConnectionStrings:Private in appsettings.json.");
+                Log.Fatal("Missing CosmosDB Settings. Please set CosmosDB and ConnectionStrings:Public ConnectionStrings:Private in appsettings.json.");
+                throw new ConfigurationErrorsException("Missing CosmosDB Settings. Please set CosmosDB and ConnectionStrings:Public ConnectionStrings:Private in appsettings.json.");
             }
         }
     }

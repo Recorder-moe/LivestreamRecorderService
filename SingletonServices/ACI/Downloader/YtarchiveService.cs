@@ -1,17 +1,19 @@
 ﻿using Azure.ResourceManager;
 using Azure.ResourceManager.Resources;
-using LivestreamRecorderService.Interfaces.Job;
+using LivestreamRecorder.DB.Models;
+using LivestreamRecorderService.Helper;
+using LivestreamRecorderService.Interfaces.Job.Downloader;
 using LivestreamRecorderService.Models.Options;
 using Microsoft.Extensions.Options;
 
-namespace LivestreamRecorderService.SingletonServices.ACI;
+namespace LivestreamRecorderService.SingletonServices.ACI.Downloader;
 
 public class YtarchiveService : ACIServiceBase, IYtarchiveService
 {
     private readonly ILogger<YtarchiveService> _logger;
     private readonly AzureOption _azureOption;
 
-    public override string DownloaderName => "ytarchive";
+    public override string Name => IYtarchiveService.name;
 
     public YtarchiveService(
         ILogger<YtarchiveService> logger,
@@ -22,32 +24,12 @@ public class YtarchiveService : ACIServiceBase, IYtarchiveService
         _azureOption = options.Value;
     }
 
-    public override async Task<dynamic> InitJobAsync(string videoId,
-                                                           string channelId,
-                                                           bool useCookiesFile = false,
-                                                           CancellationToken cancellation = default)
-    {
-        if (null != await GetInstanceByKeywordAsync(videoId, cancellation))
-        {
-            _logger.LogWarning("ACI already exists! Fixed {videoId} status mismatch.", videoId);
-            return Task.CompletedTask;
-        }
-        else
-        {
-            var url = $"https://youtu.be/{videoId}";
-            return CreateNewJobAsync(id: url,
-                                     instanceName: GetInstanceName(url),
-                                     channelId: channelId,
-                                     useCookiesFile: useCookiesFile,
-                                     cancellation: cancellation);
-        }
-    }
-
-    protected override Task<ArmOperation<ArmDeploymentResource>> CreateNewJobAsync(string id,
-                                                                                   string instanceName,
-                                                                                   string channelId,
-                                                                                   bool useCookiesFile,
-                                                                                   CancellationToken cancellation)
+    protected override Task<ArmOperation<ArmDeploymentResource>> CreateNewJobAsync(
+        string url,
+        string instanceName,
+        Video video,
+        bool useCookiesFile,
+        CancellationToken cancellation)
     {
         try
         {
@@ -69,18 +51,17 @@ public class YtarchiveService : ACIServiceBase, IYtarchiveService
                     "sh", "-c",
                     // It is possible for Youtube to use "-" at the beginning of an id, which can cause errors when using the id as a file name.
                     // Therefore, we add "_" before the file name to avoid such issues.
-                    $"/ytarchive --add-metadata --merge --retry-frags 30 --thumbnail -o '_%(id)s' -c /fileshare/cookies/{channelId}.txt '{id}' best && mv *.mp4 /fileshare/"
+                    $"/ytarchive --add-metadata --merge --retry-frags 30 --thumbnail -o '_{NameHelper.GetFileName(video, IYtarchiveService.name).Replace(".mp4", "")}' -c /sharedvolume/cookies/{video.ChannelId}.txt '{url}' best && mv *.mp4 /sharedvolume/"
                 }
                 : new string[] {
                     "/usr/bin/dumb-init", "--",
                     "sh", "-c",
                     // It is possible for Youtube to use "-" at the beginning of an id, which can cause errors when using the id as a file name.
                     // Therefore, we add "_" before the file name to avoid such issues.
-                    $"/ytarchive --add-metadata --merge --retry-frags 30 --thumbnail -o '_%(id)s' '{id}' best && mv *.mp4 /fileshare/"
+                    $"/ytarchive --add-metadata --merge --retry-frags 30 --thumbnail -o '_{NameHelper.GetFileName(video, IYtarchiveService.name).Replace(".mp4", "")}' '{url}' best && mv *.mp4 /sharedvolume/"
                 };
 
-            return CreateInstanceAsync(
-                    template: "ACI.json",
+            return CreateResourceAsync(
                     parameters: new
                     {
                         dockerImageName = new
@@ -105,7 +86,7 @@ public class YtarchiveService : ACIServiceBase, IYtarchiveService
                         },
                         fileshareVolumeName = new
                         {
-                            value = "livestream-recorder"
+                            value = _azureOption.FileShare!.ShareName
                         }
                     },
                     deploymentName: instanceName,

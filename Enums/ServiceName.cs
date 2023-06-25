@@ -1,13 +1,13 @@
-﻿namespace LivestreamRecorder.DB.Enum;
+﻿namespace LivestreamRecorderService.Enums;
 
 public enum ServiceName
 {
     // Container
     AzureContainerInstance,
-    K8s,
+    Kubernetes,
     Docker,
 
-    // PressistentVolume
+    // SharedVolume
     AzureFileShare,
     NFS,
     DockerVolume,
@@ -18,6 +18,6 @@ public enum ServiceName
     // NFS,
 
     // Database
-    AzureCosmosDb,
-    CouchDB
+    AzureCosmosDB,
+    ApacheCouchDB
 }

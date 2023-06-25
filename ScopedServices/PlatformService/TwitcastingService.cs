@@ -1,9 +1,9 @@
 ﻿using LivestreamRecorder.DB.Core;
-using LivestreamRecorder.DB.Enum;
+using LivestreamRecorder.DB.Enums;
 using LivestreamRecorder.DB.Interfaces;
 using LivestreamRecorder.DB.Models;
 using LivestreamRecorderService.Interfaces;
-using LivestreamRecorderService.Interfaces.Job;
+using LivestreamRecorderService.Interfaces.Job.Downloader;
 using LivestreamRecorderService.Models;
 using LivestreamRecorderService.Models.OptionDiscords;
 using Microsoft.Extensions.Options;
@@ -121,10 +121,10 @@ public class TwitcastingService : PlatformService, IPlatformService
                 if (isLive && (video.Status < VideoStatus.Recording
                                || video.Status == VideoStatus.Missing))
                 {
-                    _ = _twitcastingRecorderService.InitJobAsync(url: videoId,
-                                                                          channelId: video.ChannelId,
-                                                                          useCookiesFile: false,
-                                                                          cancellation: cancellation);
+                    await _twitcastingRecorderService.InitJobAsync(url: videoId,
+                                                                   video: video,
+                                                                   useCookiesFile: false,
+                                                                   cancellation: cancellation);
 
                     video.Status = VideoStatus.Recording;
                     _logger.LogInformation("{channelId} is now lived! Start recording.", channel.id);

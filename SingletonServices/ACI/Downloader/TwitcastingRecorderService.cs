@@ -1,17 +1,19 @@
 ﻿using Azure.ResourceManager;
 using Azure.ResourceManager.Resources;
-using LivestreamRecorderService.Interfaces.Job;
+using LivestreamRecorder.DB.Models;
+using LivestreamRecorderService.Helper;
+using LivestreamRecorderService.Interfaces.Job.Downloader;
 using LivestreamRecorderService.Models.Options;
 using Microsoft.Extensions.Options;
 
-namespace LivestreamRecorderService.SingletonServices.ACI;
+namespace LivestreamRecorderService.SingletonServices.ACI.Downloader;
 
 public class TwitcastingRecorderService : ACIServiceBase, ITwitcastingRecorderService
 {
     private readonly AzureOption _azureOption;
     private readonly ILogger<TwitcastingRecorderService> _logger;
 
-    public override string DownloaderName => "twitcastingrecorder";
+    public override string Name => ITwitcastingRecorderService.name;
 
     public TwitcastingRecorderService(
         ILogger<TwitcastingRecorderService> logger,
@@ -22,11 +24,21 @@ public class TwitcastingRecorderService : ACIServiceBase, ITwitcastingRecorderSe
         _logger = logger;
     }
 
-    protected override Task<ArmOperation<ArmDeploymentResource>> CreateNewJobAsync(string id,
-                                                                                   string instanceName,
-                                                                                   string channelId,
-                                                                                   bool useCookiesFile = false,
-                                                                                   CancellationToken cancellation = default)
+    public override Task InitJobAsync(string videoId,
+                                      Video video,
+                                      bool useCookiesFile = false,
+                                      CancellationToken cancellation = default)
+        => InitJobAsyncWithChannelName(videoId: videoId,
+                                       video: video,
+                                       useCookiesFile: useCookiesFile,
+                                       cancellation: cancellation);
+
+    protected override Task<ArmOperation<ArmDeploymentResource>> CreateNewJobAsync(
+        string id,
+        string instanceName,
+        Video video,
+        bool useCookiesFile = false,
+        CancellationToken cancellation = default)
     {
         try
         {
@@ -41,8 +53,7 @@ public class TwitcastingRecorderService : ACIServiceBase, ITwitcastingRecorderSe
 
         Task<ArmOperation<ArmDeploymentResource>> doWithImage(string imageName)
         {
-            return CreateInstanceAsync(
-                    template: "ACI.json",
+            return CreateResourceAsync(
                     parameters: new
                     {
                         dockerImageName = new
@@ -58,7 +69,7 @@ public class TwitcastingRecorderService : ACIServiceBase, ITwitcastingRecorderSe
                             value = new string[] {
                                 "/usr/bin/dumb-init", "--",
                                 "/bin/bash", "-c",
-                                $"/bin/bash record_twitcast.sh {channelId} once && mv /download/*.mp4 /fileshare/"
+                                $"/bin/bash record_twitcast.sh {video.ChannelId} once && mv /download/{NameHelper.GetFileName(video, ITwitcastingRecorderService.name)} /sharedvolume/{NameHelper.GetFileName(video, ITwitcastingRecorderService.name)}"
                             }
                         },
                         storageAccountName = new
@@ -71,7 +82,7 @@ public class TwitcastingRecorderService : ACIServiceBase, ITwitcastingRecorderSe
                         },
                         fileshareVolumeName = new
                         {
-                            value = "livestream-recorder"
+                            value = _azureOption.FileShare!.ShareName
                         }
                     },
                     deploymentName: instanceName,

@@ -1,17 +1,19 @@
 ﻿using Azure.ResourceManager;
 using Azure.ResourceManager.Resources;
-using LivestreamRecorderService.Interfaces.Job;
+using LivestreamRecorder.DB.Models;
+using LivestreamRecorderService.Helper;
+using LivestreamRecorderService.Interfaces.Job.Downloader;
 using LivestreamRecorderService.Models.Options;
 using Microsoft.Extensions.Options;
 
-namespace LivestreamRecorderService.SingletonServices.ACI;
+namespace LivestreamRecorderService.SingletonServices.ACI.Downloader;
 
 public class StreamlinkService : ACIServiceBase, IStreamlinkService
 {
     private readonly AzureOption _azureOption;
     private readonly ILogger<StreamlinkService> _logger;
 
-    public override string DownloaderName => "streamlink";
+    public override string Name => IStreamlinkService.name;
 
     public StreamlinkService(
         ILogger<StreamlinkService> logger,
@@ -22,11 +24,21 @@ public class StreamlinkService : ACIServiceBase, IStreamlinkService
         _logger = logger;
     }
 
-    protected override Task<ArmOperation<ArmDeploymentResource>> CreateNewJobAsync(string id,
-                                                                                   string instanceName,
-                                                                                   string channelId,
-                                                                                   bool useCookiesFile = false,
-                                                                                   CancellationToken cancellation = default)
+    public override Task InitJobAsync(string videoId,
+                                      Video video,
+                                      bool useCookiesFile = false,
+                                      CancellationToken cancellation = default)
+        => InitJobAsyncWithChannelName(videoId: videoId,
+                                       video: video,
+                                       useCookiesFile: useCookiesFile,
+                                       cancellation: cancellation);
+
+    protected override Task<ArmOperation<ArmDeploymentResource>> CreateNewJobAsync(
+        string id,
+        string instanceName,
+        Video video,
+        bool useCookiesFile = false,
+        CancellationToken cancellation = default)
     {
         try
         {
@@ -41,8 +53,7 @@ public class StreamlinkService : ACIServiceBase, IStreamlinkService
 
         Task<ArmOperation<ArmDeploymentResource>> doWithImage(string imageName)
         {
-            return CreateInstanceAsync(
-                    template: "ACI.json",
+            return CreateResourceAsync(
                     parameters: new
                     {
                         dockerImageName = new
@@ -57,7 +68,7 @@ public class StreamlinkService : ACIServiceBase, IStreamlinkService
                         {
                             value = new string[] {
                                 "/bin/sh", "-c",
-                                $"/usr/local/bin/streamlink --twitch-disable-ads -o '/downloads/{{id}}.mp4' -f 'twitch.tv/{channelId}' best && cd /downloads && for file in *.mp4; do ffmpeg -i \"$file\" -map 0:v:0 -map 0:a:0 -c copy -movflags +faststart 'temp.mp4' && mv 'temp.mp4' \"/fileshare/$file\"; done"
+                                $"/usr/local/bin/streamlink --twitch-disable-ads -o '/downloads/{NameHelper.GetFileName(video, IStreamlinkService.name)}' -f 'twitch.tv/{video.ChannelId}' best && cd /downloads && for file in *.mp4; do ffmpeg -i \"$file\" -map 0:v:0 -map 0:a:0 -c copy -movflags +faststart 'temp.mp4' && mv 'temp.mp4' \"/sharedvolume/$file\"; done"
                             }
                         },
                         storageAccountName = new
@@ -70,7 +81,7 @@ public class StreamlinkService : ACIServiceBase, IStreamlinkService
                         },
                         fileshareVolumeName = new
                         {
-                            value = "livestream-recorder"
+                            value = _azureOption.FileShare!.ShareName
                         }
                     },
                     deploymentName: instanceName,

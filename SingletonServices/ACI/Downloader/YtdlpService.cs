@@ -1,17 +1,19 @@
 ﻿using Azure.ResourceManager;
 using Azure.ResourceManager.Resources;
-using LivestreamRecorderService.Interfaces.Job;
+using LivestreamRecorder.DB.Models;
+using LivestreamRecorderService.Helper;
+using LivestreamRecorderService.Interfaces.Job.Downloader;
 using LivestreamRecorderService.Models.Options;
 using Microsoft.Extensions.Options;
 
-namespace LivestreamRecorderService.SingletonServices.ACI;
+namespace LivestreamRecorderService.SingletonServices.ACI.Downloader;
 
 public class YtdlpService : ACIServiceBase, IYtdlpService
 {
     private readonly AzureOption _azureOption;
     private readonly ILogger<YtdlpService> _logger;
 
-    public override string DownloaderName => "ytdlp";
+    public override string Name => IYtdlpService.name;
 
     public YtdlpService(
         ILogger<YtdlpService> logger,
@@ -22,31 +24,22 @@ public class YtdlpService : ACIServiceBase, IYtdlpService
         _logger = logger;
     }
 
-    public override async Task<dynamic> InitJobAsync(string url,
-                                                  string channelId,
-                                                  bool useCookiesFile = false,
-                                                  CancellationToken cancellation = default)
-        => await CreateNewJobAsync(id: url,
-                                   instanceName: GetInstanceName(url),
-                                   channelId: channelId,
-                                   useCookiesFile: useCookiesFile,
-                                   cancellation: cancellation);
-
-    protected override Task<ArmOperation<ArmDeploymentResource>> CreateNewJobAsync(string id,
-                                                                                   string instanceName,
-                                                                                   string channelId,
-                                                                                   bool useCookiesFile = false,
-                                                                                   CancellationToken cancellation = default)
+    protected override Task<ArmOperation<ArmDeploymentResource>> CreateNewJobAsync(
+        string url,
+        string instanceName,
+        Video video,
+        bool useCookiesFile = false,
+        CancellationToken cancellation = default)
     {
         try
         {
-            return doWithImage("ghcr.io/recorder-moe/yt-dlp:2023.03.04");
+            return doWithImage("ghcr.io/recorder-moe/yt-dlp:2023.06.22");
         }
         catch (Exception)
         {
             // Use DockerHub as fallback
             _logger.LogWarning("Failed once, try docker hub as fallback.");
-            return doWithImage("recordermoe/yt-dlp:2023.03.04");
+            return doWithImage("recordermoe/yt-dlp:2023.06.22");
         }
 
         Task<ArmOperation<ArmDeploymentResource>> doWithImage(string imageName)
@@ -56,31 +49,23 @@ public class YtdlpService : ACIServiceBase, IYtdlpService
                 {
                     "dumb-init", "--",
                     "sh", "-c",
-                    $"yt-dlp --ignore-config --retries 30 --concurrent-fragments 16 --merge-output-format mp4 -S '+codec:h264' --embed-thumbnail --embed-metadata --no-part --cookies /fileshare/cookies/{channelId}.txt -o '%(id)s.%(ext)s' '{id}' && mv *.mp4 /fileshare/"
+                    $"yt-dlp --ignore-config --retries 30 --concurrent-fragments 16 --merge-output-format mp4 -S '+codec:h264' --embed-thumbnail --embed-metadata --no-part --cookies /sharedvolume/cookies/{video.ChannelId}.txt -o '{NameHelper.GetFileName(video, video.Source)}' '{url}' && mv *.mp4 /sharedvolume/"
                 }
                 : new string[]
                 {
                     "dumb-init", "--",
                     "sh", "-c",
-                    $"yt-dlp --ignore-config --retries 30 --concurrent-fragments 16 --merge-output-format mp4 -S '+codec:h264' --embed-thumbnail --embed-metadata --no-part -o '%(id)s.%(ext)s' '{id}' && mv *.mp4 /fileshare/"
+                    $"yt-dlp --ignore-config --retries 30 --concurrent-fragments 16 --merge-output-format mp4 -S '+codec:h264' --embed-thumbnail --embed-metadata --no-part -o '{NameHelper.GetFileName(video, video.Source)}' '{url}' && mv *.mp4 /sharedvolume/"
                 };
 
             // Workground for twitcasting ERROR: Initialization fragment found after media fragments, unable to download
             // https://github.com/yt-dlp/yt-dlp/issues/5497
-            if (id.Contains("twitcasting.tv"))
+            if (url.Contains("twitcasting.tv"))
             {
                 command[4] = command[4].Replace("--ignore-config --retries 30", "--ignore-config --retries 30 --downloader ffmpeg");
             }
 
-            // It is possible for Youtube to use "-" at the beginning of an id, which can cause errors when using the id as a file name.
-            // Therefore, we add "_" before the file name to avoid such issues.
-            if (id.Contains("youtu"))
-            {
-                command[4] = command[4].Replace("-o '%(id)s.%(ext)s'", "-o '_%(id)s.%(ext)s'");
-            }
-
-            return CreateInstanceAsync(
-                    template: "ACI.json",
+            return CreateResourceAsync(
                     parameters: new
                     {
                         dockerImageName = new
@@ -105,8 +90,8 @@ public class YtdlpService : ACIServiceBase, IYtdlpService
                         },
                         fileshareVolumeName = new
                         {
-                            value = "livestream-recorder"
-                        }
+                            value = _azureOption.FileShare!.ShareName
+                        },
                     },
                     deploymentName: instanceName,
                     cancellation: cancellation);

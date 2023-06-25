@@ -9,7 +9,8 @@ services:
     #  dockerfile: Dockerfile
     env_file:
       - .env
-    #volumes:
+    volumes:
+      - ~/.kube/config:/.kube/config
     #  - ./appsettings.json:/app/appsettings.json
     extra_hosts:
       - "host.docker.internal:host-gateway"
