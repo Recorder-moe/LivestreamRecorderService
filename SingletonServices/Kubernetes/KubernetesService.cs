@@ -79,6 +79,7 @@ public class KubernetesService : IJobService
 
         var status = await _client.DeleteNamespacedJobAsync(name: jobName,
                                                             namespaceParameter: job.Namespace(),
+                                                            propagationPolicy: "Foreground",
                                                             cancellationToken: cancellation);
         if (status.Status == "Failure")
         {
