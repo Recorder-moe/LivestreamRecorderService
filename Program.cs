@@ -85,6 +85,10 @@ try
                     Log.Fatal("AzureFileShare StorageAccountName, StorageAccountKey, ShareName must be specified.");
                     throw new ConfigurationErrorsException("AzureFileShare StorageAccountName, StorageAccountKey, ShareName must be specified.");
                 }
+                if (serviceOptions.JobService == ServiceName.Kubernetes)
+                {
+                    Log.Warning("If you are using Azure File Share with Kubernetes other than AKS, ensure that you have set up the Azure File CSI Driver.");
+                }
                 break;
             case ServiceName.DockerVolume:
                 Log.Fatal("Currently only AzureFileShare is supported.");

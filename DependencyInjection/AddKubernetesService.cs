@@ -47,7 +47,7 @@ namespace LivestreamRecorderService.DependencyInjection
                 services.AddSingleton<IJobService, KubernetesService>();
 
                 KubernetesService.KubernetesNamespace = string.IsNullOrWhiteSpace(kubernetesOptions.Namespace)
-                                ? "recorder.moe"
+                                ? "recordermoe"
                                 : kubernetesOptions.Namespace;
 
                 services.AddSingleton<IYtarchiveService, YtarchiveService>();

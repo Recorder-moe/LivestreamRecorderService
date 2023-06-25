@@ -96,7 +96,7 @@ public class RecordService
         var videos = videoService.GetVideosByStatus(VideoStatus.WaitingToRecord);
 
         // Livestream will start recording immediately when detected goes live.
-        // So in fact these cases will only be executed when HandledFailedACIsAsync() occured.
+        // So in fact these cases will only be executed when HandledFailedJobsAsync() occured.
         if (videos.Count > 0)
             _logger.LogInformation("Get {count} videos to record: {videoIds}", videos.Count, string.Join(", ", videos.Select(p => p.id).ToList()));
         else
@@ -105,7 +105,7 @@ public class RecordService
         foreach (var video in videos)
         {
             using var _ = LogContext.PushProperty("videoId", video.id);
-            _logger.LogInformation("Start to create ACI: {videoId}", video.id);
+            _logger.LogInformation("Start to create recording job: {videoId}", video.id);
             try
             {
                 switch (video.Source)
@@ -136,19 +136,19 @@ public class RecordService
                         break;
 
                     default:
-                        _logger.LogError("ACI deployment FAILED, Source not support: {source}", video.Source);
+                        _logger.LogError("Job deployment FAILED, Source not support: {source}", video.Source);
                         throw new NotSupportedException($"Source {video.Source} not supported");
                 }
                 videoService.UpdateVideoStatus(video, VideoStatus.Recording);
 
-                _logger.LogInformation("ACI deployed: {videoId} ", video.id);
+                _logger.LogInformation("Job deployed: {videoId} ", video.id);
                 _logger.LogInformation("Start to record {videoId}", video.id);
             }
             catch (Exception e)
             {
-                _logger.LogError(e, "ACI deployment FAILED: {videoId}", video.id);
+                _logger.LogError(e, "Job deployment FAILED: {videoId}", video.id);
                 videoService.UpdateVideoStatus(video, VideoStatus.Error);
-                videoService.UpdateVideoNote(video, "Exception happened when starting recording ACI. Please contact admin if you see this message");
+                videoService.UpdateVideoNote(video, "Exception happened when starting recording job. Please contact admin if you see this message");
             }
         }
     }
@@ -172,7 +172,7 @@ public class RecordService
         foreach (var video in videos)
         {
             using var _ = LogContext.PushProperty("videoId", video.id);
-            _logger.LogInformation("Start to create ACI: {videoId}", video.id);
+            _logger.LogInformation("Start to create downloading job: {videoId}", video.id);
             try
             {
                 switch (video.Source)
@@ -208,18 +208,18 @@ public class RecordService
                         break;
 
                     default:
-                        _logger.LogError("ACI deployment FAILED, Source not support: {source}", video.Source);
+                        _logger.LogError("Job deployment FAILED, Source not support: {source}", video.Source);
                         throw new NotSupportedException($"Source {video.Source} not supported");
                 }
                 videoService.UpdateVideoStatus(video, VideoStatus.Downloading);
-                _logger.LogInformation("ACI deployed: {videoId} ", video.id);
+                _logger.LogInformation("Job deployed: {videoId} ", video.id);
                 _logger.LogInformation("Start to download {videoId}", video.id);
             }
             catch (Exception e)
             {
-                _logger.LogError(e, "ACI deployment FAILED: {videoId}", video.id);
+                _logger.LogError(e, "Job deployment FAILED: {videoId}", video.id);
                 videoService.UpdateVideoStatus(video, VideoStatus.Error);
-                videoService.UpdateVideoNote(video, "Exception happened when starting downloading ACI. Please contact admin if you see this message");
+                videoService.UpdateVideoNote(video, "Exception happened when starting downloading job. Please contact admin if you see this message");
             }
         }
     }
@@ -285,6 +285,8 @@ public class RecordService
         {
             videoService.UpdateVideoStatus(video, VideoStatus.Error);
             videoService.UpdateVideoNote(video, $"This recording is FAILED! Please contact admin if you see this message.");
+            _logger.LogError("Recording FAILED: {videoId}", video.id);
+            return;
         }
 
         channelService.UpdateChannelLatestVideo(video);
@@ -307,6 +309,8 @@ public class RecordService
         {
             videoService.UpdateVideoStatus(video, VideoStatus.Error);
             videoService.UpdateVideoNote(video, $"This recording is FAILED! Please contact admin if you see this message.");
+            _logger.LogError("Uploading FAILED: {videoId}", video.id);
+            return;
         }
 
         await _discordService.SendArchivedMessage(video);

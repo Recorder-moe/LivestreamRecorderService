@@ -19,20 +19,24 @@ public class KubernetesService : IJobService
     internal const string _azureFileShareSecretName = "azure-fileshare-secret";
     internal const string _nfsSecretName = "nfs-secret";
 
-    internal static string KubernetesNamespace { get; set; } = "recorder.moe";
+    internal static string KubernetesNamespace { get; set; } = "recordermoe";
 
     public KubernetesService(
         ILogger<KubernetesService> logger,
         k8s.Kubernetes kubernetes,
         IOptions<AzureOption> azureOptions,
         IOptions<ServiceOption> serviceOptions,
-        IOptions<NFSOption> nfsOptions)
+        IOptions<NFSOption> nfsOptions,
+        IOptions<KubernetesOption> options)
     {
         _logger = logger;
         _client = kubernetes;
         _azureOption = azureOptions.Value;
         _serviceOption = serviceOptions.Value;
         _nfsOption = nfsOptions.Value;
+
+        KubernetesNamespace = options.Value.Namespace ?? KubernetesNamespace;
+        EnsureNamespaceExists(KubernetesNamespace);
 
         if (!CheckSecretExists()) CreateSecret();
     }
@@ -43,7 +47,9 @@ public class KubernetesService : IJobService
     public async Task<bool> IsJobSucceededAsync(string keyword, CancellationToken cancellation = default)
     {
         var job = await GetJobByKeywordAsync(keyword, cancellation);
-        return null != job && job.Status.Active == 0 && job.Status.Succeeded > 0;
+        return null != job
+               && (job.Status.Active == null || job.Status.Active == 0)
+               && job.Status.Succeeded > 0;
     }
 
     public Task<bool> IsJobFailedAsync(Video video, CancellationToken cancellation = default)
@@ -132,5 +138,23 @@ public class KubernetesService : IJobService
     {
         var jobs = await _client.ListNamespacedJobAsync(KubernetesNamespace, cancellationToken: cancellation);
         return jobs.Items.FirstOrDefault(p => p.Name().Contains(NameHelper.GetInstanceName(keyword)));
+    }
+
+    private void EnsureNamespaceExists(string namespaceName)
+    {
+        var existingNamespace = _client.ListNamespace().Items.ToList().Find(ns => ns.Metadata.Name == namespaceName);
+
+        if (existingNamespace != null) return;
+
+        var newNamespace = new V1Namespace()
+        {
+            Metadata = new V1ObjectMeta()
+            {
+                Name = namespaceName
+            }
+        };
+
+        _client.CreateNamespace(newNamespace);
+        _logger.LogInformation("Namespace {namespaceName} created.", namespaceName);
     }
 }
