@@ -70,8 +70,8 @@ public class RecordService
                 switch (video.Source)
                 {
                     case "Youtube":
-                        videoService.UpdateVideoStatus(video, VideoStatus.Scheduled);
-                        _logger.LogWarning("{videoId} is failed. Set status to Scheduled", video.id);
+                        videoService.UpdateVideoStatus(video, VideoStatus.Pending);
+                        _logger.LogWarning("{videoId} is failed. Set status to {status}", video.id, video.Status);
                         break;
                     default:
                         videoService.UpdateVideoStatus(video, VideoStatus.Error);

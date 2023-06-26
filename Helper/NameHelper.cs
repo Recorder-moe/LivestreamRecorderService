@@ -5,12 +5,12 @@ namespace LivestreamRecorderService.Helper;
 
 public static class NameHelper
 {
-    public static string GetInstanceName(string videoId)
-        => (videoId.Split("/").Last()
-                   .Split("?").First()
-                   .Split(".").First()
-                   .Replace("_", "")
-                   .Replace(":", "")
+    public static string GetInstanceName(string id)
+        => (id.Split("/").Last()
+              .Split("?").First()
+              .Split(".").First()
+              .Replace("_", "")
+              .Replace(":", "")
            ).ToLower();
 
     public static string GetFileName(Video video, string Platform)

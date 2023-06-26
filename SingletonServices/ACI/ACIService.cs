@@ -1,5 +1,5 @@
 ﻿using Azure.ResourceManager;
-using Azure.ResourceManager.Resources;
+using Azure.ResourceManager.ContainerInstance;
 using LivestreamRecorder.DB.Models;
 using LivestreamRecorderService.Helper;
 using LivestreamRecorderService.Interfaces.Job;
@@ -27,23 +27,23 @@ public class ACIService : IJobService
     }
 
     public async Task<bool> IsJobSucceededAsync(Video video, CancellationToken cancellation = default)
-        => await IsJobSucceededAsync(NameHelper.GetInstanceName(video.id), cancellation)
-           || await IsJobSucceededAsync(NameHelper.GetInstanceName(video.ChannelId), cancellation);
+        => await IsJobSucceededAsync(video.id, cancellation)
+           || await IsJobSucceededAsync(video.ChannelId, cancellation);
 
     public async Task<bool> IsJobSucceededAsync(string keyword, CancellationToken cancellation = default)
     {
-        var resource = await GetResourceByKeywordAsync(keyword, cancellation);
-        return null != resource && resource.HasData && resource.Data.ProvisioningState == "Succeeded";
+        var resource = await GetResourceByKeywordAsync(NameHelper.GetInstanceName(keyword), cancellation);
+        return null != resource && resource.HasData && resource.Data.InstanceView.State == "Succeeded";
     }
 
     public async Task<bool> IsJobFailedAsync(Video video, CancellationToken cancellation = default)
-        => await IsJobFailedAsync(NameHelper.GetInstanceName(video.id), cancellation)
-           && await IsJobFailedAsync(NameHelper.GetInstanceName(video.ChannelId), cancellation);
+        => await IsJobFailedAsync(video.id, cancellation)
+           && await IsJobFailedAsync(video.ChannelId, cancellation);
 
     public async Task<bool> IsJobFailedAsync(string keyword, CancellationToken cancellation)
     {
-        var resource = await GetResourceByKeywordAsync(keyword, cancellation);
-        return null == resource || !resource.HasData || resource.Data.ProvisioningState == "Failed";
+        var resource = await GetResourceByKeywordAsync(NameHelper.GetInstanceName(keyword), cancellation);
+        return null == resource || !resource.HasData || resource.Data.InstanceView.State == "Failed";
     }
 
     /// <summary>
@@ -54,10 +54,10 @@ public class ACIService : IJobService
     /// <exception cref="Exception">ACI status is FAILED</exception>
     public async Task RemoveCompletedJobsAsync(Video video, CancellationToken cancellation = default)
     {
-        var resource = await GetResourceByKeywordAsync(video.id, cancellation);
+        var resource = await GetResourceByKeywordAsync(NameHelper.GetInstanceName(video.id), cancellation);
         if (null == resource || !resource.HasData)
         {
-            resource = await GetResourceByKeywordAsync(video.ChannelId, cancellation);
+            resource = await GetResourceByKeywordAsync(NameHelper.GetInstanceName(video.ChannelId), cancellation);
             if (null == resource || !resource.HasData)
             {
                 _logger.LogError("Failed to get ACI instance for {videoId} when removing completed jobs. Please check if the ACI exists.", video.id);
@@ -86,20 +86,13 @@ public class ACIService : IJobService
         _logger.LogInformation("Delete ACI {jobName} for video {videoId}", jobName, video.id);
     }
 
-    private async Task<GenericResource?> GetResourceByKeywordAsync(string keyword, CancellationToken cancellation = default)
-    {
-        var resourceGroupResource = await GetResourceGroupAsync(cancellation);
-        return resourceGroupResource.GetGenericResources(
-                                        filter: $"substringof('{NameHelper.GetInstanceName(keyword)}', name) and resourceType eq 'microsoft.containerinstance/containergroups'",
-                                        expand: "provisioningState",
-                                        top: 1,
-                                        cancellationToken: cancellation)
-                                    .FirstOrDefault();
-    }
-
-    private async Task<ResourceGroupResource> GetResourceGroupAsync(CancellationToken cancellation = default)
+    private async Task<ContainerGroupResource?> GetResourceByKeywordAsync(string keyword, CancellationToken cancellation = default)
     {
         var subscriptionResource = await _armClient.GetDefaultSubscriptionAsync(cancellation);
-        return await subscriptionResource.GetResourceGroupAsync(_resourceGroupName, cancellation);
+        var resourceGroupResource = (await subscriptionResource.GetResourceGroupAsync(_resourceGroupName, cancellation))?.Value;
+        var containerGroupResourceTemp = resourceGroupResource.GetContainerGroups().FirstOrDefault(p => p.Id.Name.Contains(keyword));
+        return null == containerGroupResourceTemp
+            ? null
+            : (await resourceGroupResource.GetContainerGroupAsync(containerGroupResourceTemp.Id.Name, cancellation)).Value;
     }
 }
