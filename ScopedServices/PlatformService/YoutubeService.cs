@@ -202,6 +202,8 @@ public class YoutubeService : PlatformService, IPlatformService
                 // Livestream is finished but cannot download yet.
                 if (video.Status != VideoStatus.Recording)
                     video.Status = VideoStatus.Pending;
+
+                _logger.LogWarning("Video {videoId} is currently in post_live status. Please wait for YouTube to prepare the video for download. If the admin still wants to download it, please manually change the video status to \"WaitingToDownload\".", video.id);
                 goto case "_live";
             case "was_live":
                 switch (video.Status)
