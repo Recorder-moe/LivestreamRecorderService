@@ -31,6 +31,8 @@ public class YtarchiveService : ACIServiceBase, IYtarchiveService
         bool useCookiesFile,
         CancellationToken cancellation)
     {
+        if (!url.StartsWith("http")) url = $"https://youtu.be/{url}";
+
         try
         {
             return doWithImage("ghcr.io/recorder-moe/ytarchive:v0.3.2");

@@ -24,31 +24,14 @@ public class YtarchiveService : KubernetesServiceBase, IYtarchiveService
         _logger = logger;
     }
 
-    public override async Task InitJobAsync(string videoId,
-                                            Video video,
-                                            bool useCookiesFile = false,
-                                            CancellationToken cancellation = default)
-    {
-        if (null != await GetJobByKeywordAsync(videoId, cancellation))
-        {
-            _logger.LogWarning("K8s job already exists! Fixed {videoId} status mismatch.", videoId);
-            return;
-        }
-
-        var url = $"https://youtu.be/{videoId}";
-        await CreateNewJobAsync(url: url,
-                                instanceName: GetInstanceName(url),
-                                video: video,
-                                useCookiesFile: useCookiesFile,
-                                cancellation: cancellation);
-    }
-
     protected override Task<V1Job> CreateNewJobAsync(string url,
                                                      string instanceName,
                                                      Video video,
                                                      bool useCookiesFile,
                                                      CancellationToken cancellation)
     {
+        if (!url.StartsWith("http")) url = $"https://youtu.be/{url}";
+
         try
         {
             return doWithImage("ghcr.io/recorder-moe/ytarchive:v0.3.2");
