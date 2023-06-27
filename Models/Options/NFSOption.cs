@@ -1,6 +1,4 @@
-﻿using System.ComponentModel.DataAnnotations;
-
-namespace LivestreamRecorderService.Models.Options;
+﻿namespace LivestreamRecorderService.Models.Options;
 
 public class NFSOption
 {
@@ -10,6 +8,4 @@ public class NFSOption
 
     public string? Server { get; set; }
     public string? Path { get; set; }
-    public string? Username { get; set; }
-    public string? Password { get; set; }
 }

@@ -17,7 +17,8 @@ public class KubernetesService : IJobService
     private readonly ServiceOption _serviceOption;
     private readonly NFSOption _nfsOption;
     internal const string _azureFileShareSecretName = "azure-fileshare-secret";
-    internal const string _nfsSecretName = "nfs-secret";
+    internal const string _storageClassName = "nfs-csi";
+    internal const string _persistentVolumeClaimName = "nfs-pvc";
 
     internal static string KubernetesNamespace { get; set; } = "recordermoe";
 
@@ -26,8 +27,8 @@ public class KubernetesService : IJobService
         k8s.Kubernetes kubernetes,
         IOptions<AzureOption> azureOptions,
         IOptions<ServiceOption> serviceOptions,
-        IOptions<NFSOption> nfsOptions,
-        IOptions<KubernetesOption> options)
+        IOptions<KubernetesOption> options,
+        IOptions<NFSOption> nfsOptions)
     {
         _logger = logger;
         _client = kubernetes;
@@ -38,7 +39,13 @@ public class KubernetesService : IJobService
         KubernetesNamespace = options.Value.Namespace ?? KubernetesNamespace;
         EnsureNamespaceExists(KubernetesNamespace);
 
-        if (!CheckSecretExists()) CreateSecret();
+        if (_serviceOption.SharedVolumeService == ServiceName.AzureFileShare
+            && !CheckSecretExists())
+            CreateSecret();
+
+        if (_serviceOption.SharedVolumeService == ServiceName.NFS
+            && !CheckStorageClassAndPersistentVolumeClaimExists())
+            CreateStorageClassAndPersistentVolumeClaim();
     }
 
     public Task<bool> IsJobSucceededAsync(Video video, CancellationToken cancellation = default)
@@ -90,49 +97,80 @@ public class KubernetesService : IJobService
     }
 
     private bool CheckSecretExists()
-        => _serviceOption.SharedVolumeService switch
-        {
-            ServiceName.AzureFileShare => _client.ListNamespacedSecret(KubernetesNamespace)
-                                                 .Items
-                                                 .Any(secret => secret.Metadata.Name == _azureFileShareSecretName),
-            ServiceName.NFS => _client.ListNamespacedSecret(KubernetesNamespace)
-                                      .Items
-                                      .Any(secret => secret.Metadata.Name == _nfsSecretName),
-            _ => false,
-        };
+        => _client.ListNamespacedSecret(KubernetesNamespace)
+                      .Items
+                      .Any(secret => secret.Metadata.Name == _azureFileShareSecretName);
 
     private void CreateSecret()
     {
-        var secret = _serviceOption.SharedVolumeService switch
+        var secret = new V1Secret
         {
-            ServiceName.NFS => new V1Secret
+            Metadata = new V1ObjectMeta
             {
-                Metadata = new V1ObjectMeta
-                {
-                    Name = _nfsSecretName
-                },
-                StringData = new Dictionary<string, string>
-                {
-                    ["username"] = _nfsOption.Username ?? "",
-                    ["password"] = _nfsOption.Password ?? ""
-                }
+                Name = _azureFileShareSecretName
             },
-            ServiceName.AzureFileShare => new V1Secret
+            StringData = new Dictionary<string, string>
             {
-                Metadata = new V1ObjectMeta
-                {
-                    Name = _azureFileShareSecretName
-                },
-                StringData = new Dictionary<string, string>
-                {
-                    ["azurestorageaccountname"] = _azureOption.FileShare!.StorageAccountName,
-                    ["azurestorageaccountkey"] = _azureOption.FileShare!.StorageAccountKey
-                }
-            },
-            _ => throw new NotImplementedException(),
+                ["azurestorageaccountname"] = _azureOption.FileShare!.StorageAccountName,
+                ["azurestorageaccountkey"] = _azureOption.FileShare!.StorageAccountKey
+            }
         };
 
         _client.CreateNamespacedSecret(secret, KubernetesNamespace);
+    }
+
+    private bool CheckStorageClassAndPersistentVolumeClaimExists()
+        => _client.ListStorageClass()
+                  .Items
+                  .Any(p => p.Name() == _storageClassName)
+           && _client.ListNamespacedPersistentVolumeClaim(KubernetesNamespace)
+                     .Items
+                     .Any(p => p.Name() == _persistentVolumeClaimName);
+
+    private void CreateStorageClassAndPersistentVolumeClaim()
+    {
+        var storageClass = new V1StorageClass
+        {
+            Metadata = new V1ObjectMeta
+            {
+                Name = _storageClassName
+            },
+            Provisioner = "nfs.csi.k8s.io",
+            VolumeBindingMode = "Immediate",
+            ReclaimPolicy = "Retain",
+            MountOptions = new List<string> { "nfsvers=4.1" },
+            Parameters = new Dictionary<string, string>
+            {
+                ["server"] = string.IsNullOrEmpty(_nfsOption.Server)
+                                ? "nfs-server.recordermoe.svc.cluster.local"
+                                : _nfsOption.Server,
+                ["share"] = string.IsNullOrEmpty(_nfsOption.Path)
+                                ? "/"
+                                : _nfsOption.Path
+            }
+        };
+        var pvc = new V1PersistentVolumeClaim
+        {
+            Metadata = new V1ObjectMeta
+            {
+                Name = _persistentVolumeClaimName
+            },
+            Spec = new V1PersistentVolumeClaimSpec
+            {
+                StorageClassName = _storageClassName,
+                AccessModes = new List<string> { "ReadWriteMany" },
+                Resources = new V1ResourceRequirements
+                {
+                    Requests = new Dictionary<string, ResourceQuantity>
+                    {
+                        ["storage"] = new ResourceQuantity("10Gi")
+                    }
+                }
+            }
+        };
+
+        _client.CreateStorageClass(storageClass);
+        _client.CreateNamespacedPersistentVolumeClaim(pvc, KubernetesNamespace);
     }
 
     private async Task<V1Job?> GetJobByKeywordAsync(string keyword, CancellationToken cancellation)

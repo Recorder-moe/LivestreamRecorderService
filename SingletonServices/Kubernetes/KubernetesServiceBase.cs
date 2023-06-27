@@ -135,15 +135,10 @@ public abstract class KubernetesServiceBase : IJobServiceBase
             ServiceName.NFS => new()
             {
                 Name = "sharedvolume",
-                Nfs = new()
+                PersistentVolumeClaim = new()
                 {
-                    Server = _nfsOption.Server,
-                    Path = _nfsOption.Path,
-                    ReadOnlyProperty = false,
-                },
-                Secret = new()
-                {
-                    SecretName = KubernetesService._nfsSecretName,
+                    ClaimName = KubernetesService._persistentVolumeClaimName,
+                    ReadOnlyProperty = false
                 }
             },
             _ => throw new ConfigurationErrorsException($"ShareVolume Service {Enum.GetName(typeof(ServiceName), _serviceOption.SharedVolumeService)} not supported for Kubernetes.")

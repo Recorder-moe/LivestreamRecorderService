@@ -91,18 +91,27 @@ try
                 }
                 break;
             case ServiceName.DockerVolume:
-                Log.Fatal("Currently only AzureFileShare is supported.");
-                throw new NotImplementedException("Currently only AzureFileShare is supported.");
-            case ServiceName.NFS:
-                goto case ServiceName.DockerVolume;
+                Log.Fatal("Currently only AzureFileShare and NFS is supported.");
+                throw new NotImplementedException("Currently only AzureFileShare and NFS is supported.");
 
-            //if (string.IsNullOrWhiteSpace(nfsOption.Server)
-            //    || string.IsNullOrWhiteSpace(nfsOption.Path))
+            //if (serviceOptions.JobService == ServiceName.AzureContainerInstance)
             //{
-            //    Log.Fatal("NFS server and path must be specified.");
-            //    throw new ConfigurationErrorsException("NFS server and path must be specified.");
+            //    Log.Fatal("Azure Container Instance is not able to mount Docker volume. Use Azure File Share instead.");
+            //    throw new ConfigurationErrorsException("Azure Container Instance is not able to mount Docker volume. Use Azure File Share instead.");
             //}
-            //break;
+            case ServiceName.NFS:
+                if (string.IsNullOrWhiteSpace(nfsOption.Server)
+                    || string.IsNullOrWhiteSpace(nfsOption.Path))
+                {
+                    Log.Fatal("NFS server and path must be specified.");
+                    throw new ConfigurationErrorsException("NFS server and path must be specified.");
+                }
+                if (serviceOptions.JobService == ServiceName.AzureContainerInstance)
+                {
+                    Log.Fatal("Azure Container Instance is not able to mount NFS volume. Use Azure File Share instead.");
+                    throw new ConfigurationErrorsException("Azure Container Instance is not able to mount NFS volume. Use Azure File Share instead.");
+                }
+                break;
             default:
                 Log.Fatal("Shared Volume Serivce is limited to Azure File Share, DockerVolume or NFS.");
                 throw new ConfigurationErrorsException("Shared Volume Serivce is limited to Azure File Share, DockerVolume or NFS.");
@@ -113,7 +122,6 @@ try
             case ServiceName.AzureBlobStorage:
                 services.AddAzuerBlobStorageService();
                 break;
-            case ServiceName.NFS:
             case ServiceName.S3:
                 Log.Fatal("Currently only Azure Blob Storage is supported.");
                 throw new NotImplementedException("Currently only Azure Blob Storage is supported.");
