@@ -30,10 +30,10 @@ public class ABSService : IStorageService
                                           .DeleteIfExistsAsync(snapshotsOption: DeleteSnapshotsOption.IncludeSnapshots,
                                                                cancellationToken: cancellation)).Value;
 
-    public async Task<BlobContentInfo> UploadVideoFile(string? contentType, string pathInStorage, string tempPath, CancellationToken cancellation = default)
-        => (await _blobContainerClient_public.GetBlobClient(pathInStorage)
+    public Task UploadVideoFile(string? contentType, string pathInStorage, string tempPath, CancellationToken cancellation = default)
+        => _blobContainerClient_public.GetBlobClient(pathInStorage)
                                              .UploadAsync(path: tempPath,
                                                           httpHeaders: new BlobHttpHeaders { ContentType = contentType },
                                                           accessTier: AccessTier.Hot,
-                                                          cancellationToken: cancellation)).Value;
+                                                          cancellationToken: cancellation);
 }
