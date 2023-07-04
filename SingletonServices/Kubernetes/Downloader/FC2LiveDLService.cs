@@ -50,7 +50,7 @@ public class FC2LiveDLService : KubernetesServiceBase, IFC2LiveDLService
                 {
                     "/usr/bin/dumb-init", "--",
                     "sh", "-c",
-                    $"/venv/bin/fc2-live-dl --latency high --threads 1 -o '{filename}' --log-level trace --cookies /sharedvolume/cookies/{video}.txt 'https://live.fc2.com/{video.ChannelId}/' && mv *.mp4 /sharedvolume/"
+                    $"/venv/bin/fc2-live-dl --latency high --threads 1 -o '{filename}' --log-level trace --cookies /sharedvolume/cookies/{video.ChannelId}.txt 'https://live.fc2.com/{video.ChannelId}/' && mv *.mp4 /sharedvolume/"
                 }
                 : new string[] {
                     "/usr/bin/dumb-init", "--",
