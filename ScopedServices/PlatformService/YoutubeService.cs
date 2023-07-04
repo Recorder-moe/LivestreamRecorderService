@@ -370,7 +370,7 @@ public class YoutubeService : PlatformService, IPlatformService
                         }
                     }
                     video.SourceStatus = VideoStatus.Edited;
-                    _logger.LogInformation("Video source is {status} because it has been restored from rejection or deletion.", Enum.GetName(typeof(VideoStatus), video.Status));
+                    _logger.LogInformation("Video source is {status} because it has been restored from rejection or deletion.", Enum.GetName(typeof(VideoStatus), video.SourceStatus));
                 }
                 else if (video.SourceStatus != VideoStatus.Edited)
                 {
