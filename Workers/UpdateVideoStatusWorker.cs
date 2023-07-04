@@ -49,7 +49,7 @@ public class UpdateVideoStatusWorker : BackgroundService
             {
                 VideoService videoService = scope.ServiceProvider.GetRequiredService<VideoService>();
                 IVideoRepository videoRepository = scope.ServiceProvider.GetRequiredService<IVideoRepository>();
-                IPlatformService youtubeSerivce = scope.ServiceProvider.GetRequiredService<YoutubeService>();
+                IPlatformService youtubeService = scope.ServiceProvider.GetRequiredService<YoutubeService>();
                 IPlatformService twitcastingService = scope.ServiceProvider.GetRequiredService<TwitcastingService>();
                 IPlatformService fc2Service = scope.ServiceProvider.GetRequiredService<FC2Service>();
                 #endregion
@@ -80,7 +80,7 @@ public class UpdateVideoStatusWorker : BackgroundService
                 switch (video.Source)
                 {
                     case "Youtube":
-                        await youtubeSerivce.UpdateVideoDataAsync(video, stoppingToken);
+                        await youtubeService.UpdateVideoDataAsync(video, stoppingToken);
                         break;
                     case "Twitcasting":
                         await twitcastingService.UpdateVideoDataAsync(video, stoppingToken);
