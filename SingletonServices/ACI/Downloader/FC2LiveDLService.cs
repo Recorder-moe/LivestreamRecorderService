@@ -28,10 +28,14 @@ public class FC2LiveDLService : ACIServiceBase, IFC2LiveDLService
                                       Video video,
                                       bool useCookiesFile = false,
                                       CancellationToken cancellation = default)
-        => InitJobAsyncWithChannelName(videoId: videoId,
-                                       video: video,
-                                       useCookiesFile: useCookiesFile,
-                                       cancellation: cancellation);
+    {
+        string filename = NameHelper.GetFileName(video, IFC2LiveDLService.name);
+        video.Filename = filename;
+        return InitJobAsyncWithChannelName(videoId: videoId,
+                                           video: video,
+                                           useCookiesFile: useCookiesFile,
+                                           cancellation: cancellation);
+    }
 
     protected override Task<ArmOperation<ArmDeploymentResource>> CreateNewJobAsync(
         string _,
@@ -40,6 +44,7 @@ public class FC2LiveDLService : ACIServiceBase, IFC2LiveDLService
         bool useCookiesFile = false,
         CancellationToken cancellation = default)
     {
+        string filename = NameHelper.GetFileName(video, IFC2LiveDLService.name);
         try
         {
             return doWithImage("ghcr.io/recorder-moe/fc2-live-dl:2.1.3");
@@ -53,8 +58,6 @@ public class FC2LiveDLService : ACIServiceBase, IFC2LiveDLService
 
         Task<ArmOperation<ArmDeploymentResource>> doWithImage(string imageName)
         {
-            string filename = NameHelper.GetFileName(video, IFC2LiveDLService.name);
-            video.Filename = filename;
             string[] command = useCookiesFile
                 ? new string[]
                 {

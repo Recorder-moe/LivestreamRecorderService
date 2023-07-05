@@ -28,10 +28,14 @@ public class StreamlinkService : ACIServiceBase, IStreamlinkService
                                       Video video,
                                       bool useCookiesFile = false,
                                       CancellationToken cancellation = default)
-        => InitJobAsyncWithChannelName(videoId: videoId,
-                                       video: video,
-                                       useCookiesFile: useCookiesFile,
-                                       cancellation: cancellation);
+    {
+        string filename = NameHelper.GetFileName(video, IStreamlinkService.name);
+        video.Filename = filename;
+        return InitJobAsyncWithChannelName(videoId: videoId,
+                                           video: video,
+                                           useCookiesFile: useCookiesFile,
+                                           cancellation: cancellation);
+    }
 
     protected override Task<ArmOperation<ArmDeploymentResource>> CreateNewJobAsync(
         string id,
@@ -40,6 +44,7 @@ public class StreamlinkService : ACIServiceBase, IStreamlinkService
         bool useCookiesFile = false,
         CancellationToken cancellation = default)
     {
+        string filename = NameHelper.GetFileName(video, IStreamlinkService.name);
         try
         {
             return doWithImage("ghcr.io/recorder-moe/streamlink:5.3.1");
@@ -53,8 +58,6 @@ public class StreamlinkService : ACIServiceBase, IStreamlinkService
 
         Task<ArmOperation<ArmDeploymentResource>> doWithImage(string imageName)
         {
-            string filename = NameHelper.GetFileName(video, IStreamlinkService.name);
-            video.Filename = filename;
             return CreateResourceAsync(
                     parameters: new
                     {

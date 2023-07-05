@@ -28,10 +28,14 @@ public class TwitcastingRecorderService : ACIServiceBase, ITwitcastingRecorderSe
                                       Video video,
                                       bool useCookiesFile = false,
                                       CancellationToken cancellation = default)
-        => InitJobAsyncWithChannelName(videoId: videoId,
-                                       video: video,
-                                       useCookiesFile: useCookiesFile,
-                                       cancellation: cancellation);
+    {
+        string filename = NameHelper.GetFileName(video, ITwitcastingRecorderService.name);
+        video.Filename = filename;
+        return InitJobAsyncWithChannelName(videoId: videoId,
+                                           video: video,
+                                           useCookiesFile: useCookiesFile,
+                                           cancellation: cancellation);
+    }
 
     protected override Task<ArmOperation<ArmDeploymentResource>> CreateNewJobAsync(
         string id,
@@ -53,8 +57,6 @@ public class TwitcastingRecorderService : ACIServiceBase, ITwitcastingRecorderSe
 
         Task<ArmOperation<ArmDeploymentResource>> doWithImage(string imageName)
         {
-            string filename = NameHelper.GetFileName(video, ITwitcastingRecorderService.name);
-            video.Filename = filename;
             return CreateResourceAsync(
                     parameters: new
                     {
