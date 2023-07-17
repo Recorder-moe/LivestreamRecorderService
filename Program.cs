@@ -112,8 +112,17 @@ try
                     throw new ConfigurationErrorsException("Azure Container Instance is not able to mount NFS volume. Use Azure File Share instead.");
                 }
                 break;
+            case ServiceName.CustomPVC:
+                var k8sOption = services.BuildServiceProvider().GetRequiredService<IOptions<KubernetesOption>>().Value;
+                if (string.IsNullOrEmpty(k8sOption.PVCName))
+                {
+                    Log.Fatal("When selected the CustomPVC for SharedVolumeService, it is necessary to specify the Kubernetes.PVCName.");
+                    throw new ConfigurationErrorsException("When selected the CustomPVC for SharedVolumeService, it is necessary to specify the Kubernetes.PVCName.");
+                }
+                Log.Warning($"CustomPVC has been selected as the SharedVolumeService. Please ensure that you have already prepared the PersistentVolumeClaim with the name {k8sOption.PVCName} in the Namespace {k8sOption.Namespace}.");
+                break;
             default:
-                Log.Fatal("Shared Volume Serivce is limited to Azure File Share, DockerVolume or NFS.");
+                Log.Fatal("Shared Volume Serivce is limited to Azure File Share, DockerVolume, NFS or CustomPVC(k8s).");
                 throw new ConfigurationErrorsException("Shared Volume Serivce is limited to Azure File Share, DockerVolume or NFS.");
         }
 

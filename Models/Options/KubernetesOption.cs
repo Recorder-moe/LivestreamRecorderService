@@ -9,4 +9,5 @@ public class KubernetesOption
     public required bool UseTheSameCluster { get; set; } = true;
     public string? ConfigFile { get; set; }
     public string? Namespace { get; set; } = "recorder.moe";
+    public string? PVCName { get; set; }
 }

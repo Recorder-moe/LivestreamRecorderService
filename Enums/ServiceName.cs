@@ -19,5 +19,7 @@ public enum ServiceName
 
     // Database
     AzureCosmosDB,
-    ApacheCouchDB
+    ApacheCouchDB,
+
+    CustomPVC
 }

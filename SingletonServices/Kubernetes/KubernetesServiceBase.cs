@@ -132,7 +132,8 @@ public abstract class KubernetesServiceBase : IJobServiceBase
                     ReadOnlyProperty = false,
                 }
             },
-            ServiceName.NFS => new()
+            ServiceName.NFS or
+            ServiceName.CustomPVC => new()
             {
                 Name = "sharedvolume",
                 PersistentVolumeClaim = new()

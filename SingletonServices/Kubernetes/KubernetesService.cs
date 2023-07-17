@@ -18,7 +18,7 @@ public class KubernetesService : IJobService
     private readonly NFSOption _nfsOption;
     internal const string _azureFileShareSecretName = "azure-fileshare-secret";
     internal const string _storageClassName = "nfs-csi";
-    internal const string _persistentVolumeClaimName = "nfs-pvc";
+    internal static string _persistentVolumeClaimName = "";
 
     internal static string KubernetesNamespace { get; set; } = "recordermoe";
 
@@ -39,13 +39,26 @@ public class KubernetesService : IJobService
         KubernetesNamespace = options.Value.Namespace ?? KubernetesNamespace;
         EnsureNamespaceExists(KubernetesNamespace);
 
-        if (_serviceOption.SharedVolumeService == ServiceName.AzureFileShare
-            && !CheckSecretExists())
-            CreateSecret();
+        if (_serviceOption.SharedVolumeService == ServiceName.AzureFileShare)
+        {
+            if (!CheckSecretExists()) CreateSecret();
+        }
 
-        if (_serviceOption.SharedVolumeService == ServiceName.NFS
-            && !CheckStorageClassAndPersistentVolumeClaimExists())
-            CreateStorageClassAndPersistentVolumeClaim();
+        if (_serviceOption.SharedVolumeService == ServiceName.NFS)
+        {
+            _persistentVolumeClaimName = "nfs-pvc";
+
+            if (!CheckStorageClassExists()) CreateNFSStorageClass();
+
+            if (!CheckPersistentVolumeClaimExists()) CreatePersistentVolumeClaim();
+        }
+
+        if (_serviceOption.SharedVolumeService == ServiceName.CustomPVC)
+        {
+            _persistentVolumeClaimName = options.Value.PVCName!;
+
+            if (!CheckPersistentVolumeClaimExists()) CreatePersistentVolumeClaim();
+        }
     }
 
     public Task<bool> IsJobSucceededAsync(Video video, CancellationToken cancellation = default)
@@ -119,15 +132,17 @@ public class KubernetesService : IJobService
         _client.CreateNamespacedSecret(secret, KubernetesNamespace);
     }
 
-    private bool CheckStorageClassAndPersistentVolumeClaimExists()
+    private bool CheckStorageClassExists()
         => _client.ListStorageClass()
                   .Items
-                  .Any(p => p.Name() == _storageClassName)
-           && _client.ListNamespacedPersistentVolumeClaim(KubernetesNamespace)
-                     .Items
-                     .Any(p => p.Name() == _persistentVolumeClaimName);
+                  .Any(p => p.Name() == _storageClassName);
 
-    private void CreateStorageClassAndPersistentVolumeClaim()
+    private bool CheckPersistentVolumeClaimExists()
+        => _client.ListNamespacedPersistentVolumeClaim(KubernetesNamespace)
+                  .Items
+                  .Any(p => p.Name() == _persistentVolumeClaimName);
+
+    private void CreateNFSStorageClass()
     {
         var storageClass = new V1StorageClass
         {
@@ -149,6 +164,12 @@ public class KubernetesService : IJobService
                                 : _nfsOption.Path
             }
         };
+
+        _client.CreateStorageClass(storageClass);
+    }
+
+    private void CreatePersistentVolumeClaim()
+    {
         var pvc = new V1PersistentVolumeClaim
         {
             Metadata = new V1ObjectMeta
@@ -158,7 +179,7 @@ public class KubernetesService : IJobService
             Spec = new V1PersistentVolumeClaimSpec
             {
                 StorageClassName = _storageClassName,
-                AccessModes = new List<string> { "ReadWriteMany" },
+                AccessModes = new List<string> { "ReadWriteOnce" },
                 Resources = new V1ResourceRequirements
                 {
                     Requests = new Dictionary<string, ResourceQuantity>
@@ -169,7 +190,6 @@ public class KubernetesService : IJobService
             }
         };
 
-        _client.CreateStorageClass(storageClass);
         _client.CreateNamespacedPersistentVolumeClaim(pvc, KubernetesNamespace);
     }
 
