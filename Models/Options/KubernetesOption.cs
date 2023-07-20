@@ -7,7 +7,7 @@ public class KubernetesOption
 #pragma warning restore IDE1006 // 命名樣式
 
     public required bool UseTheSameCluster { get; set; } = true;
-    public string? ConfigFile { get; set; }
     public string? Namespace { get; set; } = "recorder.moe";
+    public string? ConfigFile { get; set; }
     public string? PVCName { get; set; }
 }

@@ -18,8 +18,7 @@ public class StreamlinkService : KubernetesServiceBase, IStreamlinkService
         k8s.Kubernetes kubernetes,
         IOptions<KubernetesOption> options,
         IOptions<ServiceOption> serviceOptions,
-        IOptions<AzureOption> azureOptions,
-        IOptions<NFSOption> nfsOptions) : base(logger, kubernetes, options, serviceOptions, azureOptions, nfsOptions)
+        IOptions<AzureOption> azureOptions) : base(logger, kubernetes, options, serviceOptions, azureOptions)
     {
         _logger = logger;
     }

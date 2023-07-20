@@ -18,7 +18,6 @@ public abstract class KubernetesServiceBase : IJobServiceBase
     private readonly KubernetesOption _option;
     private readonly ServiceOption _serviceOption;
     private readonly AzureOption _azureOption;
-    private readonly NFSOption _nfsOption;
 
     public abstract string Name { get; }
     protected static string KubernetesNamespace => KubernetesService.KubernetesNamespace;
@@ -28,15 +27,13 @@ public abstract class KubernetesServiceBase : IJobServiceBase
         k8s.Kubernetes kubernetes,
         IOptions<KubernetesOption> options,
         IOptions<ServiceOption> serviceOptions,
-        IOptions<AzureOption> azureOptions,
-        IOptions<NFSOption> nfsOptions)
+        IOptions<AzureOption> azureOptions)
     {
         _logger = logger;
         _client = kubernetes;
         _option = options.Value;
         _serviceOption = serviceOptions.Value;
         _azureOption = azureOptions.Value;
-        _nfsOption = nfsOptions.Value;
     }
 
     public virtual async Task InitJobAsync(string videoId, Video video, bool useCookiesFile = false, CancellationToken cancellation = default)
@@ -132,7 +129,6 @@ public abstract class KubernetesServiceBase : IJobServiceBase
                     ReadOnlyProperty = false,
                 }
             },
-            ServiceName.NFS or
             ServiceName.CustomPVC => new()
             {
                 Name = "sharedvolume",

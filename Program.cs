@@ -49,14 +49,8 @@ try
                 .ValidateDataAnnotations()
                 .ValidateOnStart();
 
-        services.AddOptions<NFSOption>()
-                .Bind(configuration.GetSection(NFSOption.ConfigurationSectionName))
-                .ValidateDataAnnotations()
-                .ValidateOnStart();
-
         var serviceOptions = services.BuildServiceProvider().GetRequiredService<IOptions<ServiceOption>>().Value;
         var azureOptions = services.BuildServiceProvider().GetRequiredService<IOptions<AzureOption>>().Value;
-        var nfsOption = services.BuildServiceProvider().GetRequiredService<IOptions<NFSOption>>().Value;
 
         switch (serviceOptions.JobService)
         {
@@ -99,20 +93,13 @@ try
             //    Log.Fatal("Azure Container Instance is not able to mount Docker volume. Use Azure File Share instead.");
             //    throw new ConfigurationErrorsException("Azure Container Instance is not able to mount Docker volume. Use Azure File Share instead.");
             //}
-            case ServiceName.NFS:
-                if (string.IsNullOrWhiteSpace(nfsOption.Server)
-                    || string.IsNullOrWhiteSpace(nfsOption.Path))
-                {
-                    Log.Fatal("NFS server and path must be specified.");
-                    throw new ConfigurationErrorsException("NFS server and path must be specified.");
-                }
-                if (serviceOptions.JobService == ServiceName.AzureContainerInstance)
-                {
-                    Log.Fatal("Azure Container Instance is not able to mount NFS volume. Use Azure File Share instead.");
-                    throw new ConfigurationErrorsException("Azure Container Instance is not able to mount NFS volume. Use Azure File Share instead.");
-                }
-                break;
             case ServiceName.CustomPVC:
+                if (serviceOptions.JobService != ServiceName.Kubernetes)
+                {
+                    Log.Fatal("CustomPVC is only supported in Kubernetes.");
+                    throw new ConfigurationErrorsException("CustomPVC is only supported in Kubernetes.");
+                }
+
                 var k8sOption = services.BuildServiceProvider().GetRequiredService<IOptions<KubernetesOption>>().Value;
                 if (string.IsNullOrEmpty(k8sOption.PVCName))
                 {

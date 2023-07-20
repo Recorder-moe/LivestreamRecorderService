@@ -6,6 +6,7 @@ using LivestreamRecorderService.Helper;
 using LivestreamRecorderService.Interfaces.Job;
 using LivestreamRecorderService.Models.Options;
 using Microsoft.Extensions.Options;
+using System.Configuration;
 
 namespace LivestreamRecorderService.SingletonServices.Kubernetes;
 
@@ -15,9 +16,7 @@ public class KubernetesService : IJobService
     private readonly k8s.Kubernetes _client;
     private readonly AzureOption _azureOption;
     private readonly ServiceOption _serviceOption;
-    private readonly NFSOption _nfsOption;
     internal const string _azureFileShareSecretName = "azure-fileshare-secret";
-    internal const string _storageClassName = "nfs-csi";
     internal static string _persistentVolumeClaimName = "";
 
     internal static string KubernetesNamespace { get; set; } = "recordermoe";
@@ -27,14 +26,12 @@ public class KubernetesService : IJobService
         k8s.Kubernetes kubernetes,
         IOptions<AzureOption> azureOptions,
         IOptions<ServiceOption> serviceOptions,
-        IOptions<KubernetesOption> options,
-        IOptions<NFSOption> nfsOptions)
+        IOptions<KubernetesOption> options)
     {
         _logger = logger;
         _client = kubernetes;
         _azureOption = azureOptions.Value;
         _serviceOption = serviceOptions.Value;
-        _nfsOption = nfsOptions.Value;
 
         KubernetesNamespace = options.Value.Namespace ?? KubernetesNamespace;
         EnsureNamespaceExists(KubernetesNamespace);
@@ -44,20 +41,15 @@ public class KubernetesService : IJobService
             if (!CheckSecretExists()) CreateSecret();
         }
 
-        if (_serviceOption.SharedVolumeService == ServiceName.NFS)
-        {
-            _persistentVolumeClaimName = "nfs-pvc";
-
-            if (!CheckStorageClassExists()) CreateNFSStorageClass();
-
-            if (!CheckPersistentVolumeClaimExists()) CreatePersistentVolumeClaim();
-        }
-
         if (_serviceOption.SharedVolumeService == ServiceName.CustomPVC)
         {
             _persistentVolumeClaimName = options.Value.PVCName!;
 
-            if (!CheckPersistentVolumeClaimExists()) CreatePersistentVolumeClaim();
+            if (!CheckPersistentVolumeClaimExists())
+            {
+                _logger.LogCritical("PresistentVolumeClaim {name} does not exist!", _persistentVolumeClaimName);
+                throw new ConfigurationErrorsException($"PresistentVolumeClaim {_persistentVolumeClaimName} does not exist!");
+            }
         }
     }
 
@@ -132,66 +124,10 @@ public class KubernetesService : IJobService
         _client.CreateNamespacedSecret(secret, KubernetesNamespace);
     }
 
-    private bool CheckStorageClassExists()
-        => _client.ListStorageClass()
-                  .Items
-                  .Any(p => p.Name() == _storageClassName);
-
     private bool CheckPersistentVolumeClaimExists()
         => _client.ListNamespacedPersistentVolumeClaim(KubernetesNamespace)
                   .Items
                   .Any(p => p.Name() == _persistentVolumeClaimName);
-
-    private void CreateNFSStorageClass()
-    {
-        var storageClass = new V1StorageClass
-        {
-            Metadata = new V1ObjectMeta
-            {
-                Name = _storageClassName
-            },
-            Provisioner = "nfs.csi.k8s.io",
-            VolumeBindingMode = "Immediate",
-            ReclaimPolicy = "Retain",
-            MountOptions = new List<string> { "nfsvers=4.1" },
-            Parameters = new Dictionary<string, string>
-            {
-                ["server"] = string.IsNullOrEmpty(_nfsOption.Server)
-                                ? "nfs-server.recordermoe.svc.cluster.local"
-                                : _nfsOption.Server,
-                ["share"] = string.IsNullOrEmpty(_nfsOption.Path)
-                                ? "/"
-                                : _nfsOption.Path
-            }
-        };
-
-        _client.CreateStorageClass(storageClass);
-    }
-
-    private void CreatePersistentVolumeClaim()
-    {
-        var pvc = new V1PersistentVolumeClaim
-        {
-            Metadata = new V1ObjectMeta
-            {
-                Name = _persistentVolumeClaimName
-            },
-            Spec = new V1PersistentVolumeClaimSpec
-            {
-                StorageClassName = _storageClassName,
-                AccessModes = new List<string> { "ReadWriteOnce" },
-                Resources = new V1ResourceRequirements
-                {
-                    Requests = new Dictionary<string, ResourceQuantity>
-                    {
-                        ["storage"] = new ResourceQuantity("10Gi")
-                    }
-                }
-            }
-        };
-
-        _client.CreateNamespacedPersistentVolumeClaim(pvc, KubernetesNamespace);
-    }
 
     private async Task<V1Job?> GetJobByKeywordAsync(string keyword, CancellationToken cancellation)
     {
