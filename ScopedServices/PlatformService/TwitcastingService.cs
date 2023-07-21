@@ -26,6 +26,10 @@ public class TwitcastingService : PlatformService, IPlatformService
 
     private const string _streamServerApi = "https://twitcasting.tv/streamserver.php";
     private const string _frontendApi = "https://frontendapi.twitcasting.tv";
+
+    // TODO: Become failing since mid-2023/7.
+    // Twitcasting has changed the method for obtaining tokens, and it is no longer possible to reproduce it.
+    // Happy token is no longer happy :(
     private const string _happytokenApi = "https://twitcasting.tv/happytoken.php";
 
     public TwitcastingService(
@@ -172,48 +176,51 @@ public class TwitcastingService : PlatformService, IPlatformService
 
     private async Task<(string? title, string? telop)> GetTwitcastingStreamTitleAsync(string videoId, CancellationToken cancellation = default)
     {
-        using var client = _httpFactory.CreateClient();
+        // TODO: Get the title from webpages instead of using the API.
+        return ("(Unknown)", "");
 
-        var token = await GetTwitcastingTokenAsync(videoId, cancellation);
-        if (null == token)
-        {
-            _logger.LogWarning("Failed to get video title because token in null! {videoId}", videoId);
-            return default;
-        }
+        //using var client = _httpFactory.CreateClient();
 
-        var response = await client.GetAsync($@"{_frontendApi}/movies/{videoId}/status/viewer?token={token}", cancellation);
-        var data = await response.Content.ReadFromJsonAsync<TwitcastingViewerData>(cancellationToken: cancellation);
+        //var token = await GetTwitcastingTokenAsync(videoId, cancellation);
+        //if (null == token)
+        //{
+        //    _logger.LogWarning("Failed to get video title because token in null! {videoId}", videoId);
+        //    return default;
+        //}
 
-        return !string.IsNullOrEmpty(data?.Movie.Title)
-                ? (data?.Movie.Title, data?.Movie.Telop)
-                : (data?.Movie.Telop, "");
+        //var response = await client.GetAsync($@"{_frontendApi}/movies/{videoId}/status/viewer?token={token}", cancellation);
+        //var data = await response.Content.ReadFromJsonAsync<TwitcastingViewerData>(cancellationToken: cancellation);
+
+        //return !string.IsNullOrEmpty(data?.Movie.Title)
+        //        ? (data?.Movie.Title, data?.Movie.Telop)
+        //        : (data?.Movie.Telop, "");
     }
 
-    private async Task<string?> GetTwitcastingTokenAsync(string videoId, CancellationToken cancellation = default)
-    {
-        using var client = _httpFactory.CreateClient();
-        int epochTimeStamp = (int)(DateTime.UtcNow - new DateTime(1970, 1, 1)).TotalSeconds;
-        using var content = new MultipartFormDataContent("------WebKitFormBoundary")
-        {
-            { new StringContent(videoId), "movie_id" }
-        };
-        try
-        {
-            var response = await client.PostAsync($@"{_happytokenApi}?__n={epochTimeStamp}", content, cancellation);
-            response.EnsureSuccessStatusCode();
-            var data = await response.Content.ReadFromJsonAsync<TwitcastingTokenData>(cancellationToken: cancellation);
+    //private async Task<string?> GetTwitcastingTokenAsync(string videoId, CancellationToken cancellation = default)
+    //{
+    //    using var client = _httpFactory.CreateClient();
+    //    int epochTimeStamp = (int)(DateTime.UtcNow - new DateTime(1970, 1, 1)).TotalSeconds;
+    //    using var content = new MultipartFormDataContent("------WebKitFormBoundary")
+    //    {
+    //        { new StringContent(videoId), "movie_id" }
+    //    };
+    //    try
+    //    {
+    //        var response = await client.PostAsync($@"{_happytokenApi}?__n={epochTimeStamp}", content, cancellation);
+    //        response.EnsureSuccessStatusCode();
+    //        var data = await response.Content.ReadFromJsonAsync<TwitcastingTokenData>(cancellationToken: cancellation);
 
-            return null != data
-                    && !string.IsNullOrEmpty(data.Token)
-                        ? data.Token
-                        : throw new Exception();
-        }
-        catch (Exception)
-        {
-            _logger.LogWarning("Failed to get Twitcasting token!");
-        }
-        return null;
-    }
+    //        return null != data
+    //                && !string.IsNullOrEmpty(data.Token)
+    //                    ? data.Token
+    //                    : throw new Exception();
+    //    }
+    //    catch (Exception)
+    //    {
+    //        _logger.LogWarning("Failed to get Twitcasting token!");
+    //    }
+    //    return null;
+    //}
 
     /// <summary>
     /// 檢查影片是否公開(沒有密碼鎖或是瀏覧限制)
@@ -223,24 +230,25 @@ public class TwitcastingService : PlatformService, IPlatformService
     /// <returns></returns>
     private async Task<bool> GetTwitcastingIsPublicAsync(string videoId, CancellationToken cancellation = default)
     {
-        var data = await GetTwitcastingInfoDataAsync(videoId, cancellation);
-        // 事實上，私人影片會在取得token時失敗，並不會回傳TwitcastingInfoData物件
-        return null != data
-            && data.Visibility?.Type == "public";
+        return true;
+        //var data = await GetTwitcastingInfoDataAsync(videoId, cancellation);
+        //// 事實上，私人影片會在取得token時失敗，並不會回傳TwitcastingInfoData物件
+        //return null != data
+        //    && data.Visibility?.Type == "public";
     }
 
-    private async Task<TwitcastingInfoData?> GetTwitcastingInfoDataAsync(string videoId, CancellationToken cancellation = default)
-    {
-        using var client = _httpFactory.CreateClient();
-        int epochTimeStamp = (int)(DateTime.UtcNow - new DateTime(1970, 1, 1)).TotalSeconds;
+    //private async Task<TwitcastingInfoData?> GetTwitcastingInfoDataAsync(string videoId, CancellationToken cancellation = default)
+    //{
+    //    using var client = _httpFactory.CreateClient();
+    //    int epochTimeStamp = (int)(DateTime.UtcNow - new DateTime(1970, 1, 1)).TotalSeconds;
 
-        var token = await GetTwitcastingTokenAsync(videoId, cancellation);
-        if (null == token) return null;
-        var response = await client.GetAsync($@"{_frontendApi}/movies/{videoId}/info?__n={epochTimeStamp}&token={token}", cancellation);
-        response.EnsureSuccessStatusCode();
-        var data = await response.Content.ReadFromJsonAsync<TwitcastingInfoData>(cancellationToken: cancellation);
-        return data;
-    }
+    //    var token = await GetTwitcastingTokenAsync(videoId, cancellation);
+    //    if (null == token) return null;
+    //    var response = await client.GetAsync($@"{_frontendApi}/movies/{videoId}/info?__n={epochTimeStamp}&token={token}", cancellation);
+    //    response.EnsureSuccessStatusCode();
+    //    var data = await response.Content.ReadFromJsonAsync<TwitcastingInfoData>(cancellationToken: cancellation);
+    //    return data;
+    //}
 
     /// <summary>
     /// 檢查影片是否發佈
