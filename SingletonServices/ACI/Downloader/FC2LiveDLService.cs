@@ -47,13 +47,13 @@ public class FC2LiveDLService : ACIServiceBase, IFC2LiveDLService
         string filename = NameHelper.GetFileName(video, IFC2LiveDLService.name);
         try
         {
-            return doWithImage("ghcr.io/recorder-moe/fc2-live-dl:2.1.3");
+            return doWithImage("ghcr.io/recorder-moe/fc2-live-dl:2.2.0");
         }
         catch (Exception)
         {
             // Use DockerHub as fallback
             _logger.LogWarning("Failed once, try docker hub as fallback.");
-            return doWithImage("recordermoe/fc2-live-dl:2.1.3");
+            return doWithImage("recordermoe/fc2-live-dl:2.2.0");
         }
 
         Task<ArmOperation<ArmDeploymentResource>> doWithImage(string imageName)

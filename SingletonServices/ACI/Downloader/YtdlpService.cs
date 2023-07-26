@@ -33,13 +33,13 @@ public class YtdlpService : ACIServiceBase, IYtdlpService
     {
         try
         {
-            return doWithImage("ghcr.io/recorder-moe/yt-dlp:2023.06.22");
+            return doWithImage("ghcr.io/recorder-moe/yt-dlp:2023.07.06");
         }
         catch (Exception)
         {
             // Use DockerHub as fallback
             _logger.LogWarning("Failed once, try docker hub as fallback.");
-            return doWithImage("recordermoe/yt-dlp:2023.06.22");
+            return doWithImage("recordermoe/yt-dlp:2023.07.06");
         }
 
         Task<ArmOperation<ArmDeploymentResource>> doWithImage(string imageName)

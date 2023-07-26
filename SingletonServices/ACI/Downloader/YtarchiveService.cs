@@ -35,13 +35,13 @@ public class YtarchiveService : ACIServiceBase, IYtarchiveService
 
         try
         {
-            return doWithImage("ghcr.io/recorder-moe/ytarchive:v0.3.2");
+            return doWithImage("ghcr.io/recorder-moe/ytarchive:master");
         }
         catch (Exception)
         {
             // Use DockerHub as fallback
             _logger.LogWarning("Failed once, try docker hub as fallback.");
-            return doWithImage("recordermoe/ytarchive:v0.3.2");
+            return doWithImage("recordermoe/ytarchive:master");
         }
 
         Task<ArmOperation<ArmDeploymentResource>> doWithImage(string imageName)

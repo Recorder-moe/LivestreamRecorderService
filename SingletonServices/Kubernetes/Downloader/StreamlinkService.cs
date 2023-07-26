@@ -31,13 +31,13 @@ public class StreamlinkService : KubernetesServiceBase, IStreamlinkService
     {
         try
         {
-            return doWithImage("ghcr.io/recorder-moe/streamlink:5.3.1");
+            return doWithImage("ghcr.io/recorder-moe/streamlink:5.5.1");
         }
         catch (Exception)
         {
             // Use DockerHub as fallback
             _logger.LogWarning("Failed once, try docker hub as fallback.");
-            return doWithImage("recordermoe/streamlink:5.3.1");
+            return doWithImage("recordermoe/streamlink:5.5.1");
         }
 
         Task<V1Job> doWithImage(string imageName)

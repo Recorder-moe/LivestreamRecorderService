@@ -31,13 +31,13 @@ public class FC2LiveDLService : KubernetesServiceBase, IFC2LiveDLService
     {
         try
         {
-            return doWithImage("ghcr.io/recorder-moe/fc2-live-dl:2.1.3");
+            return doWithImage("ghcr.io/recorder-moe/fc2-live-dl:2.2.0");
         }
         catch (Exception)
         {
             // Use DockerHub as fallback
             _logger.LogWarning("Failed once, try docker hub as fallback.");
-            return doWithImage("recordermoe/fc2-live-dl:2.1.3");
+            return doWithImage("recordermoe/fc2-live-dl:2.2.0");
         }
 
         Task<V1Job> doWithImage(string imageName)
