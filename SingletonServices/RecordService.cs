@@ -65,18 +65,18 @@ public class RecordService
 
         foreach (var video in videos)
         {
-            if (!await _jobService.IsJobSucceededAsync(video, stoppingToken))
+            if (await _jobService.IsJobFailedAsync(video, stoppingToken))
             {
                 switch (video.Source)
                 {
                     case "Youtube":
                         videoService.UpdateVideoStatus(video, VideoStatus.Pending);
-                        _logger.LogWarning("{videoId} is not succeed. Set status to {status}", video.id, video.Status);
+                        _logger.LogWarning("{videoId} is failed. Set status to {status}", video.id, video.Status);
                         break;
                     default:
                         videoService.UpdateVideoStatus(video, VideoStatus.Error);
-                        videoService.UpdateVideoNote(video, $"This recording is NOT SUCCEED! Please contact admin if you see this message.");
-                        _logger.LogWarning("{videoId} is not succeed.", video.id);
+                        videoService.UpdateVideoNote(video, $"This recording FAILED! Please contact admin if you see this message.");
+                        _logger.LogWarning("{videoId} is failed.", video.id);
                         break;
                 }
             }
