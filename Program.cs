@@ -116,7 +116,7 @@ try
         switch (serviceOptions.StorageService)
         {
             case ServiceName.AzureBlobStorage:
-                services.AddAzuerBlobStorageService();
+                services.AddAzureBlobStorageService();
                 break;
             case ServiceName.S3:
                 Log.Fatal("Currently only Azure Blob Storage is supported.");
