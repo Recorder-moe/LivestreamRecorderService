@@ -192,6 +192,11 @@ public class FC2Service : PlatformService, IPlatformService
 
             return info;
         }
+        catch (HttpRequestException e)
+        {
+            _logger.LogError(e, "Get fc2 info failed with {StatusCode}. {channelId} Be careful if this happens repeatedly.", e.StatusCode, channelId);
+            return null;
+        }
         catch (Exception e)
         {
             _logger.LogError(e, "Get fc2 info failed. {channelId} Be careful if this happens repeatedly.", channelId);

@@ -167,9 +167,14 @@ public class TwitcastingService : PlatformService, IPlatformService
                     ? (false, null)
                     : (data.Movie.Live ?? false, data.Movie.Id.ToString());
         }
-        catch (Exception)
+        catch (HttpRequestException e)
         {
-            _logger.LogError("Get twitcasting live status failed. {channelId} Be careful if this happens repeatedly.", channel.id);
+            _logger.LogError(e, "Get twitcasting live status failed with {StatusCode}. {channelId} Be careful if this happens repeatedly.", e.StatusCode, channel.id);
+            return (false, null);
+        }
+        catch (Exception e)
+        {
+            _logger.LogError(e, "Get twitcasting live status failed. {channelId} Be careful if this happens repeatedly.", channel.id);
             return (false, null);
         }
     }
