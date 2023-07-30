@@ -69,11 +69,11 @@ public class S3UploaderService : KubernetesServiceBase, IS3UploaderService
                     deploymentName: instanceName,
                     environment: new List<EnvironmentVariable>
                     {
-                        new EnvironmentVariable("S3_ENDPOINT", _s3Option.Endpoint, null),
-                        new EnvironmentVariable("S3_ACCESS_KEY", _s3Option.AccessKey, null),
-                        new EnvironmentVariable("S3_SECRET_KEY", _s3Option.SecretKey, null),
+                        new EnvironmentVariable("S3_ENDPOINT", $"http{(_s3Option.Secure? "s": "")}://{_s3Option.Endpoint}", null),
+                        new EnvironmentVariable("S3_ACCESS_KEY", null, _s3Option.AccessKey),
+                        new EnvironmentVariable("S3_SECRET_KEY", null, _s3Option.SecretKey),
                         new EnvironmentVariable("DESTINATION_BUCKET", _s3Option.BucketName_Private, null),
-                        new EnvironmentVariable("DESTINATION_DIRECTORY", null, "/videos")
+                        new EnvironmentVariable("DESTINATION_DIRECTORY", "videos", null)
                     },
                     cancellation: cancellation);
         }
