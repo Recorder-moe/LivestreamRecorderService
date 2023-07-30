@@ -36,16 +36,6 @@ public class ACIService : IJobService
         return null != resource && resource.HasData && resource.Data.InstanceView.State == "Succeeded";
     }
 
-    public async Task<bool> IsJobFailedAsync(Video video, CancellationToken cancellation = default)
-        => await IsJobFailedAsync(video.id, cancellation)
-           && await IsJobFailedAsync(video.ChannelId, cancellation);
-
-    public async Task<bool> IsJobFailedAsync(string keyword, CancellationToken cancellation)
-    {
-        var resource = await GetResourceByKeywordAsync(NameHelper.GetInstanceName(keyword), cancellation);
-        return null == resource || !resource.HasData || resource.Data.InstanceView.State == "Failed";
-    }
-
     /// <summary>
     /// RemoveCompletedInstanceContainer
     /// </summary>
@@ -71,10 +61,10 @@ public class ACIService : IJobService
         }
 
         var jobName = resource.Data.Name;
-        if (await IsJobFailedAsync(video, cancellation))
+        if (!await IsJobSucceededAsync(video, cancellation))
         {
-            _logger.LogError("ACI status FAILED! {videoId} {jobName}", video.id, jobName);
-            throw new Exception($"ACI status FAILED! {jobName}");
+            _logger.LogError("ACI status not succeed! {videoId} {jobName}", video.id, jobName);
+            throw new Exception($"ACI status not succeed! {jobName}");
         }
 
         var status = (await resource.DeleteAsync(Azure.WaitUntil.Completed, cancellation)).GetRawResponse();

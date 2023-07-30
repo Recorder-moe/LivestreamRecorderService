@@ -64,15 +64,6 @@ public class KubernetesService : IJobService
                && job.Status.Succeeded > 0;
     }
 
-    public Task<bool> IsJobFailedAsync(Video video, CancellationToken cancellation = default)
-        => IsJobFailedAsync(NameHelper.GetInstanceName(video.id), cancellation);
-
-    public async Task<bool> IsJobFailedAsync(string keyword, CancellationToken cancellation = default)
-    {
-        var job = await GetJobByKeywordAsync(keyword, cancellation);
-        return null == job || job.Status.Failed > 0;
-    }
-
     public async Task RemoveCompletedJobsAsync(Video video, CancellationToken cancellation = default)
     {
         var job = await GetJobByKeywordAsync(video.id, cancellation);
@@ -83,10 +74,10 @@ public class KubernetesService : IJobService
         }
 
         string jobName = job.Name();
-        if (await IsJobFailedAsync(video, cancellation))
+        if (!await IsJobSucceededAsync(video, cancellation))
         {
-            _logger.LogError("K8s job status FAILED! {videoId} {jobName}", video.id, jobName);
-            throw new Exception($"K8s job status FAILED! {jobName}");
+            _logger.LogError("K8s job status is NOT SUCCEED! {videoId} {jobName}", video.id, jobName);
+            throw new Exception($"K8s job status is NOT SUCCEED! {jobName}");
         }
 
         var status = await _client.DeleteNamespacedJobAsync(name: jobName,
