@@ -169,8 +169,8 @@ public abstract class PlatformService : IPlatformService
         {
             List<Task> tasks = new()
             {
-                _storageService.UploadVideoFile(contentType, pathInStorage, tempPath, cancellation),
-                _storageService.UploadVideoFile(KnownMimeTypes.Avif, $"{path}.avif", await ImageHelper.ConvertToAvifAsync(tempPath), cancellation)
+                _storageService.UploadPublicFile(contentType, pathInStorage, tempPath, cancellation),
+                _storageService.UploadPublicFile(KnownMimeTypes.Avif, $"{path}.avif", await ImageHelper.ConvertToAvifAsync(tempPath), cancellation)
             };
 
             await Task.WhenAll(tasks);
@@ -183,8 +183,12 @@ public abstract class PlatformService : IPlatformService
         }
         finally
         {
-            File.Delete(tempPath);
-            File.Delete(Path.ChangeExtension(tempPath, ".avif"));
+            try
+            {
+                File.Delete(tempPath);
+                File.Delete(Path.ChangeExtension(tempPath, ".avif"));
+            }
+            catch (IOException) { }
         }
     }
 

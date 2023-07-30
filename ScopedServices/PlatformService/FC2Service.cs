@@ -192,6 +192,11 @@ public class FC2Service : PlatformService, IPlatformService
 
             return info;
         }
+        catch (HttpRequestException e)
+        {
+            _logger.LogError(e, "Get fc2 info failed with {StatusCode}. {channelId} Be careful if this happens repeatedly.", e.StatusCode, channelId);
+            return null;
+        }
         catch (Exception e)
         {
             _logger.LogError(e, "Get fc2 info failed. {channelId} Be careful if this happens repeatedly.", channelId);
@@ -218,20 +223,23 @@ public class FC2Service : PlatformService, IPlatformService
             }
         }
 
-        if (!await _storageService.IsVideoFileExists(video.Filename, cancellation))
+        if (!string.IsNullOrEmpty(video.Filename))
         {
-            if (video.Status >= VideoStatus.Archived && video.Status < VideoStatus.Expired)
+            if (!await _storageService.IsVideoFileExists(video.Filename, cancellation))
             {
-                video.Status = VideoStatus.Missing;
-                video.Note = $"Video missing because archived not found.";
-                _logger.LogInformation("Can not found archived, change video status to {status}", Enum.GetName(typeof(VideoStatus), video.Status));
+                if (video.Status >= VideoStatus.Archived && video.Status < VideoStatus.Expired)
+                {
+                    video.Status = VideoStatus.Missing;
+                    video.Note = $"Video missing because archived not found.";
+                    _logger.LogInformation("Can not found archived, change video status to {status}", Enum.GetName(typeof(VideoStatus), video.Status));
+                }
             }
-        }
-        else if (video.Status < VideoStatus.Archived || video.Status >= VideoStatus.Expired)
-        {
-            video.Status = VideoStatus.Archived;
-            video.Note = null;
-            _logger.LogInformation("Correct video status to {status} because archived is exists.", Enum.GetName(typeof(VideoStatus), video.Status));
+            else if (video.Status < VideoStatus.Archived || video.Status >= VideoStatus.Expired)
+            {
+                video.Status = VideoStatus.Archived;
+                video.Note = null;
+                _logger.LogInformation("Correct video status to {status} because archived is exists.", Enum.GetName(typeof(VideoStatus), video.Status));
+            }
         }
 
         _videoRepository.Update(video);

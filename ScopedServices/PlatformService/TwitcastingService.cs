@@ -167,9 +167,14 @@ public class TwitcastingService : PlatformService, IPlatformService
                     ? (false, null)
                     : (data.Movie.Live ?? false, data.Movie.Id.ToString());
         }
-        catch (Exception)
+        catch (HttpRequestException e)
         {
-            _logger.LogError("Get twitcasting live status failed. {channelId} Be careful if this happens repeatedly.", channel.id);
+            _logger.LogError(e, "Get twitcasting live status failed with {StatusCode}. {channelId} Be careful if this happens repeatedly.", e.StatusCode, channel.id);
+            return (false, null);
+        }
+        catch (Exception e)
+        {
+            _logger.LogError(e, "Get twitcasting live status failed. {channelId} Be careful if this happens repeatedly.", channel.id);
             return (false, null);
         }
     }
@@ -334,20 +339,23 @@ public class TwitcastingService : PlatformService, IPlatformService
                 video.Status = VideoStatus.Missing;
         }
 
-        if (!await _storageService.IsVideoFileExists(video.Filename, cancellation))
+        if (!string.IsNullOrEmpty(video.Filename))
         {
-            if (video.Status >= VideoStatus.Archived && video.Status < VideoStatus.Expired)
+            if (!await _storageService.IsVideoFileExists(video.Filename, cancellation))
             {
-                video.Status = VideoStatus.Missing;
-                video.Note = $"Video missing because archived not found.";
-                _logger.LogInformation("Can not found archived, change video status to {status}", Enum.GetName(typeof(VideoStatus), video.Status));
+                if (video.Status >= VideoStatus.Archived && video.Status < VideoStatus.Expired)
+                {
+                    video.Status = VideoStatus.Missing;
+                    video.Note = $"Video missing because archived not found.";
+                    _logger.LogInformation("Can not found archived, change video status to {status}", Enum.GetName(typeof(VideoStatus), video.Status));
+                }
             }
-        }
-        else if (video.Status < VideoStatus.Archived || video.Status >= VideoStatus.Expired)
-        {
-            video.Status = VideoStatus.Archived;
-            video.Note = null;
-            _logger.LogInformation("Correct video status to {status} because archived is exists.", Enum.GetName(typeof(VideoStatus), video.Status));
+            else if (video.Status < VideoStatus.Archived || video.Status >= VideoStatus.Expired)
+            {
+                video.Status = VideoStatus.Archived;
+                video.Note = null;
+                _logger.LogInformation("Correct video status to {status} because archived is exists.", Enum.GetName(typeof(VideoStatus), video.Status));
+            }
         }
 
         _videoRepository.Update(video);

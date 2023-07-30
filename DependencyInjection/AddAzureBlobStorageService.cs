@@ -10,7 +10,7 @@ namespace LivestreamRecorderService.DependencyInjection
 {
     public static partial class Extensions
     {
-        public static IServiceCollection AddAzuerBlobStorageService(this IServiceCollection services)
+        public static IServiceCollection AddAzureBlobStorageService(this IServiceCollection services)
         {
             try
             {
@@ -26,6 +26,7 @@ namespace LivestreamRecorderService.DependencyInjection
                     => clientsBuilder.AddBlobServiceClient(azureOptions.BlobStorage.ConnectionString));
 
                 services.AddSingleton<IStorageService, ABSService>();
+
                 return services;
             }
             catch (ConfigurationErrorsException)

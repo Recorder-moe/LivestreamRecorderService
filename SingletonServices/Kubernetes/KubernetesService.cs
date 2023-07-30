@@ -70,7 +70,8 @@ public class KubernetesService : IJobService
     public async Task<bool> IsJobFailedAsync(string keyword, CancellationToken cancellation = default)
     {
         var job = await GetJobByKeywordAsync(keyword, cancellation);
-        return null == job || job.Status.Failed > 0;
+        return null == job
+               || (job.Status.Failed > 0 && job.Status.Succeeded == 0);
     }
 
     public async Task RemoveCompletedJobsAsync(Video video, CancellationToken cancellation = default)

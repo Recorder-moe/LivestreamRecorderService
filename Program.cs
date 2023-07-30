@@ -44,6 +44,11 @@ try
                 .ValidateDataAnnotations()
                 .ValidateOnStart();
 
+        services.AddOptions<S3Option>()
+                .Bind(configuration.GetSection(S3Option.ConfigurationSectionName))
+                .ValidateDataAnnotations()
+                .ValidateOnStart();
+
         services.AddOptions<ServiceOption>()
                 .Bind(configuration.GetSection(ServiceOption.ConfigurationSectionName))
                 .ValidateDataAnnotations()
@@ -116,14 +121,14 @@ try
         switch (serviceOptions.StorageService)
         {
             case ServiceName.AzureBlobStorage:
-                services.AddAzuerBlobStorageService();
+                services.AddAzureBlobStorageService();
                 break;
             case ServiceName.S3:
-                Log.Fatal("Currently only Azure Blob Storage is supported.");
-                throw new NotImplementedException("Currently only Azure Blob Storage is supported.");
+                services.AddS3StorageService();
+                break;
             default:
-                Log.Fatal("Storage Serivce is limited to Azure Blob Storage, NFS or S3.");
-                throw new ConfigurationErrorsException("Storage Serivce is limited to Azure Blob Storage, NFS or S3.");
+                Log.Fatal("Storage Serivce is limited to Azure Blob Storage or S3.");
+                throw new ConfigurationErrorsException("Storage Serivce is limited to Azure Blob Storage or S3.");
         }
 
         switch (serviceOptions.DatabaseService)

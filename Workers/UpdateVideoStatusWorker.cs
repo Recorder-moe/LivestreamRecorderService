@@ -1,6 +1,7 @@
 ﻿using LivestreamRecorder.DB.Enums;
 using LivestreamRecorder.DB.Interfaces;
 using LivestreamRecorder.DB.Models;
+using LivestreamRecorderService.Enums;
 using LivestreamRecorderService.Interfaces;
 using LivestreamRecorderService.Models.Options;
 using LivestreamRecorderService.ScopedServices;
@@ -16,6 +17,8 @@ public class UpdateVideoStatusWorker : BackgroundService
     private readonly IStorageService _storageService;
     private readonly AzureOption _azureOption;
     private readonly TwitchOption _twitchOption;
+    private readonly ServiceOption _serviceOption;
+    private readonly S3Option _s3Option;
     private readonly IServiceProvider _serviceProvider;
 
     public UpdateVideoStatusWorker(
@@ -23,12 +26,16 @@ public class UpdateVideoStatusWorker : BackgroundService
         IStorageService storageService,
         IOptions<AzureOption> azureOptions,
         IOptions<TwitchOption> twitchOptions,
+        IOptions<ServiceOption> serviceOptions,
+        IOptions<S3Option> s3Options,
         IServiceProvider serviceProvider)
     {
         _logger = logger;
         _storageService = storageService;
         _azureOption = azureOptions.Value;
         _twitchOption = twitchOptions.Value;
+        _serviceOption = serviceOptions.Value;
+        _s3Option = s3Options.Value;
         _serviceProvider = serviceProvider;
     }
 
@@ -110,7 +117,13 @@ public class UpdateVideoStatusWorker : BackgroundService
 
     private async Task ExpireVideosAsync(VideoService videoService, CancellationToken cancellation)
     {
-        int? retentionDays = _azureOption.BlobStorage?.RetentionDays;
+        int? retentionDays = _serviceOption.StorageService switch
+        {
+            ServiceName.AzureBlobStorage => _azureOption.BlobStorage?.RetentionDays,
+            ServiceName.S3 => _s3Option.RetentionDays,
+            _ => null
+        };
+
         if (null == retentionDays)
         {
             _logger.LogInformation("The RetentionDays setting is not configured. Videos will be skipped for expiration.");
@@ -130,7 +143,8 @@ public class UpdateVideoStatusWorker : BackgroundService
                 _logger.LogWarning("The video {videoId} that has expired does not exist on the source platform!!", video.id);
             }
 
-            if (await _storageService.DeleteVideoBlob(video.Filename, cancellation))
+            if (!string.IsNullOrEmpty(video.Filename)
+                && await _storageService.DeleteVideoBlob(video.Filename, cancellation))
             {
                 _logger.LogInformation("Delete blob {path}", video.Filename);
                 videoService.UpdateVideoStatus(video, VideoStatus.Expired);
