@@ -150,7 +150,8 @@ public class TwitchService : PlatformService, IPlatformService
             video.Status = VideoStatus.WaitingToDownload;
         }
 
-        if (!await _storageService.IsVideoFileExists(video.Filename, cancellation))
+        if (!string.IsNullOrEmpty(video.Filename)
+            && !await _storageService.IsVideoFileExists(video.Filename, cancellation))
         {
             if (video.Status >= VideoStatus.Archived && video.Status < VideoStatus.Expired)
             {

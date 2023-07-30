@@ -130,7 +130,8 @@ public class UpdateVideoStatusWorker : BackgroundService
                 _logger.LogWarning("The video {videoId} that has expired does not exist on the source platform!!", video.id);
             }
 
-            if (await _storageService.DeleteVideoBlob(video.Filename, cancellation))
+            if (!string.IsNullOrEmpty(video.Filename)
+                && await _storageService.DeleteVideoBlob(video.Filename, cancellation))
             {
                 _logger.LogInformation("Delete blob {path}", video.Filename);
                 videoService.UpdateVideoStatus(video, VideoStatus.Expired);

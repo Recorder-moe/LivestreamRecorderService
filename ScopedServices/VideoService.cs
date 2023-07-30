@@ -3,10 +3,8 @@ using LivestreamRecorder.DB.Enums;
 using LivestreamRecorder.DB.Interfaces;
 using LivestreamRecorder.DB.Models;
 using LivestreamRecorderService.Enums;
-using LivestreamRecorderService.Interfaces.Job;
 using LivestreamRecorderService.Interfaces.Job.Uploader;
 using LivestreamRecorderService.Models.Options;
-using LivestreamRecorderService.SingletonServices;
 using Microsoft.Extensions.Options;
 
 namespace LivestreamRecorderService.ScopedServices;
@@ -16,31 +14,23 @@ public class VideoService
     private readonly ILogger<VideoService> _logger;
     private readonly IUnitOfWork _unitOfWork_Public;
     private readonly IVideoRepository _videoRepository;
-    private readonly DiscordService _discordService;
     private readonly IAzureUploaderService _azureUploaderService;
-    private readonly IJobService _jobService;
-    private readonly AzureOption _azureOptions;
+    private readonly IS3UploaderService _s3UploaderService;
     private readonly ServiceOption _serviceOptions;
-
-    private const int _timeoutMinutes = 15;
 
     public VideoService(
         ILogger<VideoService> logger,
         UnitOfWork_Public unitOfWork_Public,
         IVideoRepository videoRepository,
-        DiscordService discordService,
-        IOptions<AzureOption> azureOptions,
         IOptions<ServiceOption> serviceOptions,
         IAzureUploaderService azureUploaderService,
-        IJobService jobService)
+        IS3UploaderService s3UploaderService)
     {
         _logger = logger;
         _unitOfWork_Public = unitOfWork_Public;
         _videoRepository = videoRepository;
-        _discordService = discordService;
         _azureUploaderService = azureUploaderService;
-        _jobService = jobService;
-        _azureOptions = azureOptions.Value;
+        _s3UploaderService = s3UploaderService;
         _serviceOptions = serviceOptions.Value;
     }
 
@@ -109,8 +99,11 @@ public class VideoService
                                                              cancellation: cancellation);
                     break;
                 case ServiceName.S3:
-                case ServiceName.NFS:
-                    throw new NotImplementedException(nameof(TransferVideoFromSharedVolumeToStorageAsync));
+                    instanceName = _s3UploaderService.GetInstanceName(video.id);
+                    await _s3UploaderService.InitJobAsync(url: video.id,
+                                                          video: video,
+                                                          cancellation: cancellation);
+                    break;
                 default:
                     throw new NotSupportedException($"StorageService {_serviceOptions.StorageService} is not supported.");
             }

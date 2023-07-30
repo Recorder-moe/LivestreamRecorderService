@@ -339,7 +339,8 @@ public class TwitcastingService : PlatformService, IPlatformService
                 video.Status = VideoStatus.Missing;
         }
 
-        if (!await _storageService.IsVideoFileExists(video.Filename, cancellation))
+        if (!string.IsNullOrEmpty(video.Filename)
+            && !await _storageService.IsVideoFileExists(video.Filename, cancellation))
         {
             if (video.Status >= VideoStatus.Archived && video.Status < VideoStatus.Expired)
             {

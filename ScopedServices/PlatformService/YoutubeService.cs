@@ -306,7 +306,8 @@ public class YoutubeService : PlatformService, IPlatformService
             video.Description = videoData.Description;
         }
 
-        if (!await _storageService.IsVideoFileExists(video.Filename, cancellation))
+        if (!string.IsNullOrEmpty(video.Filename)
+            && !await _storageService.IsVideoFileExists(video.Filename, cancellation))
         {
             if (video.SourceStatus == VideoStatus.Deleted
                 && video.Status < VideoStatus.Recording)

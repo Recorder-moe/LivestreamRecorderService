@@ -119,11 +119,11 @@ try
                 services.AddAzureBlobStorageService();
                 break;
             case ServiceName.S3:
-                Log.Fatal("Currently only Azure Blob Storage is supported.");
-                throw new NotImplementedException("Currently only Azure Blob Storage is supported.");
+                services.AddS3StorageService();
+                break;
             default:
-                Log.Fatal("Storage Serivce is limited to Azure Blob Storage, NFS or S3.");
-                throw new ConfigurationErrorsException("Storage Serivce is limited to Azure Blob Storage, NFS or S3.");
+                Log.Fatal("Storage Serivce is limited to Azure Blob Storage or S3.");
+                throw new ConfigurationErrorsException("Storage Serivce is limited to Azure Blob Storage or S3.");
         }
 
         switch (serviceOptions.DatabaseService)

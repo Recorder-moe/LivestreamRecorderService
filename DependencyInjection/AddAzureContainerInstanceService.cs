@@ -42,6 +42,7 @@ namespace LivestreamRecorderService.DependencyInjection
                 services.AddSingleton<IFC2LiveDLService, FC2LiveDLService>();
 
                 services.AddSingleton<IAzureUploaderService, AzureUploaderService>();
+                services.AddSingleton<IS3UploaderService, S3UploaderService>();
 
                 return services;
             }

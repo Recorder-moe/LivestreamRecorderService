@@ -53,7 +53,9 @@ public class ACIService : IJobService
                 _logger.LogError("Failed to get ACI instance for {videoId} when removing completed jobs. Please check if the ACI exists.", video.id);
                 return;
             }
-            else if (video.Source is "Twitcasting" or "Twitch" or "FC2" && !resource.Data.Name.StartsWith(IAzureUploaderService.name))
+            else if (video.Source is "Twitcasting" or "Twitch" or "FC2"
+                     && !resource.Data.Name.StartsWith(IAzureUploaderService.name)
+                     && !resource.Data.Name.StartsWith(IS3UploaderService.name))
             {
                 _logger.LogInformation("Keep ACI {jobName} for video {videoId} platform {platform}", resource.Data.Name, video.id, video.Source);
                 return;

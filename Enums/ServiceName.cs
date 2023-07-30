@@ -9,17 +9,14 @@ public enum ServiceName
 
     // SharedVolume
     AzureFileShare,
-    NFS,
+    CustomPVC,
     DockerVolume,
 
     // Storage
     AzureBlobStorage,
     S3,
-    // NFS,
 
     // Database
     AzureCosmosDB,
-    ApacheCouchDB,
-
-    CustomPVC
+    ApacheCouchDB
 }
