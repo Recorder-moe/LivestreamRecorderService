@@ -44,6 +44,11 @@ try
                 .ValidateDataAnnotations()
                 .ValidateOnStart();
 
+        services.AddOptions<S3Option>()
+                .Bind(configuration.GetSection(S3Option.ConfigurationSectionName))
+                .ValidateDataAnnotations()
+                .ValidateOnStart();
+
         services.AddOptions<ServiceOption>()
                 .Bind(configuration.GetSection(ServiceOption.ConfigurationSectionName))
                 .ValidateDataAnnotations()
