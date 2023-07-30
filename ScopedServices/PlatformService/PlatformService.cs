@@ -183,8 +183,12 @@ public abstract class PlatformService : IPlatformService
         }
         finally
         {
-            File.Delete(tempPath);
-            File.Delete(Path.ChangeExtension(tempPath, ".avif"));
+            try
+            {
+                File.Delete(tempPath);
+                File.Delete(Path.ChangeExtension(tempPath, ".avif"));
+            }
+            catch (IOException) { }
         }
     }
 

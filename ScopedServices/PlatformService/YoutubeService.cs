@@ -150,7 +150,7 @@ public class YoutubeService : PlatformService, IPlatformService
 
         // Download thumbnail for new videos
         if (video.Status == VideoStatus.Unknown
-            || video.Status == VideoStatus.Pending && string.IsNullOrEmpty(video.Thumbnail))
+            || (video.Status == VideoStatus.Pending && string.IsNullOrEmpty(video.Thumbnail)))
         {
             video.Thumbnail = await DownloadThumbnailAsync(videoData.Thumbnail, video.id, cancellation);
         }
@@ -221,6 +221,7 @@ public class YoutubeService : PlatformService, IPlatformService
                     case VideoStatus.Scheduled:
                     case VideoStatus.Pending:
                     case VideoStatus.WaitingToRecord:
+                    case VideoStatus.Missing:
                         video.Status = VideoStatus.WaitingToDownload;
                         _logger.LogInformation("Change video {videoId} status to {videoStatus}", video.id, Enum.GetName(typeof(VideoStatus), video.Status));
                         video.Thumbnail = await DownloadThumbnailAsync(videoData.Thumbnail, video.id, cancellation);
@@ -261,8 +262,30 @@ public class YoutubeService : PlatformService, IPlatformService
                 }
                 else
                 {
-                    video.Status = VideoStatus.WaitingToDownload;
-                    _logger.LogInformation("Change video {videoId} status to {videoStatus}", video.id, Enum.GetName(typeof(VideoStatus), video.Status));
+                    switch (video.Status)
+                    {
+                        // Old unarchived video.
+                        // Will fall in here when adding a new channel.
+                        case VideoStatus.Unknown:
+                            video.Status = VideoStatus.Expired;
+                            video.Note = $"Video expired because it is an old video.";
+                            _logger.LogInformation("Change video {videoId} status to {videoStatus}", video.id, Enum.GetName(typeof(VideoStatus), video.Status));
+                            video.Thumbnail = await DownloadThumbnailAsync(videoData.Thumbnail, video.id, cancellation);
+                            break;
+                        // Should download these video but not downloaded.
+                        // Download them.
+                        case VideoStatus.Scheduled:
+                        case VideoStatus.Pending:
+                        case VideoStatus.Missing:
+                            video.Status = VideoStatus.WaitingToDownload;
+                            _logger.LogInformation("Change video {videoId} status to {videoStatus}", video.id, Enum.GetName(typeof(VideoStatus), video.Status));
+                            video.Thumbnail = await DownloadThumbnailAsync(videoData.Thumbnail, video.id, cancellation);
+                            break;
+                        default:
+                            // Don't modify status.
+                            break;
+                    }
+
                 }
 
                 video.Timestamps.ActualStartTime ??=
@@ -306,37 +329,39 @@ public class YoutubeService : PlatformService, IPlatformService
             video.Description = videoData.Description;
         }
 
-        if (!string.IsNullOrEmpty(video.Filename)
-            && !await _storageService.IsVideoFileExists(video.Filename, cancellation))
+        if (!string.IsNullOrEmpty(video.Filename))
         {
-            if (video.SourceStatus == VideoStatus.Deleted
-                && video.Status < VideoStatus.Recording)
+            if (!await _storageService.IsVideoFileExists(video.Filename, cancellation))
             {
-                video.Note = "This video archive is missing. If you would like to provide it, please contact admin.";
-                if (video.Status != VideoStatus.Missing)
+                if (video.SourceStatus == VideoStatus.Deleted
+                    && video.Status < VideoStatus.Recording)
                 {
-                    video.SourceStatus = VideoStatus.Missing;
-                    if (null != discordService)
+                    video.Note = "This video archive is missing. If you would like to provide it, please contact admin.";
+                    if (video.Status != VideoStatus.Missing)
                     {
-                        await discordService.SendSkippedMessage(video);
+                        video.SourceStatus = VideoStatus.Missing;
+                        if (null != discordService)
+                        {
+                            await discordService.SendSkippedMessage(video);
+                        }
                     }
+                    video.Status = VideoStatus.Missing;
+                    _logger.LogInformation("Source removed and not archived, change video status to {status}", Enum.GetName(typeof(VideoStatus), video.Status));
                 }
-                video.Status = VideoStatus.Missing;
-                _logger.LogInformation("Source removed and not archived, change video status to {status}", Enum.GetName(typeof(VideoStatus), video.Status));
-            }
 
-            if (video.Status >= VideoStatus.Archived && video.Status < VideoStatus.Expired)
-            {
-                video.Status = VideoStatus.Missing;
-                video.Note = $"Video missing because archived not found.";
-                _logger.LogInformation("Can not found archived, change video status to {status}", Enum.GetName(typeof(VideoStatus), video.Status));
+                if (video.Status >= VideoStatus.Archived && video.Status < VideoStatus.Expired)
+                {
+                    video.Status = VideoStatus.Missing;
+                    video.Note = $"Video missing because archived not found.";
+                    _logger.LogInformation("Can not found archived, change video status to {status}", Enum.GetName(typeof(VideoStatus), video.Status));
+                }
             }
-        }
-        else if (video.Status < VideoStatus.Archived || video.Status >= VideoStatus.Expired)
-        {
-            video.Status = VideoStatus.Archived;
-            video.Note = null;
-            _logger.LogInformation("Correct video status to {status} because archived is exists.", Enum.GetName(typeof(VideoStatus), video.Status));
+            else if (video.Status < VideoStatus.Archived || video.Status >= VideoStatus.Expired)
+            {
+                video.Status = VideoStatus.Archived;
+                video.Note = null;
+                _logger.LogInformation("Correct video status to {status} because archived is exists.", Enum.GetName(typeof(VideoStatus), video.Status));
+            }
         }
 
         switch (videoData.Availability)

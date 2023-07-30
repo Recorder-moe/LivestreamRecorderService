@@ -223,21 +223,23 @@ public class FC2Service : PlatformService, IPlatformService
             }
         }
 
-        if (!string.IsNullOrEmpty(video.Filename)
-            && !await _storageService.IsVideoFileExists(video.Filename, cancellation))
+        if (!string.IsNullOrEmpty(video.Filename))
         {
-            if (video.Status >= VideoStatus.Archived && video.Status < VideoStatus.Expired)
+            if (!await _storageService.IsVideoFileExists(video.Filename, cancellation))
             {
-                video.Status = VideoStatus.Missing;
-                video.Note = $"Video missing because archived not found.";
-                _logger.LogInformation("Can not found archived, change video status to {status}", Enum.GetName(typeof(VideoStatus), video.Status));
+                if (video.Status >= VideoStatus.Archived && video.Status < VideoStatus.Expired)
+                {
+                    video.Status = VideoStatus.Missing;
+                    video.Note = $"Video missing because archived not found.";
+                    _logger.LogInformation("Can not found archived, change video status to {status}", Enum.GetName(typeof(VideoStatus), video.Status));
+                }
             }
-        }
-        else if (video.Status < VideoStatus.Archived || video.Status >= VideoStatus.Expired)
-        {
-            video.Status = VideoStatus.Archived;
-            video.Note = null;
-            _logger.LogInformation("Correct video status to {status} because archived is exists.", Enum.GetName(typeof(VideoStatus), video.Status));
+            else if (video.Status < VideoStatus.Archived || video.Status >= VideoStatus.Expired)
+            {
+                video.Status = VideoStatus.Archived;
+                video.Note = null;
+                _logger.LogInformation("Correct video status to {status} because archived is exists.", Enum.GetName(typeof(VideoStatus), video.Status));
+            }
         }
 
         _videoRepository.Update(video);
