@@ -2,6 +2,7 @@
 using Discord.Webhook;
 using LivestreamRecorder.DB.Enums;
 using LivestreamRecorder.DB.Models;
+using LivestreamRecorderService.Enums;
 using LivestreamRecorderService.Models.OptionDiscords;
 using LivestreamRecorderService.Models.Options;
 using Microsoft.Extensions.Options;
@@ -13,25 +14,33 @@ public partial class DiscordService
 {
     private readonly ILogger<DiscordService> _logger;
     private readonly DiscordOption _discordOption;
-    private readonly AzureOption _azureOption;
     private readonly DiscordWebhookClient _discordWebhookClient;
     private readonly DiscordWebhookClient _discordWebhookClientWarning;
     private readonly DiscordWebhookClient _discordWebhookClientAdmin;
+    private readonly string _objectStorageUrl_Public;
 
     public DiscordService(
         ILogger<DiscordService> logger,
         IOptions<DiscordOption> options,
-        IOptions<AzureOption> azureOptions)
+        IOptions<AzureOption> azureOptions,
+        IOptions<ServiceOption> serviceOptions,
+        IOptions<S3Option> s3Options)
     {
         _logger = logger;
         _discordOption = options.Value;
-        _azureOption = azureOptions.Value;
         _discordWebhookClient = new DiscordWebhookClient(_discordOption.Webhook);
         _discordWebhookClient.Log += DiscordWebhookClient_Log;
         _discordWebhookClientWarning = new DiscordWebhookClient(_discordOption.WebhookWarning);
         _discordWebhookClientWarning.Log += DiscordWebhookClient_Log;
         _discordWebhookClientAdmin = new DiscordWebhookClient(_discordOption.WebhookAdmin);
         _discordWebhookClientAdmin.Log += DiscordWebhookClient_Log;
+
+        _objectStorageUrl_Public = serviceOptions.Value.StorageService switch
+        {
+            ServiceName.AzureBlobStorage => $"https://{azureOptions.Value.BlobStorage?.StorageAccountName}.blob.core.windows.net/{azureOptions.Value.BlobStorage?.BlobContainerName_Public}",
+            ServiceName.S3 => (s3Options.Value.Secure ? "https" : "http") + $"://{s3Options.Value.Endpoint}/{s3Options.Value.BucketName_Public}",
+            _ => string.Empty,
+        };
     }
 
     #region Log mapping
@@ -116,13 +125,10 @@ public partial class DiscordService
     private EmbedBuilder GetEmbedBuilder(Video video)
     {
         EmbedBuilder embedBuilder = new();
-        if(null != _azureOption.BlobStorage)
-        {
         if (null != video.Thumbnail)
-            embedBuilder.WithImageUrl($"https://{_azureOption.BlobStorage.StorageAccountName}.blob.core.windows.net/{_azureOption.BlobStorage.BlobContainerName_Public}/thumbnails/{video.Thumbnail}");
+            embedBuilder.WithImageUrl($"{_objectStorageUrl_Public}/thumbnails/{video.Thumbnail}");
         else if (null != video.Channel)
-            embedBuilder.WithImageUrl($"https://{_azureOption.BlobStorage.StorageAccountName}.blob.core.windows.net/{_azureOption.BlobStorage.BlobContainerName_Public}/banner/{video.Channel.Banner}");
-        }
+            embedBuilder.WithImageUrl($"{_objectStorageUrl_Public}/banner/{video.Channel.Banner}");
 
         embedBuilder.WithDescription(video.Title);
         embedBuilder.WithUrl($"https://{_discordOption.FrontEndHost}/channels/{video.ChannelId}/videos/{video.id}");
