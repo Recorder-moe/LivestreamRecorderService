@@ -87,6 +87,7 @@ public class FC2Service : PlatformService, IPlatformService
                     case VideoStatus.Skipped:
                         _logger.LogTrace("{videoId} is rejected for recording.", video.id);
                         return;
+                    case VideoStatus.Uploading:
                     case VideoStatus.Archived:
                     case VideoStatus.PermanentArchived:
                         _logger.LogWarning("{videoId} has already been archived. It is possible that an internet disconnect occurred during the process. Changed its state back to Recording.", video.id);
