@@ -62,7 +62,7 @@ public abstract class ACIServiceBase : IJobServiceBase
         var instanceNameChannelId = GetInstanceName(video.ChannelId);
         var instanceNameVideoId = GetInstanceName(videoId);
 
-        var job = await GetJobByKeywordAsync(video.ChannelId, cancellation);
+        var job = await GetJobByKeywordAsync(instanceNameChannelId, cancellation);
         if (null == job || !job.HasData)
         {
             _logger.LogWarning("Does not get ACI instance for {videoId} {name}. A new instance will now be created.", videoId, instanceNameChannelId);
@@ -131,7 +131,7 @@ public abstract class ACIServiceBase : IJobServiceBase
     {
         var resourceGroupResource = await GetResourceGroupAsync(cancellation);
         return resourceGroupResource.GetGenericResources(
-                                        filter: $"substringof('{GetInstanceName(keyword)}', name) and resourceType eq 'microsoft.containerinstance/containergroups'",
+                                        filter: $"substringof('{keyword}', name) and resourceType eq 'microsoft.containerinstance/containergroups'",
                                         expand: "provisioningState",
                                         top: 1,
                                         cancellationToken: cancellation)

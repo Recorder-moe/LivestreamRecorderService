@@ -76,7 +76,6 @@ public class FC2Service : PlatformService, IPlatformService
 
             if (_videoRepository.Exists(videoId))
             {
-
                 video = _videoRepository.GetById(videoId);
                 switch (video.Status)
                 {
@@ -94,6 +93,7 @@ public class FC2Service : PlatformService, IPlatformService
                         video.Status = VideoStatus.WaitingToRecord;
                         break;
                 }
+                _videoRepository.Update(video);
             }
             else
             {
@@ -113,7 +113,10 @@ public class FC2Service : PlatformService, IPlatformService
                         ActualStartTime = DateTime.UtcNow
                     },
                 };
+                _logger.LogTrace("New video found: {videoId}", video.id);
+                _videoRepository.Add(video);
             }
+            _unitOfWork_Public.Commit();
 
             var info = await GetFC2InfoDataAsync(channel.id, cancellation);
             if (null == info) return;
@@ -127,10 +130,11 @@ public class FC2Service : PlatformService, IPlatformService
                     ? DateTime.UtcNow
                     : DateTimeOffset.FromUnixTimeMilliseconds((long)info.Data.ChannelData.Start).UtcDateTime;
 
-            if (info.Data.ChannelData.IsLimited == 0 || info.Data.ChannelData.IsPremium == 0)
+            if (info.Data.ChannelData.IsLimited == 0
+                && info.Data.ChannelData.IsPremium == 0)
             {
-                if (isLive && (video.Status < VideoStatus.Recording
-                               || video.Status == VideoStatus.Missing))
+                if (video.Status < VideoStatus.Recording
+                    || video.Status == VideoStatus.Missing)
                 {
                     await _fC2LiveDLService.InitJobAsync(url: $"https://live.fc2.com/{channel.id}/",
                                                          video: video,

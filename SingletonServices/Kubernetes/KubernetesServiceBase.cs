@@ -58,7 +58,7 @@ public abstract class KubernetesServiceBase : IJobServiceBase
     protected async Task<V1Job?> GetJobByKeywordAsync(string keyword, CancellationToken cancellation)
     {
         var jobs = await _client.ListNamespacedJobAsync(KubernetesNamespace, cancellationToken: cancellation);
-        return jobs.Items.FirstOrDefault(p => p.Name().Contains(GetInstanceName(keyword)));
+        return jobs.Items.FirstOrDefault(p => p.Name().Contains(keyword));
     }
 
     protected Task<V1Job> CreateInstanceAsync(dynamic parameters,
