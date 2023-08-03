@@ -58,7 +58,7 @@ public class KubernetesService : IJobService
 
     public async Task<bool> IsJobSucceededAsync(string keyword, CancellationToken cancellation = default)
     {
-        var job = await GetJobByKeywordAsync(keyword, cancellation);
+        var job = (await GetJobsByKeywordAsync(keyword, cancellation)).FirstOrDefault();
         return null != job
                && (job.Status.Active == null || job.Status.Active == 0)
                && job.Status.Succeeded > 0;
@@ -69,14 +69,14 @@ public class KubernetesService : IJobService
 
     public async Task<bool> IsJobFailedAsync(string keyword, CancellationToken cancellation = default)
     {
-        var job = await GetJobByKeywordAsync(keyword, cancellation);
+        var job = (await GetJobsByKeywordAsync(keyword, cancellation)).FirstOrDefault();
         return null == job
                || (job.Status.Failed > 0 && job.Status.Succeeded == 0);
     }
 
     public async Task RemoveCompletedJobsAsync(Video video, CancellationToken cancellation = default)
     {
-        var job = await GetJobByKeywordAsync(video.id, cancellation);
+        var job = (await GetJobsByKeywordAsync(video.id, cancellation)).FirstOrDefault(p => p.Status.Conditions.LastOrDefault()?.Type == "Complete");
         if (null == job)
         {
             _logger.LogError("Failed to get K8s job for {videoId} when removing completed job. Please check if the job exists.", video.id);
@@ -130,10 +130,10 @@ public class KubernetesService : IJobService
                   .Items
                   .Any(p => p.Name() == _persistentVolumeClaimName);
 
-    private async Task<V1Job?> GetJobByKeywordAsync(string keyword, CancellationToken cancellation)
+    private async Task<List<V1Job>> GetJobsByKeywordAsync(string keyword, CancellationToken cancellation)
     {
         var jobs = await _client.ListNamespacedJobAsync(KubernetesNamespace, cancellationToken: cancellation);
-        return jobs.Items.FirstOrDefault(p => p.Name().Contains(NameHelper.GetInstanceName(keyword)));
+        return jobs.Items.Where(p => p.Name().Contains(NameHelper.GetInstanceName(keyword))).ToList();
     }
 
     private void EnsureNamespaceExists(string namespaceName)
