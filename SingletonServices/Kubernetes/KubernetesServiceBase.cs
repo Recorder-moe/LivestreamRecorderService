@@ -38,7 +38,7 @@ public abstract class KubernetesServiceBase : IJobServiceBase
 
     public virtual async Task InitJobAsync(string videoId, Video video, bool useCookiesFile = false, CancellationToken cancellation = default)
     {
-        var jobName = GetInstanceName(videoId);
+        var jobName = GetInstanceName(video.id);
 
         var job = await GetJobByKeywordAsync(jobName, cancellation);
         if (null != job && job.Status.Active != 0)

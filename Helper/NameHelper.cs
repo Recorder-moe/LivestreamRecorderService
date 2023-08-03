@@ -6,9 +6,9 @@ namespace LivestreamRecorderService.Helper;
 public static class NameHelper
 {
     public static string GetInstanceName(string id)
-        => (id.Split("/").Last()
-              .Split("?").First()
-              .Split(".").First()
+        => (id.Split("/", StringSplitOptions.RemoveEmptyEntries).Last()
+              .Split("?", StringSplitOptions.RemoveEmptyEntries).First()
+              .Split(".", StringSplitOptions.RemoveEmptyEntries).First()
               .Replace("_", "")
               .Replace(":", "")
            ).ToLower();
