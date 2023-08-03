@@ -1,7 +1,6 @@
 ﻿using Azure.ResourceManager;
 using Azure.ResourceManager.Resources;
 using LivestreamRecorder.DB.Models;
-using LivestreamRecorderService.Helper;
 using LivestreamRecorderService.Interfaces.Job.Uploader;
 using LivestreamRecorderService.Models;
 using LivestreamRecorderService.Models.Options;
@@ -61,7 +60,7 @@ public class AzureUploaderService : ACIServiceBase, IAzureUploaderService
                         {
                             value = new string[] {
                                 "/bin/sh", "-c",
-                                $"/app/azure-uploader.sh {NameHelper.GetFileName(video, video.Source).Replace(".mp4", "")}"
+                                $"/app/azure-uploader.sh {video.Filename?.Replace(".mp4", "")}"
                             }
                         },
                         storageAccountName = new

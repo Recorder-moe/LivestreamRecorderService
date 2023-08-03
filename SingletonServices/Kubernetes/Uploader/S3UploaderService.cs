@@ -1,6 +1,5 @@
 ﻿using k8s.Models;
 using LivestreamRecorder.DB.Models;
-using LivestreamRecorderService.Helper;
 using LivestreamRecorderService.Interfaces.Job.Uploader;
 using LivestreamRecorderService.Models;
 using LivestreamRecorderService.Models.Options;
@@ -62,7 +61,7 @@ public class S3UploaderService : KubernetesServiceBase, IS3UploaderService
                         {
                             value = new string[] {
                                 "/bin/sh", "-c",
-                                $"/app/s3-uploader.sh {NameHelper.GetFileName(video, video.Source).Replace(".mp4", "")}"
+                                $"/app/s3-uploader.sh {video.Filename?.Replace(".mp4", "")}"
                             }
                         }
                     },
