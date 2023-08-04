@@ -1,5 +1,6 @@
 ﻿using LivestreamRecorder.DB.Enums;
 using LivestreamRecorderService.Interfaces;
+using LivestreamRecorderService.Interfaces.Job;
 using LivestreamRecorderService.Models.Options;
 using LivestreamRecorderService.ScopedServices;
 using LivestreamRecorderService.ScopedServices.PlatformService;
@@ -37,6 +38,8 @@ public class MonitorWorker : BackgroundService
             #region DI
             using (var scope = _serviceProvider.CreateScope())
             {
+                // KubernetesService needed to be initialized first
+                var ___ = scope.ServiceProvider.GetRequiredService<IJobService>();
                 var youtubeSerivce = scope.ServiceProvider.GetRequiredService<YoutubeService>();
                 var twitcastingService = scope.ServiceProvider.GetRequiredService<TwitcastingService>();
                 var fc2Service = scope.ServiceProvider.GetRequiredService<FC2Service>();
