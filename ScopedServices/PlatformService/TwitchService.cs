@@ -110,7 +110,7 @@ public class TwitchService : PlatformService, IPlatformService
             video.Description = stream.GameName;
             video.Timestamps.ActualStartTime = stream.StartedAt;
             video.Timestamps.PublishedAt = stream.StartedAt;
-            video.Thumbnail = await DownloadThumbnailAsync(stream.ThumbnailUrl, video.id, cancellation);
+            video.Thumbnail = await DownloadThumbnailAsync(stream.ThumbnailUrl.Replace("-{width}x{height}", ""), video.id, cancellation);
 
             if (video.Status < VideoStatus.Recording
                 || video.Status == VideoStatus.Missing)
