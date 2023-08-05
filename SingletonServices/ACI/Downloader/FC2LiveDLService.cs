@@ -63,12 +63,12 @@ public class FC2LiveDLService : ACIServiceBase, IFC2LiveDLService
                 {
                     "/usr/bin/dumb-init", "--",
                     "sh", "-c",
-                    $"/venv/bin/fc2-live-dl --latency high --threads 1 -o '{filename}' --log-level trace --cookies /sharedvolume/cookies/{video.ChannelId}.txt 'https://live.fc2.com/{video.ChannelId}/' && mv '/app/{filename}' /sharedvolume/"
+                    $"/venv/bin/fc2-live-dl --latency high --threads 1 -o '{Path.ChangeExtension(filename, ".%(ext)s")}' --log-level trace --cookies /sharedvolume/cookies/{video.ChannelId}.txt 'https://live.fc2.com/{video.ChannelId}/' && mv '/app/{filename}' /sharedvolume/"
                 }
                 : new string[] {
                     "/usr/bin/dumb-init", "--",
                     "sh", "-c",
-                    $"/venv/bin/fc2-live-dl --latency high --threads 1 -o '{filename}' --log-level trace 'https://live.fc2.com/{video.ChannelId}/' && mv '/app/{filename}' /sharedvolume/"
+                    $"/venv/bin/fc2-live-dl --latency high --threads 1 -o '{Path.ChangeExtension(filename, ".%(ext)s")}' --log-level trace 'https://live.fc2.com/{video.ChannelId}/' && mv '/app/{filename}' /sharedvolume/"
                 };
 
             return CreateResourceAsync(
