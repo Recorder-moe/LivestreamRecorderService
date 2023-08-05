@@ -22,3 +22,8 @@ FROM base AS final
 WORKDIR /app
 COPY --from=publish /app/publish .
 ENTRYPOINT ["dotnet", "LivestreamRecorderService.dll"]
+
+RUN addgroup -g 1000 docker && \
+    adduser -u 1000 -G docker -h /home/docker -s /bin/sh -D docker \
+    && chown -R 1000:1000 .
+USER docker
