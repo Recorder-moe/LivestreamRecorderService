@@ -1,14 +1,18 @@
-﻿using CodeHollow.FeedReader;
-using LivestreamRecorder.DB.Core;
+﻿#if COSMOSDB
+using LivestreamRecorder.DB.CosmosDB;
+#elif COUCHDB
+using LivestreamRecorder.DB.CouchDB;
+#endif
+using CodeHollow.FeedReader;
 using LivestreamRecorder.DB.Enums;
 using LivestreamRecorder.DB.Interfaces;
-using LivestreamRecorder.DB.Models;
 using LivestreamRecorderService.Interfaces;
 using LivestreamRecorderService.Interfaces.Job.Downloader;
 using LivestreamRecorderService.Models;
 using LivestreamRecorderService.Models.OptionDiscords;
 using Microsoft.Extensions.Options;
 using Serilog.Context;
+using LivestreamRecorder.DB.Models;
 
 namespace LivestreamRecorderService.ScopedServices.PlatformService;
 
@@ -92,7 +96,7 @@ public class YoutubeService : PlatformService, IPlatformService
         var videoId = item.Id.Split(':').Last();
         using var _ = LogContext.PushProperty("videoId", videoId);
         var video = _videoRepository.Exists(videoId)
-                    ? _videoRepository.GetById(videoId)
+                    ? await _videoRepository.GetById(videoId)
                     : null;
 
         // Don't need to track anymore.
@@ -113,7 +117,6 @@ public class YoutubeService : PlatformService, IPlatformService
                 SourceStatus = VideoStatus.Unknown,
                 Title = item.Title,
                 ChannelId = channel.id,
-                Channel = channel,
                 Timestamps = new Timestamps()
                 {
                     PublishedAt = item.PublishingDate
@@ -148,6 +151,9 @@ public class YoutubeService : PlatformService, IPlatformService
             return;
         }
 
+        // Note: The channel can be null in the design.
+        var channel = await _channelRepository.GetById(video.ChannelId);
+
         // Download thumbnail for new videos
         if (video.Status == VideoStatus.Unknown
             || (video.Status == VideoStatus.Pending && string.IsNullOrEmpty(video.Thumbnail)))
@@ -163,14 +169,14 @@ public class YoutubeService : PlatformService, IPlatformService
                 {
                     video.IsLiveStream = false;
 
-                    if (video.Channel?.SkipNotLiveStream == true)
+                    if (channel?.SkipNotLiveStream == true)
                     {
                         video.Note = $"Video skipped because it is not live stream.";
                         // First detected
                         if (video.Status != VideoStatus.Skipped
                             && null != discordService)
                         {
-                            await discordService.SendSkippedMessage(video);
+                            await discordService.SendSkippedMessage(video, channel);
                         }
                         video.Status = VideoStatus.Skipped;
                         _logger.LogInformation("Change video {videoId} status to {videoStatus}", video.id, Enum.GetName(typeof(VideoStatus), video.Status));
@@ -248,14 +254,14 @@ public class YoutubeService : PlatformService, IPlatformService
 
                 // Don't download uploaded videos.
                 if (video.Status == VideoStatus.Unknown
-                    && video.Channel?.SkipNotLiveStream == true)
+                    && channel?.SkipNotLiveStream == true)
                 {
                     video.Note = $"Video skipped because it is not live stream.";
                     // First detected
                     if (video.Status != VideoStatus.Skipped
                         && null != discordService)
                     {
-                        await discordService.SendSkippedMessage(video);
+                        await discordService.SendSkippedMessage(video, channel);
                     }
                     video.Status = VideoStatus.Skipped;
                     _logger.LogInformation("Change video {videoId} status to {videoStatus}", video.id, Enum.GetName(typeof(VideoStatus), video.Status));
@@ -308,7 +314,7 @@ public class YoutubeService : PlatformService, IPlatformService
                         video.SourceStatus = VideoStatus.Deleted;
                         if (null != discordService)
                         {
-                            await discordService.SendDeletedMessage(video);
+                            await discordService.SendDeletedMessage(video, channel);
                         }
                     }
 
@@ -342,7 +348,7 @@ public class YoutubeService : PlatformService, IPlatformService
                         video.SourceStatus = VideoStatus.Missing;
                         if (null != discordService)
                         {
-                            await discordService.SendSkippedMessage(video);
+                            await discordService.SendSkippedMessage(video, channel);
                         }
                     }
                     video.Status = VideoStatus.Missing;
@@ -368,7 +374,7 @@ public class YoutubeService : PlatformService, IPlatformService
         {
             // Member only
             case "subscriber_only":
-                if ((video.Channel?.UseCookiesFile) == true)
+                if ((channel?.UseCookiesFile) == true)
                 {
                     goto case "public";
                 }
@@ -392,7 +398,7 @@ public class YoutubeService : PlatformService, IPlatformService
                         video.SourceStatus = VideoStatus.Edited;
                         if (null != discordService)
                         {
-                            await discordService.SendDeletedMessage(video);
+                            await discordService.SendDeletedMessage(video, channel);
                         }
                     }
                     video.SourceStatus = VideoStatus.Edited;
@@ -413,7 +419,7 @@ public class YoutubeService : PlatformService, IPlatformService
                     if (video.Status != VideoStatus.Skipped
                         && null != discordService)
                     {
-                        await discordService.SendSkippedMessage(video);
+                        await discordService.SendSkippedMessage(video, channel);
                     }
                     video.Status = VideoStatus.Skipped;
                     _logger.LogInformation("Video is {status} because it is detected access required or copyright notice.", Enum.GetName(typeof(VideoStatus), video.Status));
@@ -425,7 +431,7 @@ public class YoutubeService : PlatformService, IPlatformService
                     video.Note = $"Video source is detected access required or copyright notice.";
                     if (null != discordService)
                     {
-                        await discordService.SendDeletedMessage(video);
+                        await discordService.SendDeletedMessage(video, channel);
                     }
                 }
 
@@ -439,21 +445,21 @@ public class YoutubeService : PlatformService, IPlatformService
         {
             await _ytarchiveService.InitJobAsync(url: video.id,
                                                  video: video,
-                                                 useCookiesFile: video.Channel?.UseCookiesFile ?? false,
+                                                 useCookiesFile: channel?.UseCookiesFile ?? false,
                                                  cancellation: cancellation);
 
             video.Status = VideoStatus.Recording;
             _logger.LogInformation("{videoId} is now lived! Start recording.", video.id);
             if (null != discordService)
             {
-                await discordService.SendStartRecordingMessage(video);
+                await discordService.SendStartRecordingMessage(video, channel);
             }
         }
 
         if (video.Status < 0)
             _logger.LogError("Video {videoId} has a Unknown status!", video.id);
 
-        _videoRepository.AddOrUpdate(video);
+        await _videoRepository.AddOrUpdate(video);
         _unitOfWork_Public.Commit();
     }
 
@@ -481,12 +487,11 @@ public class YoutubeService : PlatformService, IPlatformService
             bannerBlobUrl = await DownloadImageAndUploadToBlobStorage(bannerUrl, $"banner/{channel.id}", cancellation);
         }
 
-        _unitOfWork_Public.Context.Entry(channel).Reload();
         channel = _channelRepository.LoadRelatedData(channel);
         channel.ChannelName = info.Uploader;
         channel.Avatar = avatarBlobUrl?.Replace("avatar/", "");
         channel.Banner = bannerBlobUrl?.Replace("banner/", "");
-        _channelRepository.Update(channel);
+        await _channelRepository.AddOrUpdate(channel);
         _unitOfWork_Public.Commit();
     }
 }

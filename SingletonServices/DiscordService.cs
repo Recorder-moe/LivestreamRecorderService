@@ -77,9 +77,9 @@ public partial class DiscordService
            });
     #endregion
 
-    public Task SendStartRecordingMessage(Video video)
+    public Task SendStartRecordingMessage(Video video, Channel? channel)
     {
-        var embedBuilder = GetEmbedBuilder(video);
+        var embedBuilder = GetEmbedBuilder(video, channel);
         embedBuilder.WithTitle("Start Recording");
         embedBuilder.WithColor(Color.Orange);
 
@@ -88,9 +88,9 @@ public partial class DiscordService
         return SendMessage(embedBuilder.Build(), componentBuilder.Build());
     }
 
-    public Task SendArchivedMessage(Video video)
+    public Task SendArchivedMessage(Video video, Channel? channel)
     {
-        var embedBuilder = GetEmbedBuilder(video);
+        var embedBuilder = GetEmbedBuilder(video, channel);
         embedBuilder.WithTitle("Video archived");
         embedBuilder.WithColor(Color.Green);
 
@@ -99,9 +99,9 @@ public partial class DiscordService
         return SendMessage(embedBuilder.Build(), componentBuilder.Build());
     }
 
-    public Task SendSkippedMessage(Video video)
+    public Task SendSkippedMessage(Video video, Channel? channel)
     {
-        var embedBuilder = GetEmbedBuilder(video);
+        var embedBuilder = GetEmbedBuilder(video, channel);
         embedBuilder.WithTitle("Video skipped");
         embedBuilder.WithColor(Color.LightGrey);
 
@@ -110,9 +110,9 @@ public partial class DiscordService
         return SendMessage(embedBuilder.Build(), componentBuilder.Build(), video.Note ?? "");
     }
 
-    public Task SendDeletedMessage(Video video)
+    public Task SendDeletedMessage(Video video, Channel? channel)
     {
-        var embedBuilder = GetEmbedBuilder(video);
+        var embedBuilder = GetEmbedBuilder(video, channel);
         embedBuilder.WithTitle("Source " + Enum.GetName(typeof(VideoStatus), video.SourceStatus ?? VideoStatus.Unknown));
         embedBuilder.WithColor(Color.DarkGrey);
 
@@ -122,18 +122,18 @@ public partial class DiscordService
     }
 
     #region GetEmbedBuilder
-    private EmbedBuilder GetEmbedBuilder(Video video)
+    private EmbedBuilder GetEmbedBuilder(Video video, Channel? channel)
     {
         EmbedBuilder embedBuilder = new();
         if (null != video.Thumbnail)
             embedBuilder.WithImageUrl($"{_objectStorageUrl_Public}/thumbnails/{video.Thumbnail}");
-        else if (null != video.Channel)
-            embedBuilder.WithImageUrl($"{_objectStorageUrl_Public}/banner/{video.Channel.Banner}");
+        else if (null != channel)
+            embedBuilder.WithImageUrl($"{_objectStorageUrl_Public}/banner/{channel.Banner}");
 
         embedBuilder.WithDescription(video.Title);
         embedBuilder.WithUrl($"https://{_discordOption.FrontEndHost}/channels/{video.ChannelId}/videos/{video.id}");
         embedBuilder.AddField("Video ID", video.id, false);
-        embedBuilder.AddField("Channel", video.Channel?.ChannelName ?? video.ChannelId, false);
+        embedBuilder.AddField("Channel", channel?.ChannelName ?? video.ChannelId, false);
         embedBuilder.AddField("Channel ID", video.ChannelId, true);
         embedBuilder.AddField("Source", video.Source, true);
         embedBuilder.AddField("Is live stream", video.IsLiveStream?.ToString() ?? "Unknown", true);
@@ -156,7 +156,7 @@ public partial class DiscordService
         return embedBuilder;
     }
 
-    //private EmbedBuilder GetEmbedBuilder(Channel channel)
+    //private EmbedBuilder GetEmbedBuilder(IChannel channel)
     //{
     //    EmbedBuilder embedBuilder = new();
     //    embedBuilder.WithImageUrl($"https://{_azureOption.StorageAccountName}.blob.core.windows.net/{_azureOption.BlobContainerNamePublic}/avatar/{channel.Avatar}");
@@ -205,7 +205,7 @@ public partial class DiscordService
 #endif
     }
 
-    //private ComponentBuilder GetComponentBuilder(Channel channel)
+    //private ComponentBuilder GetComponentBuilder(IChannel channel)
     //{
     //    ComponentBuilder componentBuilder = new();
     //    componentBuilder.WithButton(label: "Recorder.moe",

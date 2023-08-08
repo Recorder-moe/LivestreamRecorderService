@@ -1,8 +1,9 @@
-﻿using LivestreamRecorder.DB.Models;
+﻿#if COSMOSDB
+using LivestreamRecorder.DB.Models;
 using Microsoft.EntityFrameworkCore;
 #nullable disable warnings
 
-namespace LivestreamRecorder.DB.Core;
+namespace LivestreamRecorder.DB.CosmosDB;
 
 public class PrivateContext : DbContext
 {
@@ -34,3 +35,4 @@ public class PrivateContext : DbContext
         #endregion
     }
 }
+#endif

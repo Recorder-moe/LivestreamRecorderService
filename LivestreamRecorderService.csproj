@@ -8,6 +8,17 @@
     <DockerDefaultTargetOS>Linux</DockerDefaultTargetOS>
     <DockerfileContext>.</DockerfileContext>
     <ServerGarbageCollection>false</ServerGarbageCollection>
+<Configurations>Debug;Release;CouchDB;CosmosDB;CosmosDB_Release;CouchDB_Release</Configurations>
+</PropertyGroup>
+
+<PropertyGroup Condition="'$(Configuration)|$(Platform)'=='CosmosDB_Release|AnyCPU'">
+<DefineConstants>$(DefineConstants);COSMOSDB</DefineConstants>
+<Optimize>True</Optimize>
+</PropertyGroup>
+
+<PropertyGroup Condition="'$(Configuration)|$(Platform)'=='CouchDB_Release|AnyCPU'">
+<DefineConstants>$(DefineConstants);COUCHDB</DefineConstants>
+<Optimize>True</Optimize>
   </PropertyGroup>
 
   <ItemGroup>
@@ -24,6 +35,7 @@
     <PackageReference Include="Azure.ResourceManager.Resources" Version="1.6.0" />
     <PackageReference Include="Azure.Storage.Blobs" Version="12.17.0" />
     <PackageReference Include="CodeHollow.FeedReader" Version="1.2.6" />
+    <PackageReference Include="CouchDB.NET.DependencyInjection" Version="3.4.0" />
     <PackageReference Include="Discord.Net.Webhook" Version="3.11.0" />
     <PackageReference Include="KubernetesClient" Version="11.0.44" />
     <PackageReference Include="Microsoft.EntityFrameworkCore.Cosmos" Version="7.0.9" />

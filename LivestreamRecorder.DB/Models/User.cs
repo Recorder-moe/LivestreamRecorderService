@@ -7,8 +7,8 @@ namespace LivestreamRecorder.DB.Models;
 [Table("Users")]
 public class User : Entity
 {
-    [Required]
-    public override string id { get; set; }
+    public override string Id => $"{id}:{id}";
+
     [Required]
     public string UserName { get; set; }
     [Required]

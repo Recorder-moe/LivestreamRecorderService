@@ -1,8 +1,11 @@
-﻿using LivestreamRecorder.DB.Core;
+﻿#if COSMOSDB
+using LivestreamRecorder.DB.CosmosDB;
 using LivestreamRecorder.DB.Interfaces;
+using LivestreamRecorder.DB.Models;
 using LivestreamRecorderService.Models.Options;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;
+#endif
 using Serilog;
 using System.Configuration;
 
@@ -14,6 +17,7 @@ namespace LivestreamRecorderService.DependencyInjection
         {
             try
             {
+#if COSMOSDB
                 var azureOptions = services.BuildServiceProvider().GetRequiredService<IOptions<AzureOption>>().Value;
 
                 if (null == azureOptions.CosmosDB
@@ -41,9 +45,10 @@ namespace LivestreamRecorderService.DependencyInjection
 
                 services.AddScoped<UnitOfWork_Public>();
                 services.AddScoped<UnitOfWork_Private>();
-                services.AddScoped<IVideoRepository, VideoRepository>();
-                services.AddScoped<IChannelRepository, ChannelRepository>();
-                services.AddScoped<IUserRepository, UserRepository>();
+                services.AddScoped<IVideoRepository>((s) => new VideoRepository((IUnitOfWork)s.GetRequiredService(typeof(UnitOfWork_Public))));
+                services.AddScoped<IChannelRepository>((s) => new ChannelRepository((IUnitOfWork)s.GetRequiredService(typeof(UnitOfWork_Public))));
+                services.AddScoped<IUserRepository>((s) => new UserRepository((IUnitOfWork)s.GetRequiredService(typeof(UnitOfWork_Private))));
+#endif
                 return services;
             }
             catch (ConfigurationErrorsException)

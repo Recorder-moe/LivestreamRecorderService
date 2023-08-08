@@ -1,4 +1,5 @@
-﻿namespace LivestreamRecorder.DB.Core
+﻿#if COSMOSDB
+namespace LivestreamRecorder.DB.CosmosDB
 {
     public class UnitOfWork_Private : UnitOfWork
     {
@@ -7,3 +8,4 @@
         { }
     }
 }
+#endif

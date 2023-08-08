@@ -70,12 +70,12 @@ public class RecordService
                 switch (video.Source)
                 {
                     case "Youtube":
-                        videoService.UpdateVideoStatus(video, VideoStatus.Pending);
+                        await videoService.UpdateVideoStatus(video, VideoStatus.Pending);
                         _logger.LogWarning("{videoId} is failed. Set status to {status}", video.id, video.Status);
                         break;
                     default:
-                        videoService.UpdateVideoStatus(video, VideoStatus.Error);
-                        videoService.UpdateVideoNote(video, $"This recording FAILED! Please contact admin if you see this message.");
+                        await videoService.UpdateVideoStatus(video, VideoStatus.Error);
+                        await videoService.UpdateVideoNote(video, $"This recording FAILED! Please contact admin if you see this message.");
                         _logger.LogWarning("{videoId} is failed.", video.id);
                         break;
                 }
@@ -90,7 +90,7 @@ public class RecordService
     /// <param name="stoppingToken"></param>
     /// <returns></returns>
     /// <exception cref="NotSupportedException"></exception>
-    public async Task CreateStartRecordJobAsync(VideoService videoService, CancellationToken stoppingToken)
+    public async Task CreateStartRecordJobAsync(VideoService videoService, ChannelService channelService, CancellationToken stoppingToken)
     {
         _logger.LogDebug("Getting videos to record");
         var videos = videoService.GetVideosByStatus(VideoStatus.WaitingToRecord);
@@ -105,6 +105,7 @@ public class RecordService
         foreach (var video in videos)
         {
             using var _ = LogContext.PushProperty("videoId", video.id);
+            var channel = await channelService.GetChannel(video.ChannelId);
             _logger.LogInformation("Start to create recording job: {videoId}", video.id);
             try
             {
@@ -113,7 +114,7 @@ public class RecordService
                     case "Youtube":
                         await _ytarchiveService.InitJobAsync(url: video.id,
                                                              video: video,
-                                                             useCookiesFile: video.Channel?.UseCookiesFile == true,
+                                                             useCookiesFile: channel?.UseCookiesFile == true,
                                                              cancellation: stoppingToken);
                         break;
                     case "Twitcasting":
@@ -131,7 +132,7 @@ public class RecordService
                     case "FC2":
                         await _fC2LiveDLService.InitJobAsync(url: video.id,
                                                              video: video,
-                                                             useCookiesFile: video.Channel?.UseCookiesFile == true,
+                                                             useCookiesFile: channel?.UseCookiesFile == true,
                                                              cancellation: stoppingToken);
                         break;
 
@@ -142,8 +143,8 @@ public class RecordService
 
                 var filename = video.Filename;
 
-                videoService.UpdateVideoFilename(video, filename);
-                videoService.UpdateVideoStatus(video, VideoStatus.Recording);
+                await videoService.UpdateVideoFilename(video, filename);
+                await videoService.UpdateVideoStatus(video, VideoStatus.Recording);
 
                 _logger.LogInformation("Job deployed: {videoId} ", video.id);
                 _logger.LogInformation("Start to record {videoId}", video.id);
@@ -151,8 +152,8 @@ public class RecordService
             catch (Exception e)
             {
                 _logger.LogError(e, "Job deployment FAILED: {videoId}", video.id);
-                videoService.UpdateVideoStatus(video, VideoStatus.Error);
-                videoService.UpdateVideoNote(video, "Exception happened when starting recording job. Please contact admin if you see this message");
+                await videoService.UpdateVideoStatus(video, VideoStatus.Error);
+                await videoService.UpdateVideoNote(video, "Exception happened when starting recording job. Please contact admin if you see this message");
             }
         }
     }
@@ -164,7 +165,7 @@ public class RecordService
     /// <param name="stoppingToken"></param>
     /// <returns></returns>
     /// <exception cref="NotSupportedException"></exception>
-    public async Task CreateStartDownloadJobAsync(VideoService videoService, CancellationToken stoppingToken)
+    public async Task CreateStartDownloadJobAsync(VideoService videoService, ChannelService channelService, CancellationToken stoppingToken)
     {
         _logger.LogDebug("Getting videos to download");
         var videos = videoService.GetVideosByStatus(VideoStatus.WaitingToDownload);
@@ -176,6 +177,7 @@ public class RecordService
         foreach (var video in videos)
         {
             using var _ = LogContext.PushProperty("videoId", video.id);
+            var channel = await channelService.GetChannel(video.ChannelId);
             _logger.LogInformation("Start to create downloading job: {videoId}", video.id);
             try
             {
@@ -185,7 +187,7 @@ public class RecordService
                         await _ytdlpService.InitJobAsync(
                             url: $"https://youtu.be/{video.id}",
                             video: video,
-                            useCookiesFile: video.Channel?.UseCookiesFile == true,
+                            useCookiesFile: channel?.UseCookiesFile == true,
                             cancellation: stoppingToken);
                         break;
                     case "Twitcasting":
@@ -207,7 +209,7 @@ public class RecordService
                         await _ytdlpService.InitJobAsync(
                             url: $"https://video.fc2.com/content/{video.id}",
                             video: video,
-                            useCookiesFile: video.Channel?.UseCookiesFile == true,
+                            useCookiesFile: channel?.UseCookiesFile == true,
                             cancellation: stoppingToken);
                         break;
 
@@ -218,8 +220,8 @@ public class RecordService
 
                 var filename = video.Filename;
 
-                videoService.UpdateVideoFilename(video, filename);
-                videoService.UpdateVideoStatus(video, VideoStatus.Downloading);
+                await videoService.UpdateVideoFilename(video, filename);
+                await videoService.UpdateVideoStatus(video, VideoStatus.Downloading);
 
                 _logger.LogInformation("Job deployed: {videoId} ", video.id);
                 _logger.LogInformation("Start to download {videoId}", video.id);
@@ -227,8 +229,8 @@ public class RecordService
             catch (Exception e)
             {
                 _logger.LogError(e, "Job deployment FAILED: {videoId}", video.id);
-                videoService.UpdateVideoStatus(video, VideoStatus.Error);
-                videoService.UpdateVideoNote(video, "Exception happened when starting downloading job. Please contact admin if you see this message");
+                await videoService.UpdateVideoStatus(video, VideoStatus.Error);
+                await videoService.UpdateVideoNote(video, "Exception happened when starting downloading job. Please contact admin if you see this message");
             }
         }
     }
@@ -292,21 +294,21 @@ public class RecordService
         }
         catch (Exception)
         {
-            videoService.UpdateVideoStatus(video, VideoStatus.Error);
-            videoService.UpdateVideoNote(video, $"This recording is FAILED! Please contact admin if you see this message.");
+            await videoService.UpdateVideoStatus(video, VideoStatus.Error);
+            await videoService.UpdateVideoNote(video, $"This recording is FAILED! Please contact admin if you see this message.");
             _logger.LogError("Recording FAILED: {videoId}", video.id);
             return;
         }
 
-        channelService.UpdateChannelLatestVideo(video);
+        await channelService.UpdateChannelLatestVideoAsync(video);
 
-        videoService.UpdateVideoArchivedTime(video);
+        await videoService.UpdateVideoArchivedTimeAsync(video);
 
         // Fire and forget
         _ = videoService.TransferVideoFromSharedVolumeToStorageAsync(video, stoppingToken).ConfigureAwait(false);
     }
 
-    public async Task ProcessUploadedVideo(VideoService videoService, Video video, CancellationToken stoppingToken = default)
+    public async Task ProcessUploadedVideo(VideoService videoService, ChannelService channelService, Video video, CancellationToken stoppingToken = default)
     {
         using var _ = LogContext.PushProperty("videoId", video.id);
 
@@ -316,15 +318,15 @@ public class RecordService
         }
         catch (Exception)
         {
-            videoService.UpdateVideoStatus(video, VideoStatus.Error);
-            videoService.UpdateVideoNote(video, $"This recording is FAILED! Please contact admin if you see this message.");
+            await videoService.UpdateVideoStatus(video, VideoStatus.Error);
+            await videoService.UpdateVideoNote(video, $"This recording is FAILED! Please contact admin if you see this message.");
             _logger.LogError("Uploading FAILED: {videoId}", video.id);
             return;
         }
 
-        await _discordService.SendArchivedMessage(video);
+        await _discordService.SendArchivedMessage(video, await channelService.GetChannel(video.ChannelId));
         _logger.LogInformation("Video {videoId} is successfully uploaded to Storage.", video.id);
-        videoService.UpdateVideoStatus(video, VideoStatus.Archived);
+        await videoService.UpdateVideoStatus(video, VideoStatus.Archived);
     }
 
 }

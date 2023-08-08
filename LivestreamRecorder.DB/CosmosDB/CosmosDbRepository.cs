@@ -6,18 +6,18 @@ using Microsoft.EntityFrameworkCore.ChangeTracking;
 using Omu.ValueInjecter;
 using System.Linq.Expressions;
 
-namespace LivestreamRecorder.DB.Core;
+namespace LivestreamRecorder.DB.CosmosDB;
 
-public abstract class CosmosDbRepository<T> : ICosmosDbRepository<T> where T : Entity
+public abstract class CosmosDbRepository<T> : IRepository<T> where T : Entity
 {
 
-    public IUnitOfWork UnitOfWork { get; set; }
+    private readonly DbContext _context;
     public abstract string CollectionName { get; }
-
 
     public CosmosDbRepository(IUnitOfWork unitOfWork)
     {
-        UnitOfWork = unitOfWork;
+        UnitOfWork u = (UnitOfWork)unitOfWork;
+        _context = u.Context;
     }
 
     private DbSet<T>? _objectset;
@@ -25,7 +25,7 @@ public abstract class CosmosDbRepository<T> : ICosmosDbRepository<T> where T : E
     {
         get
         {
-            _objectset ??= UnitOfWork.Context.Set<T>();
+            _objectset ??= _context.Set<T>();
             return _objectset;
         }
     }
@@ -36,8 +36,8 @@ public abstract class CosmosDbRepository<T> : ICosmosDbRepository<T> where T : E
     public virtual IQueryable<T> Where(Expression<Func<T, bool>> predicate)
         => All().Where(predicate);
 
-    public virtual T GetById(string id)
-        => All().SingleOrDefault(p => p.id == id)
+    public virtual Task<T?> GetById(string id)
+        => Task.FromResult(All().SingleOrDefault(p => p.id == id))
             ?? throw new EntityNotFoundException($"Entity with id: {id} was not found.");
 
     public virtual IQueryable<T> GetByPartitionKey(string partitionKey)
@@ -49,41 +49,50 @@ public abstract class CosmosDbRepository<T> : ICosmosDbRepository<T> where T : E
         => All().Where(p => p.id == id).Count() > 0;
 #pragma warning restore CA1827 // 不要在可使用 Any() 時使用 Count() 或 LongCount()
 
-    public virtual EntityEntry<T> Add(T entity)
+    public virtual Task<T> Add(T entity)
         => null == entity
             ? throw new ArgumentNullException(nameof(entity))
-            : Exists(entity.id)
-                ? throw new EntityAlreadyExistsException($"Entity with id: {entity.id} already exists.")
-                : ObjectSet.Add(entity);
+            : Task.FromResult(ObjectSet.Add(entity).Entity);
 
-    public virtual EntityEntry<T> Update(T entity)
+    public virtual async Task<T> Update(T entity)
     {
         if (!Exists(entity.id)) throw new EntityNotFoundException($"Entity with id: {entity.id} was not found.");
 
-        T entityToUpdate = GetById(entity.id);
-
+        var entityToUpdate = await GetById(entity.id);
         entityToUpdate.InjectFrom(entity);
-        return ObjectSet.Update(entityToUpdate);
+        return ObjectSet.Update(entityToUpdate!).Entity;
     }
 
-    public virtual EntityEntry<T> AddOrUpdate(T entity)
+    public virtual Task<T> AddOrUpdate(T entity)
         => Exists(entity.id)
             ? Update(entity)
             : Add(entity);
 
-    public virtual EntityEntry<T> Delete(T entity)
+    public virtual async Task Delete(T entity)
     {
         if (!Exists(entity.id)) throw new EntityNotFoundException($"Entity with id: {entity.id} was not found.");
 
-        var entityToDelete = GetById(entity.id);
+        var entityToDelete = await GetById(entity.id);
 
-        return ObjectSet.Remove(entityToDelete);
+        ObjectSet.Remove(entityToDelete!);
     }
 
     public T LoadRelatedData(T entity)
     {
-        EntityEntry<T> entityEntry = UnitOfWork.Context.Entry(entity);
+        EntityEntry<T> entityEntry = _context.Entry(entity);
         entityEntry.Navigations.ToList().ForEach(p => p.Load());
         return entityEntry.Entity;
+    }
+
+    public Task<T?> ReloadEntityFromDB(T entity)
+    {
+        try
+        {
+            _context.Entry(entity).Reload();
+        }
+        catch (NullReferenceException) { }
+#pragma warning disable CS8619 // 值中參考型別的可 Null 性與目標型別不符合。
+        return Task.FromResult(entity);
+#pragma warning restore CS8619 // 值中參考型別的可 Null 性與目標型別不符合。
     }
 }

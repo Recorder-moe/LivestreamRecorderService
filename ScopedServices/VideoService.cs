@@ -1,4 +1,8 @@
-﻿using LivestreamRecorder.DB.Core;
+﻿#if COSMOSDB
+using LivestreamRecorder.DB.CosmosDB;
+#elif COUCHDB
+using LivestreamRecorder.DB.CouchDB;
+#endif
 using LivestreamRecorder.DB.Enums;
 using LivestreamRecorder.DB.Interfaces;
 using LivestreamRecorder.DB.Models;
@@ -45,41 +49,40 @@ public class VideoService
     public Video LoadRelatedData(Video video)
         => _videoRepository.LoadRelatedData(video);
 
-    public void UpdateVideoFilename(Video video, string? filename)
+    public async Task UpdateVideoFilename(Video video, string? filename)
     {
-        _unitOfWork_Public.ReloadEntityFromDB(video);
-        video.Filename = filename;
-        _videoRepository.Update(video);
+        await _videoRepository.ReloadEntityFromDB(video);
+        video!.Filename = filename;
+        await _videoRepository.AddOrUpdate(video);
         _unitOfWork_Public.Commit();
         _logger.LogDebug("Update Video {videoId} filename to {filename}", video.id, filename);
     }
 
-    public void UpdateVideoStatus(Video video, VideoStatus status)
+    public async Task UpdateVideoStatus(Video video, VideoStatus status)
     {
-        _unitOfWork_Public.ReloadEntityFromDB(video);
+        await _videoRepository.ReloadEntityFromDB(video);
         video.Status = status;
-        _videoRepository.Update(video);
+        await _videoRepository.AddOrUpdate(video);
         _unitOfWork_Public.Commit();
         _logger.LogDebug("Update Video {videoId} Status to {videostatus}", video.id, status);
     }
 
-    public void UpdateVideoNote(Video video, string? Note)
+    public async Task UpdateVideoNote(Video video, string? Note)
     {
-        _unitOfWork_Public.ReloadEntityFromDB(video);
+        await _videoRepository.ReloadEntityFromDB(video);
         video.Note = Note;
-        _videoRepository.Update(video);
+        await _videoRepository.AddOrUpdate(video);
         _unitOfWork_Public.Commit();
         _logger.LogDebug("Update Video {videoId} note", video.id);
     }
 
-    public void UpdateVideoArchivedTime(Video video)
+    public async Task UpdateVideoArchivedTimeAsync(Video video)
     {
-        video = _videoRepository.GetById(video.id);
-        _videoRepository.LoadRelatedData(video);
+        await _videoRepository.ReloadEntityFromDB(video);
 
         video.ArchivedTime = DateTime.UtcNow;
 
-        _videoRepository.Update(video);
+        await _videoRepository.AddOrUpdate(video);
         _unitOfWork_Public.Commit();
     }
 
@@ -87,7 +90,7 @@ public class VideoService
     {
         try
         {
-            UpdateVideoStatus(video, VideoStatus.Uploading);
+            await UpdateVideoStatus(video, VideoStatus.Uploading);
 
             string instanceName;
             switch (_serviceOptions.StorageService)
@@ -110,15 +113,15 @@ public class VideoService
         }
         catch (Exception e)
         {
-            UpdateVideoStatus(video, VideoStatus.Error);
-            UpdateVideoNote(video, $"Exception happened when uploading files to storage. Please contact admin if you see this message.");
+            await UpdateVideoStatus(video, VideoStatus.Error);
+            await UpdateVideoNote(video, $"Exception happened when uploading files to storage. Please contact admin if you see this message.");
             _logger.LogError("Exception happened when uploading files to storage: {videoId}, {error}, {message}", video.id, e, e.Message);
         }
     }
 
-    public void DeleteVideo(Video video)
+    public async Task DeleteVideoAsync(Video video)
     {
-        _videoRepository.Delete(video);
+        await _videoRepository.Delete(video);
         _unitOfWork_Public.Commit();
         _logger.LogDebug("Delete Video {videoId}", video.id);
     }

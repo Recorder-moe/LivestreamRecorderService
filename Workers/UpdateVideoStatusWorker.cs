@@ -147,14 +147,14 @@ public class UpdateVideoStatusWorker : BackgroundService
                 && await _storageService.DeleteVideoBlob(video.Filename, cancellation))
             {
                 _logger.LogInformation("Delete blob {path}", video.Filename);
-                videoService.UpdateVideoStatus(video, VideoStatus.Expired);
-                videoService.UpdateVideoNote(video, $"Video expired after {retentionDays} days.");
+                await videoService.UpdateVideoStatus(video, VideoStatus.Expired);
+                await videoService.UpdateVideoNote(video, $"Video expired after {retentionDays} days.");
             }
             else
             {
                 _logger.LogError("FAILED to Delete blob {path}", video.Filename);
-                videoService.UpdateVideoStatus(video, VideoStatus.Error);
-                videoService.UpdateVideoNote(video, $"Failed to delete blob after {retentionDays} days. Please contact admin if you see this message.");
+                await videoService.UpdateVideoStatus(video, VideoStatus.Error);
+                await videoService.UpdateVideoNote(video, $"Failed to delete blob after {retentionDays} days. Please contact admin if you see this message.");
             }
         }
     }

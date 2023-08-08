@@ -7,7 +7,7 @@ namespace LivestreamRecorder.DB.Models;
 [Table("Videos")]
 public class Video : Entity
 {
-    public override string id { get; set; }
+    public override string Id => $"{ChannelId}:{id}";
 
     public string Source { get; set; }
 
@@ -36,13 +36,9 @@ public class Video : Entity
 
     public string ChannelId { get; set; }
 
+#if COSMOSDB
+    [Obsolete("Relationship mapping is only supported in CosmosDB. Please avoid using it.")]
     public Channel? Channel { get; set; }
-}
-
-public class Timestamps
-{
-    public DateTime? PublishedAt { get; set; }
-    public DateTime? ScheduledStartTime { get; set; }
-    public DateTime? ActualStartTime { get; set; }
+#endif
 }
 

@@ -1,4 +1,8 @@
-﻿using LivestreamRecorder.DB.Core;
+﻿#if COSMOSDB
+using LivestreamRecorder.DB.CosmosDB;
+#elif COUCHDB
+using LivestreamRecorder.DB.CouchDB;
+#endif
 using LivestreamRecorder.DB.Enums;
 using LivestreamRecorder.DB.Interfaces;
 using LivestreamRecorder.DB.Models;
@@ -32,13 +36,13 @@ public class FC2Service : PlatformService, IPlatformService
     public FC2Service(
         ILogger<FC2Service> logger,
         UnitOfWork_Public unitOfWork_Public,
-        IVideoRepository videoRepository,
-        IChannelRepository channelRepository,
         IFC2LiveDLService fC2LiveDLService,
         IStorageService storageService,
         DiscordService discordService,
         IHttpClientFactory httpClientFactory,
         IOptions<DiscordOption> discordOptions,
+        IChannelRepository channelRepository,
+        IVideoRepository videoRepository,
         IServiceProvider serviceProvider) : base(channelRepository,
                                                  storageService,
                                                  httpClientFactory,
@@ -72,12 +76,12 @@ public class FC2Service : PlatformService, IPlatformService
         }
         else if (!string.IsNullOrEmpty(videoId))
         {
-            Video video;
+            Video? video;
 
             if (_videoRepository.Exists(videoId))
             {
-                video = _videoRepository.GetById(videoId);
-                switch (video.Status)
+                video = await _videoRepository.GetById(videoId);
+                switch (video!.Status)
                 {
                     case VideoStatus.WaitingToRecord:
                     case VideoStatus.Recording:
@@ -94,7 +98,6 @@ public class FC2Service : PlatformService, IPlatformService
                         video.Status = VideoStatus.WaitingToRecord;
                         break;
                 }
-                _videoRepository.Update(video);
             }
             else
             {
@@ -107,7 +110,6 @@ public class FC2Service : PlatformService, IPlatformService
                     IsLiveStream = true,
                     Title = null!,
                     ChannelId = channel.id,
-                    Channel = channel,
                     Timestamps = new Timestamps()
                     {
                         PublishedAt = DateTime.UtcNow,
@@ -115,8 +117,8 @@ public class FC2Service : PlatformService, IPlatformService
                     },
                 };
                 _logger.LogTrace("New video found: {videoId}", video.id);
-                _videoRepository.Add(video);
             }
+            await _videoRepository.AddOrUpdate(video);
             _unitOfWork_Public.Commit();
 
             var info = await GetFC2InfoDataAsync(channel.id, cancellation);
@@ -147,7 +149,7 @@ public class FC2Service : PlatformService, IPlatformService
                     _logger.LogDebug("fc2Info: {info}", JsonConvert.SerializeObject(info));
                     if (null != discordService)
                     {
-                        await discordService.SendStartRecordingMessage(video);
+                        await discordService.SendStartRecordingMessage(video, channel);
                     }
                 }
             }
@@ -159,7 +161,7 @@ public class FC2Service : PlatformService, IPlatformService
                 _logger.LogWarning("This video is not public! Skip {videoId}", videoId);
             }
 
-            _videoRepository.AddOrUpdate(video);
+            await _videoRepository.AddOrUpdate(video);
             _unitOfWork_Public.Commit();
         }
     }
@@ -211,7 +213,7 @@ public class FC2Service : PlatformService, IPlatformService
 
     public override async Task UpdateVideoDataAsync(Video video, CancellationToken cancellation = default)
     {
-        _unitOfWork_Public.ReloadEntityFromDB(video);
+        await _videoRepository.ReloadEntityFromDB(video);
         if (null == video.Timestamps.ActualStartTime)
         {
             video.Timestamps.ActualStartTime = video.Timestamps.PublishedAt;
@@ -247,7 +249,7 @@ public class FC2Service : PlatformService, IPlatformService
             }
         }
 
-        _videoRepository.Update(video);
+        await _videoRepository.AddOrUpdate(video);
         _unitOfWork_Public.Commit();
     }
 
@@ -267,11 +269,10 @@ public class FC2Service : PlatformService, IPlatformService
             avatarBlobUrl = await DownloadImageAndUploadToBlobStorage(avatarUrl, $"avatar/{channel.id}", stoppingToken);
         }
 
-        _unitOfWork_Public.Context.Entry(channel).Reload();
         channel = _channelRepository.LoadRelatedData(channel);
         channel.ChannelName = info.Data.ProfileData.Name;
         channel.Avatar = avatarBlobUrl?.Replace("avatar/", "");
-        _channelRepository.Update(channel);
+        await _channelRepository.AddOrUpdate(channel);
         _unitOfWork_Public.Commit();
     }
 }

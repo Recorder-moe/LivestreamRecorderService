@@ -1,13 +1,33 @@
-<Project Sdk="Microsoft.NET.Sdk">
+﻿<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
     <TargetFramework>net6.0</TargetFramework>
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
+<Configurations>Debug;Release;CouchDB;CosmosDB;CosmosDB_Release;CouchDB_Release</Configurations>
+</PropertyGroup>
+
+<PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|AnyCPU'" />
+
+<PropertyGroup Condition="'$(Configuration)|$(Platform)'=='CosmosDB|AnyCPU'" />
+
+<PropertyGroup Condition="'$(Configuration)|$(Platform)'=='CouchDB|AnyCPU'" />
+
+<PropertyGroup Condition="'$(Configuration)|$(Platform)'=='CouchDB_Release|AnyCPU'">
+<DefineConstants>$(DefineConstants);COUCHDB</DefineConstants>
+<Optimize>True</Optimize>
+</PropertyGroup>
+
+<PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|AnyCPU'" />
+
+<PropertyGroup Condition="'$(Configuration)|$(Platform)'=='CosmosDB_Release|AnyCPU'">
+<DefineConstants>$(DefineConstants);COSMOSDB</DefineConstants>
+<Optimize>True</Optimize>
   </PropertyGroup>
 
   <ItemGroup>
-    <PackageReference Include="Microsoft.EntityFrameworkCore.Cosmos" Version="6.0.13" />
+    <PackageReference Include="CouchDB.NET" Version="3.4.0" />
+    <PackageReference Include="Microsoft.EntityFrameworkCore.Cosmos" Version="6.0.20" />
     <PackageReference Include="ValueInjecter" Version="3.2.0" />
   </ItemGroup>
 

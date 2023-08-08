@@ -1,4 +1,8 @@
-﻿using LivestreamRecorder.DB.Core;
+﻿#if COSMOSDB
+using LivestreamRecorder.DB.CosmosDB;
+#elif COUCHDB
+using LivestreamRecorder.DB.CouchDB;
+#endif
 using LivestreamRecorder.DB.Interfaces;
 using LivestreamRecorder.DB.Models;
 
@@ -17,14 +21,16 @@ public class ChannelService
         _channelRepository = channelRepository;
     }
 
-    public void UpdateChannelLatestVideo(Video video)
+    public async Task UpdateChannelLatestVideoAsync(Video video)
     {
         if (!_channelRepository.Exists(video.ChannelId)) return;
 
-        var channel = _channelRepository.GetById(video.ChannelId);
-        _unitOfWork_Public.Context.Entry(channel).Reload();
-        channel.LatestVideoId = video.id;
-        _channelRepository.Update(channel);
+        var channel = await _channelRepository.GetById(video.ChannelId);
+        channel!.LatestVideoId = video.id;
+        await _channelRepository.AddOrUpdate(channel);
         _unitOfWork_Public.Commit();
     }
+
+    public Task<Channel?> GetChannel(string channelId)
+        => _channelRepository.GetById(channelId);
 }

@@ -1,5 +1,9 @@
 ﻿using CodeHollow.FeedReader;
-using LivestreamRecorder.DB.Core;
+#if COSMOSDB
+using LivestreamRecorder.DB.CosmosDB;
+#elif COUCHDB
+using LivestreamRecorder.DB.CouchDB;
+#endif
 using LivestreamRecorder.DB.Interfaces;
 using LivestreamRecorder.DB.Models;
 
@@ -42,7 +46,7 @@ public class RSSService
         {
             _logger.LogInformation("Update channel name from {oldName} to {newName}", channel.ChannelName, feed.Title);
             channel.ChannelName = feed.Title;
-            _channelRepository.Update(channel);
+            _channelRepository.AddOrUpdate(channel);
             _unitOfWork_Public.Commit();
         }
     }

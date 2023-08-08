@@ -1,19 +1,15 @@
-﻿using LivestreamRecorder.DB.Models;
-using LivestreamRecorder.DB.Exceptions;
-using Microsoft.EntityFrameworkCore.ChangeTracking;
+﻿using LivestreamRecorder.DB.Exceptions;
 using System.Linq.Expressions;
 
 namespace LivestreamRecorder.DB.Interfaces;
 
-public interface ICosmosDbRepository<T> where T : Entity
+public interface IRepository<T> where T : IEntity
 {
     string CollectionName { get; }
-    IUnitOfWork UnitOfWork { get; set; }
 
-    EntityEntry<T> Add(T entity);
-    EntityEntry<T> AddOrUpdate(T entity);
+    Task<T> AddOrUpdate(T entity);
     IQueryable<T> All();
-    EntityEntry<T> Delete(T entity);
+    Task Delete(T entity);
     bool Exists(string id);
 
     /// <summary>
@@ -22,9 +18,9 @@ public interface ICosmosDbRepository<T> where T : Entity
     /// <param name="id"></param>
     /// <returns></returns>
     /// <exception cref="EntityNotFoundException"></exception>
-    T GetById(string id);
+    Task<T?> GetById(string id);
     IQueryable<T> GetByPartitionKey(string partitionKey);
     T LoadRelatedData(T entity);
-    EntityEntry<T> Update(T entity);
+    Task<T?> ReloadEntityFromDB(T entity);
     IQueryable<T> Where(Expression<Func<T, bool>> predicate);
 }

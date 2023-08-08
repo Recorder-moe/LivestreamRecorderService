@@ -1,4 +1,8 @@
-﻿using LivestreamRecorder.DB.Core;
+﻿#if COSMOSDB
+using LivestreamRecorder.DB.CosmosDB;
+#elif COUCHDB
+using LivestreamRecorder.DB.CouchDB;
+#endif
 using LivestreamRecorder.DB.Enums;
 using LivestreamRecorder.DB.Interfaces;
 using LivestreamRecorder.DB.Models;
@@ -20,6 +24,7 @@ public class TwitcastingService : PlatformService, IPlatformService
     private readonly IVideoRepository _videoRepository;
     private readonly ITwitcastingRecorderService _twitcastingRecorderService;
     private readonly IStorageService _storageService;
+    private readonly IChannelRepository _channelRepository;
 
     public override string PlatformName => "Twitcasting";
     public override int Interval => 10;
@@ -54,6 +59,7 @@ public class TwitcastingService : PlatformService, IPlatformService
         _videoRepository = videoRepository;
         _twitcastingRecorderService = twitcastingRecorderService;
         _storageService = storageService;
+        _channelRepository = channelRepository;
     }
 
     public override async Task UpdateVideosDataAsync(Channel channel, CancellationToken cancellation = default)
@@ -66,7 +72,7 @@ public class TwitcastingService : PlatformService, IPlatformService
 
         if (null != videoId)
         {
-            Video video;
+            Video? video;
 
             if (_videoRepository.Exists(videoId))
             {
@@ -76,8 +82,8 @@ public class TwitcastingService : PlatformService, IPlatformService
                     return;
                 }
 
-                video = _videoRepository.GetById(videoId);
-                switch (video.Status)
+                video = await _videoRepository.GetById(videoId);
+                switch (video!.Status)
                 {
                     case VideoStatus.WaitingToRecord:
                     case VideoStatus.Recording:
@@ -104,7 +110,6 @@ public class TwitcastingService : PlatformService, IPlatformService
                     IsLiveStream = true,
                     Title = null!,
                     ChannelId = channel.id,
-                    Channel = channel,
                     Timestamps = new Timestamps()
                     {
                         PublishedAt = DateTime.UtcNow,
@@ -135,7 +140,7 @@ public class TwitcastingService : PlatformService, IPlatformService
 
                     if (null != discordService)
                     {
-                        await discordService.SendStartRecordingMessage(video);
+                        await discordService.SendStartRecordingMessage(video, channel);
                     }
                 }
             }
@@ -147,7 +152,7 @@ public class TwitcastingService : PlatformService, IPlatformService
                 _logger.LogWarning("This video is not public! Skip {videoId}", videoId);
             }
 
-            _videoRepository.AddOrUpdate(video);
+            await _videoRepository.AddOrUpdate(video);
             _unitOfWork_Public.Commit();
         }
     }
@@ -274,7 +279,8 @@ public class TwitcastingService : PlatformService, IPlatformService
 
     public override async Task UpdateVideoDataAsync(Video video, CancellationToken cancellation = default)
     {
-        _unitOfWork_Public.ReloadEntityFromDB(video);
+        await _videoRepository.ReloadEntityFromDB(video);
+        var channel = await _channelRepository.GetById(video.ChannelId);
         if (null == video.Timestamps.ActualStartTime)
         {
             video.Timestamps.ActualStartTime = video.Timestamps.PublishedAt;
@@ -309,7 +315,7 @@ public class TwitcastingService : PlatformService, IPlatformService
                     video.Note = $"Video source is detected access required.";
                     if (null != discordService)
                     {
-                        await discordService.SendDeletedMessage(video);
+                        await discordService.SendDeletedMessage(video, channel);
                     }
                     _logger.LogInformation("Video source is {status} because it is detected access required.", Enum.GetName(typeof(VideoStatus), video.SourceStatus));
                 }
@@ -327,7 +333,7 @@ public class TwitcastingService : PlatformService, IPlatformService
                     if (null != discordService)
                     {
                         // First detected
-                        await discordService.SendDeletedMessage(video);
+                        await discordService.SendDeletedMessage(video, channel);
                     }
                 }
                 video.SourceStatus = VideoStatus.Deleted;
@@ -358,7 +364,7 @@ public class TwitcastingService : PlatformService, IPlatformService
             }
         }
 
-        _videoRepository.Update(video);
+        await _videoRepository.AddOrUpdate(video);
         _unitOfWork_Public.Commit();
     }
 

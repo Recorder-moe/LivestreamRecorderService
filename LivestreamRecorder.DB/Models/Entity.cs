@@ -1,11 +1,22 @@
-﻿namespace LivestreamRecorder.DB.Models;
+﻿#if COUCHDB
+using CouchDB.Driver.Types;
+#endif
+using LivestreamRecorder.DB.Interfaces;
 
-public abstract class Entity
+namespace LivestreamRecorder.DB.Models;
+
+public abstract class Entity :
+#if COUCHDB
+    CouchDocument,
+#endif
+    IEntity
 {
     /// <summary>
     /// Entity identifier
     /// </summary>
-#pragma warning disable IDE1006 // 命名樣式
-    public virtual string id { get; set; } = Guid.NewGuid().ToString();
-#pragma warning restore IDE1006 // 命名樣式
+    public virtual string id { get; set; } = Guid.NewGuid().ToString().Replace("-", "");
+
+#if !COUCHDB
+    public virtual string Id => id;
+#endif
 }

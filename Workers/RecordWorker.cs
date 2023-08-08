@@ -42,13 +42,13 @@ public class RecordWorker : BackgroundService
 
                 await _recordService.HandledFailedJobsAsync(videoService, stoppingToken);
 
-                await _recordService.CreateStartRecordJobAsync(videoService, stoppingToken);
-                await _recordService.CreateStartDownloadJobAsync(videoService, stoppingToken);
+                await _recordService.CreateStartRecordJobAsync(videoService, channelService, stoppingToken);
+                await _recordService.CreateStartDownloadJobAsync(videoService, channelService, stoppingToken);
 
                 var uploaded = await _recordService.MonitorUploadedVideosAsync(videoService, stoppingToken);
                 foreach (var video in uploaded)
                 {
-                    await _recordService.ProcessUploadedVideo(videoService, video, stoppingToken);
+                    await _recordService.ProcessUploadedVideo(videoService, channelService, video, stoppingToken);
 
                     // Avoid concurrency requests
                     await Task.Delay(TimeSpan.FromSeconds(10), stoppingToken);

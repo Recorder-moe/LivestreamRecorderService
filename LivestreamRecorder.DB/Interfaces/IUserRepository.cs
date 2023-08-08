@@ -2,6 +2,6 @@
 
 namespace LivestreamRecorder.DB.Interfaces;
 
-public interface IUserRepository : ICosmosDbRepository<User>
+public interface IUserRepository : IRepository<User>
 {
 }

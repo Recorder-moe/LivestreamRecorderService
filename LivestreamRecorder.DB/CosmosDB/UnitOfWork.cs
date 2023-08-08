@@ -1,8 +1,7 @@
 ﻿using LivestreamRecorder.DB.Interfaces;
-using LivestreamRecorder.DB.Models;
 using Microsoft.EntityFrameworkCore;
 
-namespace LivestreamRecorder.DB.Core
+namespace LivestreamRecorder.DB.CosmosDB
 {
     public class UnitOfWork : IUnitOfWork, IDisposable
     {
@@ -17,16 +16,6 @@ namespace LivestreamRecorder.DB.Core
         }
 
         public void Commit() => Context.SaveChanges();
-
-        public T ReloadEntityFromDB<T>(T entity) where T : Entity
-        {
-            try
-            {
-                Context.Entry(entity).Reload();
-            }
-            catch (NullReferenceException) { }
-            return entity;
-        }
 
         protected virtual void Dispose(bool disposing)
         {

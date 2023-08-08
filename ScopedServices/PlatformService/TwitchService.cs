@@ -1,4 +1,8 @@
-﻿using LivestreamRecorder.DB.Core;
+﻿#if COSMOSDB
+using LivestreamRecorder.DB.CosmosDB;
+#elif COUCHDB
+using LivestreamRecorder.DB.CouchDB;
+#endif
 using LivestreamRecorder.DB.Enums;
 using LivestreamRecorder.DB.Interfaces;
 using LivestreamRecorder.DB.Models;
@@ -60,13 +64,13 @@ public class TwitchService : PlatformService, IPlatformService
             && streams.Streams.Length > 0
             && streams.Streams.First() is TwitchLib.Api.Helix.Models.Streams.GetStreams.Stream stream)
         {
-            Video video;
+            Video? video;
             using var ___ = LogContext.PushProperty("videoId", stream.Id);
 
             if (_videoRepository.Exists(stream.Id))
             {
-                video = _videoRepository.GetById(stream.Id);
-                switch (video.Status)
+                video = await _videoRepository.GetById(stream.Id);
+                switch (video!.Status)
                 {
                     case VideoStatus.WaitingToRecord:
                     case VideoStatus.Recording:
@@ -102,7 +106,6 @@ public class TwitchService : PlatformService, IPlatformService
                     },
 
                     ChannelId = channel.id,
-                    Channel = channel
                 };
             }
 
@@ -124,11 +127,11 @@ public class TwitchService : PlatformService, IPlatformService
                 _logger.LogInformation("{channelId} is now lived! Start recording.", channel.id);
                 if (null != discordService)
                 {
-                    await discordService.SendStartRecordingMessage(video);
+                    await discordService.SendStartRecordingMessage(video, channel);
                 }
             }
 
-            _videoRepository.AddOrUpdate(video);
+            await _videoRepository.AddOrUpdate(video);
             _unitOfWork_Public.Commit();
         }
         else
@@ -139,7 +142,7 @@ public class TwitchService : PlatformService, IPlatformService
 
     public override async Task UpdateVideoDataAsync(Video video, CancellationToken cancellation = default)
     {
-        _unitOfWork_Public.ReloadEntityFromDB(video);
+        await _videoRepository.ReloadEntityFromDB(video);
         if (null == video.Timestamps.ActualStartTime)
         {
             video.Timestamps.ActualStartTime = video.Timestamps.PublishedAt;
@@ -169,7 +172,7 @@ public class TwitchService : PlatformService, IPlatformService
             }
         }
 
-        _videoRepository.Update(video);
+        await _videoRepository.AddOrUpdate(video);
         _unitOfWork_Public.Commit();
     }
 

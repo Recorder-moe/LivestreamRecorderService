@@ -54,6 +54,11 @@ try
                 .ValidateDataAnnotations()
                 .ValidateOnStart();
 
+        services.AddOptions<CouchDBOption>()
+                .Bind(configuration.GetSection(CouchDBOption.ConfigurationSectionName))
+                .ValidateDataAnnotations()
+                .ValidateOnStart();
+
         var serviceOptions = services.BuildServiceProvider().GetRequiredService<IOptions<ServiceOption>>().Value;
         var azureOptions = services.BuildServiceProvider().GetRequiredService<IOptions<AzureOption>>().Value;
 
@@ -137,8 +142,8 @@ try
                 services.AddCosmosDB(configuration);
                 break;
             case ServiceName.ApacheCouchDB:
-                Log.Fatal("Currently only Azure CosmosDB is supported.");
-                throw new NotImplementedException("Currently only Azure CosmosDB is supported.");
+                services.AddCouchDB(configuration);
+                break;
             default:
                 Log.Fatal("Database Serivce is limited to Azure CosmosDB or Apache CouchDB.");
                 throw new ConfigurationErrorsException("Database Serivce is limited to Azure CosmosDB or Apache CouchDB.");

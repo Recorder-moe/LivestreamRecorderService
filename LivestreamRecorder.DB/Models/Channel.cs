@@ -6,12 +6,18 @@ namespace LivestreamRecorder.DB.Models;
 [Table("Channels")]
 public class Channel : Entity
 {
+#if COSMOSDB
     public Channel()
     {
+#pragma warning disable CS0618 // 類型或成員已經過時
         Videos = new HashSet<Video>();
+#pragma warning restore CS0618 // 類型或成員已經過時
     }
+    [Obsolete("Relationship mapping is only supported in CosmosDB. Please avoid using it.")]
+    public ICollection<Video> Videos { get; set; }
+#endif
 
-    public override string id { get; set; }
+    public override string Id => $"{Source}:{id}";
 
     public string ChannelName { get; set; }
 
@@ -34,7 +40,5 @@ public class Channel : Entity
     public bool? AutoUpdateInfo { get; set; } = true;
 
     public string? Note { get; set; }
-
-    public ICollection<Video> Videos { get; set; }
 }
 
