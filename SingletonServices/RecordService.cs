@@ -105,7 +105,7 @@ public class RecordService
         foreach (var video in videos)
         {
             using var _ = LogContext.PushProperty("videoId", video.id);
-            var channel = await channelService.GetChannel(video.ChannelId);
+            var channel = await channelService.GetByChannelIdAndSource(video.ChannelId, video.Source);
             _logger.LogInformation("Start to create recording job: {videoId}", video.id);
             try
             {
@@ -177,7 +177,7 @@ public class RecordService
         foreach (var video in videos)
         {
             using var _ = LogContext.PushProperty("videoId", video.id);
-            var channel = await channelService.GetChannel(video.ChannelId);
+            var channel = await channelService.GetByChannelIdAndSource(video.ChannelId, video.Source);
             _logger.LogInformation("Start to create downloading job: {videoId}", video.id);
             try
             {
@@ -324,7 +324,7 @@ public class RecordService
             return;
         }
 
-        await _discordService.SendArchivedMessage(video, await channelService.GetChannel(video.ChannelId));
+        await _discordService.SendArchivedMessage(video, await channelService.GetByChannelIdAndSource(video.ChannelId, video.Source));
         _logger.LogInformation("Video {videoId} is successfully uploaded to Storage.", video.id);
         await videoService.UpdateVideoStatus(video, VideoStatus.Archived);
     }

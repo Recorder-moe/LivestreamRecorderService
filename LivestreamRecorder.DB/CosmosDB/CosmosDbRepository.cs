@@ -2,7 +2,6 @@
 using LivestreamRecorder.DB.Interfaces;
 using LivestreamRecorder.DB.Models;
 using Microsoft.EntityFrameworkCore;
-using Microsoft.EntityFrameworkCore.ChangeTracking;
 using Omu.ValueInjecter;
 using System.Linq.Expressions;
 
@@ -37,8 +36,7 @@ public abstract class CosmosDbRepository<T> : IRepository<T> where T : Entity
         => All().Where(predicate);
 
     public virtual Task<T?> GetById(string id)
-        => Task.FromResult(All().SingleOrDefault(p => p.id == id))
-            ?? throw new EntityNotFoundException($"Entity with id: {id} was not found.");
+        => All().SingleOrDefaultAsync(p => p.id == id);
 
     public virtual IQueryable<T> GetByPartitionKey(string partitionKey)
         => All().WithPartitionKey(partitionKey)
@@ -56,9 +54,9 @@ public abstract class CosmosDbRepository<T> : IRepository<T> where T : Entity
 
     public virtual async Task<T> Update(T entity)
     {
-        if (!Exists(entity.id)) throw new EntityNotFoundException($"Entity with id: {entity.id} was not found.");
-
         var entityToUpdate = await GetById(entity.id);
+        if (null == entityToUpdate) throw new EntityNotFoundException($"Entity with id: {entity.id} was not found.");
+
         entityToUpdate.InjectFrom(entity);
         return ObjectSet.Update(entityToUpdate!).Entity;
     }
@@ -70,18 +68,10 @@ public abstract class CosmosDbRepository<T> : IRepository<T> where T : Entity
 
     public virtual async Task Delete(T entity)
     {
-        if (!Exists(entity.id)) throw new EntityNotFoundException($"Entity with id: {entity.id} was not found.");
-
         var entityToDelete = await GetById(entity.id);
+        if (null == entityToDelete) throw new EntityNotFoundException($"Entity with id: {entity.id} was not found.");
 
         ObjectSet.Remove(entityToDelete!);
-    }
-
-    public T LoadRelatedData(T entity)
-    {
-        EntityEntry<T> entityEntry = _context.Entry(entity);
-        entityEntry.Navigations.ToList().ForEach(p => p.Load());
-        return entityEntry.Entity;
     }
 
     public Task<T?> ReloadEntityFromDB(T entity)

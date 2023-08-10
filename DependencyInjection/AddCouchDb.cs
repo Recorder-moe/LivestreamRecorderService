@@ -1,13 +1,14 @@
 ﻿#if COUCHDB
 using CouchDB.Driver.DependencyInjection;
+using CouchDB.Driver.Options;
 using LivestreamRecorder.DB.CouchDB;
 using LivestreamRecorder.DB.Interfaces;
 using LivestreamRecorder.DB.Models;
 using LivestreamRecorderService.Models.Options;
 using Microsoft.Extensions.Options;
+using System.Configuration;
 #endif
 using Serilog;
-using System.Configuration;
 
 namespace LivestreamRecorderService.DependencyInjection
 {
@@ -15,9 +16,12 @@ namespace LivestreamRecorderService.DependencyInjection
     {
         public static IServiceCollection AddCouchDB(this IServiceCollection services, IConfiguration configuration)
         {
+#if !COUCHDB
+            Log.Fatal("This is a CosmosDB build. Please use the CouchDB build for Apache CouchDB support.");
+            throw new InvalidOperationException("This is a CosmosDB build. Please use the CouchDB build for Apache CouchDB support.");
+#else
             try
             {
-#if COUCHDB
                 var couchDBOptions = services.BuildServiceProvider().GetRequiredService<IOptions<CouchDBOption>>().Value;
 
                 if (null == couchDBOptions
@@ -30,7 +34,13 @@ namespace LivestreamRecorderService.DependencyInjection
                 {
                     options
                         .UseEndpoint(couchDBOptions.Endpoint)
-                        .UseCookieAuthentication(username: couchDBOptions.Username, password: couchDBOptions.Password);
+                        .UseCookieAuthentication(username: couchDBOptions.Username, password: couchDBOptions.Password)
+#if !COUCHDB_RELEASE && !COSMOSDB_RELEASE
+                        .ConfigureFlurlClient(setting
+                            => setting.BeforeCall = call
+                                => Log.Debug("Sending request to couch: {request} {body}", call, call.RequestBody))
+#endif
+                        .SetPropertyCase(PropertyCaseType.None);
                 });
 
                 services.AddScoped<UnitOfWork_Public>();
@@ -38,7 +48,6 @@ namespace LivestreamRecorderService.DependencyInjection
                 services.AddScoped<IVideoRepository>((s) => new VideoRepository((IUnitOfWork)s.GetRequiredService(typeof(UnitOfWork_Public))));
                 services.AddScoped<IChannelRepository>((s) => new ChannelRepository((IUnitOfWork)s.GetRequiredService(typeof(UnitOfWork_Public))));
                 services.AddScoped<IUserRepository>((s) => new UserRepository((IUnitOfWork)s.GetRequiredService(typeof(UnitOfWork_Private))));
-#endif
                 return services;
             }
             catch (ConfigurationErrorsException)
@@ -46,6 +55,7 @@ namespace LivestreamRecorderService.DependencyInjection
                 Log.Fatal("Missing CouchDB Settings. Please set CouchDB:Endpoint CouchDB:Username CouchDB:Password in appsettings.json.");
                 throw new ConfigurationErrorsException("Missing CouchDB Settings. Please set CouchDB:Endpoint CouchDB:Username CouchDB:Password in appsettings.json.");
             }
+#endif
         }
     }
 }

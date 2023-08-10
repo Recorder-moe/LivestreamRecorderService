@@ -4,11 +4,8 @@ using System.ComponentModel.DataAnnotations.Schema;
 namespace LivestreamRecorder.DB.Models;
 #pragma warning disable CS8618 // 退出建構函式時，不可為 Null 的欄位必須包含非 Null 值。請考慮宣告為可為 Null。
 
-[Table("Users")]
 public class User : Entity
 {
-    public override string Id => $"{id}:{id}";
-
     [Required]
     public string UserName { get; set; }
     [Required]

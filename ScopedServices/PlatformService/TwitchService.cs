@@ -64,13 +64,13 @@ public class TwitchService : PlatformService, IPlatformService
             && streams.Streams.Length > 0
             && streams.Streams.First() is TwitchLib.Api.Helix.Models.Streams.GetStreams.Stream stream)
         {
-            Video? video;
             using var ___ = LogContext.PushProperty("videoId", stream.Id);
 
-            if (_videoRepository.Exists(stream.Id))
+            Video? video = await _videoRepository.GetByVideoIdAndChannelId(stream.Id, channel.id);
+
+            if (null != video)
             {
-                video = await _videoRepository.GetById(stream.Id);
-                switch (video!.Status)
+                switch (video.Status)
                 {
                     case VideoStatus.WaitingToRecord:
                     case VideoStatus.Recording:

@@ -5,9 +5,9 @@ using LivestreamRecorder.DB.Models;
 using LivestreamRecorderService.Models.Options;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;
+using System.Configuration;
 #endif
 using Serilog;
-using System.Configuration;
 
 namespace LivestreamRecorderService.DependencyInjection
 {
@@ -15,9 +15,12 @@ namespace LivestreamRecorderService.DependencyInjection
     {
         public static IServiceCollection AddCosmosDB(this IServiceCollection services, IConfiguration configuration)
         {
+#if !COSMOSDB
+            Log.Fatal("This is a CouchDB build. Please use the CosmosDB build for Azure CosmosDB support.");
+            throw new InvalidOperationException("This is a CouchDB build. Please use the CosmosDB build for Azure CosmosDB support.");
+#else
             try
             {
-#if COSMOSDB
                 var azureOptions = services.BuildServiceProvider().GetRequiredService<IOptions<AzureOption>>().Value;
 
                 if (null == azureOptions.CosmosDB
@@ -48,7 +51,6 @@ namespace LivestreamRecorderService.DependencyInjection
                 services.AddScoped<IVideoRepository>((s) => new VideoRepository((IUnitOfWork)s.GetRequiredService(typeof(UnitOfWork_Public))));
                 services.AddScoped<IChannelRepository>((s) => new ChannelRepository((IUnitOfWork)s.GetRequiredService(typeof(UnitOfWork_Public))));
                 services.AddScoped<IUserRepository>((s) => new UserRepository((IUnitOfWork)s.GetRequiredService(typeof(UnitOfWork_Private))));
-#endif
                 return services;
             }
             catch (ConfigurationErrorsException)
@@ -56,6 +58,7 @@ namespace LivestreamRecorderService.DependencyInjection
                 Log.Fatal("Missing CosmosDB Settings. Please set CosmosDB and ConnectionStrings:Public ConnectionStrings:Private in appsettings.json.");
                 throw new ConfigurationErrorsException("Missing CosmosDB Settings. Please set CosmosDB and ConnectionStrings:Public ConnectionStrings:Private in appsettings.json.");
             }
+#endif
         }
     }
 }

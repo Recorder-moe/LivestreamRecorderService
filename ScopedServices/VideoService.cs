@@ -40,14 +40,10 @@ public class VideoService
 
     public List<Video> GetVideosByStatus(VideoStatus status)
         => _videoRepository.Where(p => p.Status == status)
-                           .Select(p => _videoRepository.LoadRelatedData(p))
                            .ToList();
 
     public IQueryable<Video> GetVideosBySource(string source)
         => _videoRepository.Where(p => p.Source == source);
-
-    public Video LoadRelatedData(Video video)
-        => _videoRepository.LoadRelatedData(video);
 
     public async Task UpdateVideoFilename(Video video, string? filename)
     {

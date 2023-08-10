@@ -70,20 +70,19 @@ public class TwitcastingService : PlatformService, IPlatformService
         var (isLive, videoId) = await GetTwitcastingLiveStatusAsync(channel, cancellation);
         using var ___ = LogContext.PushProperty("videoId", videoId);
 
+        if (!isLive || string.IsNullOrEmpty(videoId))
+        {
+            _logger.LogTrace("{channelId} is down.", channel.id);
+            return;
+        }
+
         if (null != videoId)
         {
-            Video? video;
+            Video? video = await _videoRepository.GetByVideoIdAndChannelId(videoId, channel.id);
 
-            if (_videoRepository.Exists(videoId))
+            if (null != video)
             {
-                if (!isLive)
-                {
-                    _logger.LogTrace("{channelId} is down.", channel.id);
-                    return;
-                }
-
-                video = await _videoRepository.GetById(videoId);
-                switch (video!.Status)
+                switch (video.Status)
                 {
                     case VideoStatus.WaitingToRecord:
                     case VideoStatus.Recording:
@@ -280,7 +279,7 @@ public class TwitcastingService : PlatformService, IPlatformService
     public override async Task UpdateVideoDataAsync(Video video, CancellationToken cancellation = default)
     {
         await _videoRepository.ReloadEntityFromDB(video);
-        var channel = await _channelRepository.GetById(video.ChannelId);
+        var channel = await _channelRepository.GetByChannelIdAndSource(video.ChannelId, video.Source);
         if (null == video.Timestamps.ActualStartTime)
         {
             video.Timestamps.ActualStartTime = video.Timestamps.PublishedAt;

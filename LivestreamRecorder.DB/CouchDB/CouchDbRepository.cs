@@ -18,7 +18,6 @@ public abstract class CouchDbRepository<T> : IRepository<T> where T : Entity
     {
         UnitOfWork u = (UnitOfWork)unitOfWork;
         _context = u.Context;
-        _context.Client.GetOrCreateDatabaseAsync<T>().Wait();
     }
 
     private ICouchDatabase<T>? _database;
@@ -37,9 +36,8 @@ public abstract class CouchDbRepository<T> : IRepository<T> where T : Entity
     public virtual IQueryable<T> Where(Expression<Func<T, bool>> predicate)
         => Database.Where(predicate);
 
-    public virtual async Task<T?> GetById(string id)
-        => await Database.FindAsync(id)
-            ?? throw new EntityNotFoundException($"Entity with id: {id} was not found.");
+    public virtual Task<T?> GetById(string id)
+        => Database.FindAsync(id);
 
     public virtual IQueryable<T> GetByPartitionKey(string partitionKey)
         => Database.Where(p => p.Id.IsMatch(@$"^{partitionKey}:.*$"))
@@ -58,13 +56,6 @@ public abstract class CouchDbRepository<T> : IRepository<T> where T : Entity
 
         await Database.RemoveAsync(entityToDelete);
     }
-
-    /// <summary>
-    /// CouchDB does not support LoadRelatedData
-    /// </summary>
-    /// <exception cref="InvalidOperationException">CouchDB does not support LoadRelatedData</exception>
-    [Obsolete("CouchDB does not support LoadRelatedData")]
-    public T LoadRelatedData(T entity) => throw new InvalidOperationException("CouchDB does not support LoadRelatedData.");
 
     public Task<T?> ReloadEntityFromDB(T entity) => GetById(entity.Id);
 }

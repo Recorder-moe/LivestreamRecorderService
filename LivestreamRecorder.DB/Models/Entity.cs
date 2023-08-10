@@ -11,12 +11,34 @@ public abstract class Entity :
 #endif
     IEntity
 {
+    private string? _id;
+
     /// <summary>
     /// Entity identifier
     /// </summary>
-    public virtual string id { get; set; } = Guid.NewGuid().ToString().Replace("-", "");
+    public virtual string id
+    {
+        get
+        {
+            if (string.IsNullOrEmpty(_id))
+            {
+#if COUCHDB
+                _id = base.Id.Split(':').Last();
+#else
+                _id = Guid.NewGuid().ToString().Replace("-", "");
+#endif
+            }
+            return _id;
+        }
 
-#if !COUCHDB
-    public virtual string Id => id;
+        set => _id = value;
+    }
+
+#if COUCHDB
+    public override string Id
+    {
+        get => $"{id}:{id}";
+        set => id = value?.Split(':').Last() ?? "";
+    }
 #endif
 }

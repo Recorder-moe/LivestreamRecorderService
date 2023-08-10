@@ -5,8 +5,6 @@ namespace LivestreamRecorder.DB.CosmosDB
 {
     public class UnitOfWork : IUnitOfWork, IDisposable
     {
-        private bool _disposedValue;
-
         public DbContext Context { get; set; }
 
         public UnitOfWork(DbContext context)
@@ -16,6 +14,9 @@ namespace LivestreamRecorder.DB.CosmosDB
         }
 
         public void Commit() => Context.SaveChanges();
+
+        #region Dispose
+        private bool _disposedValue;
 
         protected virtual void Dispose(bool disposing)
         {
@@ -37,5 +38,6 @@ namespace LivestreamRecorder.DB.CosmosDB
             Dispose(disposing: true);
             GC.SuppressFinalize(this);
         }
+        #endregion
     }
 }

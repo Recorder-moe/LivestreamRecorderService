@@ -1,5 +1,6 @@
 ﻿#if COSMOSDB
 using LivestreamRecorder.DB.CosmosDB;
+using Microsoft.EntityFrameworkCore;
 #elif COUCHDB
 using LivestreamRecorder.DB.CouchDB;
 #endif
@@ -18,6 +19,15 @@ public class ChannelRepository :
     public ChannelRepository(IUnitOfWork unitOfWork) : base(unitOfWork)
     {
     }
+
+    public Task<Channel?> GetByChannelIdAndSource(string channelId, string source)
+#if COUCHDB
+        => base.GetById($"{source}:{channelId}");
+#elif COSMOSDB
+        => base.GetByPartitionKey(source)
+               .Where(p => p.id == channelId)
+               .SingleOrDefaultAsync();
+#endif
 
     public IQueryable<Channel> GetChannelsBySource(string source) => base.GetByPartitionKey(source);
 

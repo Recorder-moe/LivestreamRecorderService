@@ -76,12 +76,10 @@ public class FC2Service : PlatformService, IPlatformService
         }
         else if (!string.IsNullOrEmpty(videoId))
         {
-            Video? video;
-
-            if (_videoRepository.Exists(videoId))
+            Video? video = await _videoRepository.GetByVideoIdAndChannelId(videoId, channel.id);
+            if (null != video)
             {
-                video = await _videoRepository.GetById(videoId);
-                switch (video!.Status)
+                switch (video.Status)
                 {
                     case VideoStatus.WaitingToRecord:
                     case VideoStatus.Recording:

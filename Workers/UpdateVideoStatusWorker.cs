@@ -66,6 +66,8 @@ public class UpdateVideoStatusWorker : BackgroundService
                     twitchService = scope.ServiceProvider.GetRequiredService<TwitchService>();
                 }
 
+                // Iterate over all elements, regardless of whether their content has changed.
+                i++;
                 videos = videoRepository.Where(p => p.Status >= VideoStatus.Archived
                                                     && p.Status < VideoStatus.Expired)
                                         .ToList()
@@ -73,36 +75,13 @@ public class UpdateVideoStatusWorker : BackgroundService
                                         .OrderByDescending(p => p.Timestamps.PublishedAt)
                                         .ToList();
 
-                // Iterate over all elements, regardless of whether their content has changed.
-                i++;
-                if (i >= videos.Count) i = 0;
-
-                _logger.LogInformation("Process: {index}/{amount}", i, videos.Count);
-
-                var video = videos[i];
-                _logger.LogInformation("Update video data: {videoId}", video.id);
-
-                video = videoRepository.LoadRelatedData(video);
-
-                switch (video.Source)
+                if (videos.Count > 0)
                 {
-                    case "Youtube":
-                        await youtubeService.UpdateVideoDataAsync(video, stoppingToken);
-                        break;
-                    case "Twitcasting":
-                        await twitcastingService.UpdateVideoDataAsync(video, stoppingToken);
-                        break;
-                    case "Twitch":
-                        if (_twitchOption.Enabled && null != twitchService)
-                            await twitchService.UpdateVideoDataAsync(video, stoppingToken);
-                        break;
-                    case "FC2":
-                        await fc2Service.UpdateVideoDataAsync(video, stoppingToken);
-                        break;
-                    default:
-                        break;
+                    if (i >= videos.Count) i = 0;
+                    await UpdateVideo(i, videos, youtubeService, twitcastingService, fc2Service, twitchService, stoppingToken);
                 }
 
+                // Expire videos once a day
                 if (DateTime.Now > expireDate)
                 {
                     expireDate = expireDate.AddDays(1);
@@ -112,6 +91,33 @@ public class UpdateVideoStatusWorker : BackgroundService
 
             _logger.LogTrace("{Worker} ends. Sleep 5 minutes.", nameof(UpdateVideoStatusWorker));
             await Task.Delay(TimeSpan.FromMinutes(5), stoppingToken);
+        }
+    }
+
+    private async Task UpdateVideo(int i, List<Video> videos, IPlatformService youtubeService, IPlatformService twitcastingService, IPlatformService fc2Service, IPlatformService? twitchService, CancellationToken stoppingToken)
+    {
+        _logger.LogInformation("Process: {index}/{amount}", i, videos.Count);
+
+        var video = videos[i];
+        _logger.LogInformation("Update video data: {videoId}", video.id);
+
+        switch (video.Source)
+        {
+            case "Youtube":
+                await youtubeService.UpdateVideoDataAsync(video, stoppingToken);
+                break;
+            case "Twitcasting":
+                await twitcastingService.UpdateVideoDataAsync(video, stoppingToken);
+                break;
+            case "Twitch":
+                if (_twitchOption.Enabled && null != twitchService)
+                    await twitchService.UpdateVideoDataAsync(video, stoppingToken);
+                break;
+            case "FC2":
+                await fc2Service.UpdateVideoDataAsync(video, stoppingToken);
+                break;
+            default:
+                break;
         }
     }
 

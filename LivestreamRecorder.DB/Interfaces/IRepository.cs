@@ -13,14 +13,12 @@ public interface IRepository<T> where T : IEntity
     bool Exists(string id);
 
     /// <summary>
-    /// Get a single entity by id. Will throw a <see cref="EntityNotFoundException"/> if no entity is found.
+    /// Get a single entity by id. Will return null if no entity is found.
     /// </summary>
     /// <param name="id"></param>
     /// <returns></returns>
-    /// <exception cref="EntityNotFoundException"></exception>
     Task<T?> GetById(string id);
     IQueryable<T> GetByPartitionKey(string partitionKey);
-    T LoadRelatedData(T entity);
     Task<T?> ReloadEntityFromDB(T entity);
     IQueryable<T> Where(Expression<Func<T, bool>> predicate);
 }

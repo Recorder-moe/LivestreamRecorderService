@@ -1,14 +1,24 @@
 ﻿using LivestreamRecorder.DB.Enums;
-using System.ComponentModel.DataAnnotations.Schema;
+using System.ComponentModel.DataAnnotations;
 
 namespace LivestreamRecorder.DB.Models;
 #pragma warning disable CS8618 // 退出建構函式時，不可為 Null 的欄位必須包含非 Null 值。請考慮宣告為可為 Null。
 
-[Table("Videos")]
 public class Video : Entity
 {
-    public override string Id => $"{ChannelId}:{id}";
+#if COUCHDB
+    public override string Id
+    {
+        get => $"{ChannelId}:{id}";
+        set
+        {
+            ChannelId = value?.Split(':').First() ?? "";
+            id = value?.Split(':').Last() ?? "";
+        }
+    }
+#endif
 
+    [Required]
     public string Source { get; set; }
 
     public VideoStatus Status { get; set; }
@@ -34,6 +44,7 @@ public class Video : Entity
 
     public string? Note { get; set; }
 
+    [Required]
     public string ChannelId { get; set; }
 
 #if COSMOSDB

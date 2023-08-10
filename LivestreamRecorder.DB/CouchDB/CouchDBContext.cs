@@ -17,7 +17,7 @@ public class CouchDBContext : CouchContext
     {
         #region Videos
         databaseBuilder.Document<Video>()
-            .ToDatabase("Videos");
+            .ToDatabase("videos");
 
         databaseBuilder.Document<Video>()
             .IsPartitioned();
@@ -25,7 +25,7 @@ public class CouchDBContext : CouchContext
 
         #region Channels
         databaseBuilder.Document<Channel>()
-            .ToDatabase("Channels");
+            .ToDatabase("channels");
 
         databaseBuilder.Document<Channel>()
             .IsPartitioned();
@@ -33,7 +33,7 @@ public class CouchDBContext : CouchContext
 
         #region Users
         databaseBuilder.Document<User>()
-            .ToDatabase("Users");
+            .ToDatabase("users");
 
         databaseBuilder.Document<User>()
             .IsPartitioned();

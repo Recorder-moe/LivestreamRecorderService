@@ -95,19 +95,18 @@ public class YoutubeService : PlatformService, IPlatformService
     {
         var videoId = item.Id.Split(':').Last();
         using var _ = LogContext.PushProperty("videoId", videoId);
-        var video = _videoRepository.Exists(videoId)
-                    ? await _videoRepository.GetById(videoId)
-                    : null;
+        var video = await _videoRepository.GetByVideoIdAndChannelId(videoId, channel.id);
 
-        // Don't need to track anymore.
-        if (null != video
-            && video.Status > VideoStatus.Scheduled)
+        if (null != video)
         {
-            _logger.LogTrace("Video {videoId} from RSSFeed is skipped. It is {videoStatus}.", videoId, Enum.GetName(typeof(VideoStatus), video.Status));
-            return;
+            // Don't need to track anymore.
+            if (video.Status > VideoStatus.Scheduled)
+            {
+                _logger.LogTrace("Video {videoId} from RSSFeed is skipped. It is {videoStatus}.", videoId, Enum.GetName(typeof(VideoStatus), video.Status));
+                return;
+            }
         }
-
-        if (null == video)
+        else
         {
             video = new Video()
             {
@@ -124,12 +123,8 @@ public class YoutubeService : PlatformService, IPlatformService
             };
             _logger.LogInformation("Found a new Video {videoId} from {channelId}", videoId, channel.id);
         }
-        else
-        {
-            _videoRepository.LoadRelatedData(video);
-        }
 
-        await UpdateVideoDataAsync(video, cancellation);
+        await UpdateVideoDataAsync(video!, cancellation);
     }
 
     /// <summary>
@@ -151,8 +146,8 @@ public class YoutubeService : PlatformService, IPlatformService
             return;
         }
 
-        // Note: The channel can be null in the design.
-        var channel = await _channelRepository.GetById(video.ChannelId);
+        // Note: The channel can be null by design.
+        Channel? channel = await _channelRepository.GetByChannelIdAndSource(video.ChannelId, video.Source);
 
         // Download thumbnail for new videos
         if (video.Status == VideoStatus.Unknown
