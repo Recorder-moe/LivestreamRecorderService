@@ -487,7 +487,7 @@ public class YoutubeService : PlatformService, IPlatformService
             bannerBlobUrl = await DownloadImageAndUploadToBlobStorage(bannerUrl, $"banner/{channel.id}", cancellation);
         }
 
-        channel = _channelRepository.LoadRelatedData(channel);
+        channel = await _channelRepository.ReloadEntityFromDB(channel) ?? channel;
         channel.ChannelName = info.Uploader;
         channel.Avatar = avatarBlobUrl?.Replace("avatar/", "");
         channel.Banner = bannerBlobUrl?.Replace("banner/", "");

@@ -32,7 +32,7 @@ public class UpdateChannelInfoWorker : BackgroundService
             #region DI
             using var scope = _serviceProvider.CreateScope();
             YoutubeService youtubeSerivce = scope.ServiceProvider.GetRequiredService<YoutubeService>();
-            FC2Service fC2Service= scope.ServiceProvider.GetRequiredService<FC2Service>();
+            FC2Service fC2Service = scope.ServiceProvider.GetRequiredService<FC2Service>();
             #endregion
 
             await UpdatePlatform(youtubeSerivce, stoppingToken);

@@ -269,7 +269,7 @@ public class FC2Service : PlatformService, IPlatformService
             avatarBlobUrl = await DownloadImageAndUploadToBlobStorage(avatarUrl, $"avatar/{channel.id}", stoppingToken);
         }
 
-        channel = _channelRepository.LoadRelatedData(channel);
+        channel = await _channelRepository.ReloadEntityFromDB(channel) ?? channel;
         channel.ChannelName = info.Data.ProfileData.Name;
         channel.Avatar = avatarBlobUrl?.Replace("avatar/", "");
         await _channelRepository.AddOrUpdate(channel);
