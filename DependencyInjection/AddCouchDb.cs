@@ -35,7 +35,7 @@ namespace LivestreamRecorderService.DependencyInjection
                     options
                         .UseEndpoint(couchDBOptions.Endpoint)
                         .UseCookieAuthentication(username: couchDBOptions.Username, password: couchDBOptions.Password)
-#if !COUCHDB_RELEASE && !COSMOSDB_RELEASE
+#if !RELEASE
                         .ConfigureFlurlClient(setting
                             => setting.BeforeCall = call
                                 => Log.Debug("Sending request to couch: {request} {body}", call, call.RequestBody))

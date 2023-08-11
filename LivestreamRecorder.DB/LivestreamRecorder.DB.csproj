@@ -4,24 +4,20 @@
     <TargetFramework>net6.0</TargetFramework>
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
-<Configurations>Debug;Release;CouchDB;CosmosDB;CosmosDB_Release;CouchDB_Release</Configurations>
+<Configurations>CouchDB;CosmosDB;AzureCosmosDB_Release;ApacheCouchDB_Release</Configurations>
 </PropertyGroup>
-
-<PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|AnyCPU'" />
 
 <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='CosmosDB|AnyCPU'" />
 
 <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='CouchDB|AnyCPU'" />
 
-<PropertyGroup Condition="'$(Configuration)|$(Platform)'=='CouchDB_Release|AnyCPU'">
-<DefineConstants>$(DefineConstants);COUCHDB</DefineConstants>
+<PropertyGroup Condition="'$(Configuration)|$(Platform)'=='ApacheCouchDB_Release|AnyCPU'">
+<DefineConstants>$(DefineConstants);COUCHDB;RELEASE</DefineConstants>
 <Optimize>True</Optimize>
 </PropertyGroup>
 
-<PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|AnyCPU'" />
-
-<PropertyGroup Condition="'$(Configuration)|$(Platform)'=='CosmosDB_Release|AnyCPU'">
-<DefineConstants>$(DefineConstants);COSMOSDB</DefineConstants>
+<PropertyGroup Condition="'$(Configuration)|$(Platform)'=='AzureCosmosDB_Release|AnyCPU'">
+<DefineConstants>$(DefineConstants);COSMOSDB;RELEASE</DefineConstants>
 <Optimize>True</Optimize>
   </PropertyGroup>
 

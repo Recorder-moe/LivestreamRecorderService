@@ -24,7 +24,7 @@ public class RecordWorker : BackgroundService
     {
         using var __ = LogContext.PushProperty("Worker", nameof(RecordWorker));
 
-#if COUCHDB_RELEASE || COSMOSDB_RELEASE
+#if RELEASE
         _logger.LogInformation("{Worker} will sleep 30 seconds to wait for {WorkerToWait} to start.", nameof(RecordWorker), nameof(MonitorWorker));
         await Task.Delay(TimeSpan.FromSeconds(30), stoppingToken);
 #endif

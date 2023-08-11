@@ -9,14 +9,14 @@ using Microsoft.Extensions.Options;
 using Serilog;
 using System.Configuration;
 
-#if !COUCHDB_RELEASE && !COSMOSDB_RELEASE
+#if !RELEASE
 Serilog.Debugging.SelfLog.Enable(Console.WriteLine);
 #endif
 
 
 IConfiguration configuration = new ConfigurationBuilder()
     .AddJsonFile("appsettings.json", optional: false, reloadOnChange: true)
-#if !COUCHDB_RELEASE && !COSMOSDB_RELEASE
+#if !RELEASE
     .AddJsonFile("appsettings.Development.json", optional: true, reloadOnChange: true)
     .AddUserSecrets<Program>(optional: true, reloadOnChange: true)
 #endif

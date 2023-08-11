@@ -8,7 +8,7 @@ RUN apk add --no-cache --virtual build-deps musl-dev gcc g++ python3-dev &&\
     apk del build-deps
 
 FROM mcr.microsoft.com/dotnet/sdk:7.0-alpine AS build
-ARG DatabaseService="CouchDB"
+ARG DatabaseService="ApacheCouchDB"
 WORKDIR /src
 COPY ["LivestreamRecorderService.csproj", "."]
 RUN dotnet restore "./LivestreamRecorderService.csproj"
