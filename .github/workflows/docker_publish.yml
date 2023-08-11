@@ -27,22 +27,22 @@ jobs:
           submodules: true
 
       - name: Docker meta
-        id: meta_CouchDB
+        id: meta_ApacheCouchDB
         uses: docker/metadata-action@v4
         with:
           images: ${{ secrets.DOCKERHUB_ORGANIZATION_NAME }}/${{ github.event.repository.name }},ghcr.io/${{ github.repository }}
           flavor: |
             latest=${{ github.ref == format('refs/heads/{0}', github.event.repository.default_branch) }}
           tags: |
-            type=raw,value=CouchDB
+            type=raw,value=ApacheCouchDB
 
       - name: Docker meta
-        id: meta_CosmosDB
+        id: meta_AzureCosmosDB
         uses: docker/metadata-action@v4
         with:
           images: ${{ secrets.DOCKERHUB_ORGANIZATION_NAME }}/${{ github.event.repository.name }},ghcr.io/${{ github.repository }}
           tags: |
-            type=raw,value=CosmosDB
+            type=raw,value=AzureCosmosDB
 
       # Create a Access Token and save it as as Actions secret
       # https://hub.docker.com/settings/security
@@ -68,17 +68,17 @@ jobs:
         with:
           context: .
           push: true
-          tags: ${{ steps.meta_CouchDB.outputs.tags }}
-          labels: ${{ steps.meta_CouchDB.outputs.labels }}
+          tags: ${{ steps.meta_ApacheCouchDB.outputs.tags }}
+          labels: ${{ steps.meta_ApacheCouchDB.outputs.labels }}
           build-args: |
-            DatabaseService=CouchDB
+            DatabaseService=ApacheCouchDB
 
       - name: Build and push
         uses: docker/build-push-action@v4
         with:
           context: .
           push: true
-          tags: ${{ steps.meta_CosmosDB.outputs.tags }}
-          labels: ${{ steps.meta_CosmosDB.outputs.labels }}
+          tags: ${{ steps.meta_AzureCosmosDB.outputs.tags }}
+          labels: ${{ steps.meta_AzureCosmosDB.outputs.labels }}
           build-args: |
-            DatabaseService=CosmosDB
+            DatabaseService=AzureCosmosDB
