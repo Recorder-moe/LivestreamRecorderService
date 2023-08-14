@@ -1,5 +1,6 @@
 ﻿#if COUCHDB
 using CouchDB.Driver;
+using CouchDB.Driver.Extensions;
 using CouchDB.Driver.Query.Extensions;
 using LivestreamRecorder.DB.Exceptions;
 using LivestreamRecorder.DB.Interfaces;
@@ -56,6 +57,11 @@ public abstract class CouchDbRepository<T> : IRepository<T> where T : Entity
 
         await Database.RemoveAsync(entityToDelete);
     }
+
+    // Issue: couchdb-net doesn't support Linq Count() on IQueryable<T>.
+    // https://github.com/matteobortolazzo/couchdb-net/issues/124
+    public virtual async Task<int> CountAsync()
+        => (await Database.ToCouchListAsync()).Count;
 
     public Task<T?> ReloadEntityFromDBAsync(T entity) => GetByIdAsync(entity.Id);
 }

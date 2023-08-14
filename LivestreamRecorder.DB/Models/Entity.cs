@@ -2,6 +2,7 @@
 using CouchDB.Driver.Types;
 #endif
 using LivestreamRecorder.DB.Interfaces;
+using Newtonsoft.Json;
 
 namespace LivestreamRecorder.DB.Models;
 
@@ -16,6 +17,7 @@ public abstract class Entity :
     /// <summary>
     /// Entity identifier
     /// </summary>
+    [JsonProperty("id", NullValueHandling = NullValueHandling.Ignore)]
     public virtual string id
     {
         get
@@ -31,11 +33,12 @@ public abstract class Entity :
             return _id;
         }
 
-        set => _id = value;
+        set => _id = value ?? _id;
     }
 
 #if COUCHDB
-    public override string Id
+    [JsonProperty("_id", NullValueHandling = NullValueHandling.Ignore)]
+    public virtual new string Id
     {
         get => $"{id}:{id}";
         set => id = value?.Split(':').Last() ?? "";

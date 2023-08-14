@@ -85,4 +85,7 @@ public abstract class CosmosDbRepository<T> : IRepository<T> where T : Entity
         return Task.FromResult(entity);
 #pragma warning restore CS8619 // 值中參考型別的可 Null 性與目標型別不符合。
     }
+
+    public Task<int> CountAsync()
+        => ObjectSet.CountAsync();
 }

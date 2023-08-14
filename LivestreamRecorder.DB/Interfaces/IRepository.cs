@@ -9,6 +9,7 @@ public interface IRepository<T> where T : IEntity
 
     Task<T> AddOrUpdateAsync(T entity);
     IQueryable<T> All();
+    Task<int> CountAsync();
     Task DeleteAsync(T entity);
     bool Exists(string id);
 
