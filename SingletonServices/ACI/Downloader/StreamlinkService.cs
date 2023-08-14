@@ -31,7 +31,7 @@ public class StreamlinkService : ACIServiceBase, IStreamlinkService
     {
         string filename = NameHelper.GetFileName(video, IStreamlinkService.name);
         video.Filename = filename;
-        return InitJobAsyncWithChannelName(videoId: videoId,
+        return InitJobWithChannelNameAsync(videoId: videoId,
                                            video: video,
                                            useCookiesFile: useCookiesFile,
                                            cancellation: cancellation);

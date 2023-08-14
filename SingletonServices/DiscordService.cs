@@ -85,7 +85,7 @@ public partial class DiscordService
 
         var componentBuilder = GetComponentBuilder(video);
 
-        return SendMessage(embedBuilder.Build(), componentBuilder.Build());
+        return SendMessageAsync(embedBuilder.Build(), componentBuilder.Build());
     }
 
     public Task SendArchivedMessage(Video video, Channel? channel)
@@ -96,7 +96,7 @@ public partial class DiscordService
 
         var componentBuilder = GetComponentBuilder(video);
 
-        return SendMessage(embedBuilder.Build(), componentBuilder.Build());
+        return SendMessageAsync(embedBuilder.Build(), componentBuilder.Build());
     }
 
     public Task SendSkippedMessage(Video video, Channel? channel)
@@ -107,7 +107,7 @@ public partial class DiscordService
 
         var componentBuilder = GetComponentBuilder(video);
 
-        return SendMessage(embedBuilder.Build(), componentBuilder.Build(), video.Note ?? "");
+        return SendMessageAsync(embedBuilder.Build(), componentBuilder.Build(), video.Note ?? "");
     }
 
     public Task SendDeletedMessage(Video video, Channel? channel)
@@ -118,7 +118,7 @@ public partial class DiscordService
 
         var componentBuilder = GetComponentBuilder(video);
 
-        return SendMessageWarning(embedBuilder.Build(), componentBuilder.Build(), $"{_discordOption.Mention!.Deleted} {video.Note}");
+        return SendMessageWarningAsync(embedBuilder.Build(), componentBuilder.Build(), $"{_discordOption.Mention!.Deleted} {video.Note}");
     }
 
     #region GetEmbedBuilder
@@ -235,7 +235,7 @@ public partial class DiscordService
     #endregion
 
     #region Send
-    async Task SendMessage(Embed embed, MessageComponent component, string text = "")
+    async Task SendMessageAsync(Embed embed, MessageComponent component, string text = "")
     {
         int retry = 3;
         while (retry-- >= 0)
@@ -259,7 +259,7 @@ public partial class DiscordService
         }
     }
 
-    async Task SendMessageWarning(Embed embed, MessageComponent component, string? text)
+    async Task SendMessageWarningAsync(Embed embed, MessageComponent component, string? text)
     {
         AllowedMentions allowedMentions = new()
         {

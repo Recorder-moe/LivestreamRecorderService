@@ -25,7 +25,7 @@ public class RSSService
         _channelRepository = channelRepository;
     }
 
-    public async Task<Feed?> ReadRSS(string url, CancellationToken cancellation = default)
+    public async Task<Feed?> ReadRSSAsync(string url, CancellationToken cancellation = default)
     {
         _logger.LogTrace("Start to get RSS feed: {url}", url);
         Feed? feed = null;
@@ -46,7 +46,7 @@ public class RSSService
         {
             _logger.LogInformation("Update channel name from {oldName} to {newName}", channel.ChannelName, feed.Title);
             channel.ChannelName = feed.Title;
-            _channelRepository.AddOrUpdate(channel);
+            _channelRepository.AddOrUpdateAsync(channel);
             _unitOfWork_Public.Commit();
         }
     }

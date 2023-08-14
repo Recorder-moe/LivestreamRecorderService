@@ -17,11 +17,11 @@ namespace LivestreamRecorder.DB.CouchDB
         protected async Task PrepareIndexesAsync()
         {
             var tasks = new List<Task>();
-            await prepareVideoIndex(tasks);
-            await prepareChannelIndex(tasks);
+            await prepareVideoIndexAsync(tasks);
+            await prepareChannelIndexAsync(tasks);
             await Task.WhenAll(tasks);
 
-            async Task prepareVideoIndex(List<Task> tasks)
+            async Task prepareVideoIndexAsync(List<Task> tasks)
             {
                 var database = _context.Client.GetDatabase<Video>();
                 var existIndexes = await database.GetIndexesAsync();
@@ -34,7 +34,7 @@ namespace LivestreamRecorder.DB.CouchDB
                 }
             }
 
-            async Task prepareChannelIndex(List<Task> tasks)
+            async Task prepareChannelIndexAsync(List<Task> tasks)
             {
                 var database = _context.Client.GetDatabase<Channel>();
                 var existIndexes = await database.GetIndexesAsync();

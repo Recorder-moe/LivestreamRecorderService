@@ -31,7 +31,7 @@ public class TwitcastingRecorderService : ACIServiceBase, ITwitcastingRecorderSe
     {
         string filename = NameHelper.GetFileName(video, ITwitcastingRecorderService.name);
         video.Filename = filename;
-        return InitJobAsyncWithChannelName(videoId: videoId,
+        return InitJobWithChannelNameAsync(videoId: videoId,
                                            video: video,
                                            useCookiesFile: useCookiesFile,
                                            cancellation: cancellation);

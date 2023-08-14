@@ -78,7 +78,7 @@ public class TwitcastingService : PlatformService, IPlatformService
 
         if (null != videoId)
         {
-            Video? video = await _videoRepository.GetByVideoIdAndChannelId(videoId, channel.id);
+            Video? video = await _videoRepository.GetVideoByIdAndChannelIdAsync(videoId, channel.id);
 
             if (null != video)
             {
@@ -151,7 +151,7 @@ public class TwitcastingService : PlatformService, IPlatformService
                 _logger.LogWarning("This video is not public! Skip {videoId}", videoId);
             }
 
-            await _videoRepository.AddOrUpdate(video);
+            await _videoRepository.AddOrUpdateAsync(video);
             _unitOfWork_Public.Commit();
         }
     }
@@ -278,8 +278,8 @@ public class TwitcastingService : PlatformService, IPlatformService
 
     public override async Task UpdateVideoDataAsync(Video video, CancellationToken cancellation = default)
     {
-        await _videoRepository.ReloadEntityFromDB(video);
-        var channel = await _channelRepository.GetByChannelIdAndSource(video.ChannelId, video.Source);
+        await _videoRepository.ReloadEntityFromDBAsync(video);
+        var channel = await _channelRepository.GetChannelByIdAndSourceAsync(video.ChannelId, video.Source);
         if (null == video.Timestamps.ActualStartTime)
         {
             video.Timestamps.ActualStartTime = video.Timestamps.PublishedAt;
@@ -346,7 +346,7 @@ public class TwitcastingService : PlatformService, IPlatformService
 
         if (!string.IsNullOrEmpty(video.Filename))
         {
-            if (!await _storageService.IsVideoFileExists(video.Filename, cancellation))
+            if (!await _storageService.IsVideoFileExistsAsync(video.Filename, cancellation))
             {
                 if (video.Status >= VideoStatus.Archived && video.Status < VideoStatus.Expired)
                 {
@@ -363,7 +363,7 @@ public class TwitcastingService : PlatformService, IPlatformService
             }
         }
 
-        await _videoRepository.AddOrUpdate(video);
+        await _videoRepository.AddOrUpdateAsync(video);
         _unitOfWork_Public.Commit();
     }
 

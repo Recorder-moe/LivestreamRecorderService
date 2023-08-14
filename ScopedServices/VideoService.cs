@@ -45,40 +45,40 @@ public class VideoService
     public IQueryable<Video> GetVideosBySource(string source)
         => _videoRepository.Where(p => p.Source == source);
 
-    public async Task UpdateVideoFilename(Video video, string? filename)
+    public async Task UpdateVideoFilenameAsync(Video video, string? filename)
     {
-        await _videoRepository.ReloadEntityFromDB(video);
+        await _videoRepository.ReloadEntityFromDBAsync(video);
         video!.Filename = filename;
-        await _videoRepository.AddOrUpdate(video);
+        await _videoRepository.AddOrUpdateAsync(video);
         _unitOfWork_Public.Commit();
         _logger.LogDebug("Update Video {videoId} filename to {filename}", video.id, filename);
     }
 
-    public async Task UpdateVideoStatus(Video video, VideoStatus status)
+    public async Task UpdateVideoStatusAsync(Video video, VideoStatus status)
     {
-        await _videoRepository.ReloadEntityFromDB(video);
+        await _videoRepository.ReloadEntityFromDBAsync(video);
         video.Status = status;
-        await _videoRepository.AddOrUpdate(video);
+        await _videoRepository.AddOrUpdateAsync(video);
         _unitOfWork_Public.Commit();
         _logger.LogDebug("Update Video {videoId} Status to {videostatus}", video.id, status);
     }
 
-    public async Task UpdateVideoNote(Video video, string? Note)
+    public async Task UpdateVideoNoteAsync(Video video, string? Note)
     {
-        await _videoRepository.ReloadEntityFromDB(video);
+        await _videoRepository.ReloadEntityFromDBAsync(video);
         video.Note = Note;
-        await _videoRepository.AddOrUpdate(video);
+        await _videoRepository.AddOrUpdateAsync(video);
         _unitOfWork_Public.Commit();
         _logger.LogDebug("Update Video {videoId} note", video.id);
     }
 
     public async Task UpdateVideoArchivedTimeAsync(Video video)
     {
-        await _videoRepository.ReloadEntityFromDB(video);
+        await _videoRepository.ReloadEntityFromDBAsync(video);
 
         video.ArchivedTime = DateTime.UtcNow;
 
-        await _videoRepository.AddOrUpdate(video);
+        await _videoRepository.AddOrUpdateAsync(video);
         _unitOfWork_Public.Commit();
     }
 
@@ -86,7 +86,7 @@ public class VideoService
     {
         try
         {
-            await UpdateVideoStatus(video, VideoStatus.Uploading);
+            await UpdateVideoStatusAsync(video, VideoStatus.Uploading);
 
             string instanceName;
             switch (_serviceOptions.StorageService)
@@ -109,15 +109,15 @@ public class VideoService
         }
         catch (Exception e)
         {
-            await UpdateVideoStatus(video, VideoStatus.Error);
-            await UpdateVideoNote(video, $"Exception happened when uploading files to storage. Please contact admin if you see this message.");
+            await UpdateVideoStatusAsync(video, VideoStatus.Error);
+            await UpdateVideoNoteAsync(video, $"Exception happened when uploading files to storage. Please contact admin if you see this message.");
             _logger.LogError("Exception happened when uploading files to storage: {videoId}, {error}, {message}", video.id, e, e.Message);
         }
     }
 
     public async Task DeleteVideoAsync(Video video)
     {
-        await _videoRepository.Delete(video);
+        await _videoRepository.DeleteAsync(video);
         _unitOfWork_Public.Commit();
         _logger.LogDebug("Delete Video {videoId}", video.id);
     }

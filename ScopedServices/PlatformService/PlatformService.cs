@@ -119,7 +119,7 @@ public abstract class PlatformService : IPlatformService
     protected async Task<string?> DownloadThumbnailAsync(string thumbnail, string videoId, CancellationToken cancellation = default)
         => string.IsNullOrEmpty(thumbnail)
             ? null
-            : (await DownloadImageAndUploadToBlobStorage(thumbnail, $"thumbnails/{videoId}", cancellation))?.Replace("thumbnails/", "");
+            : (await DownloadImageAndUploadToBlobStorageAsync(thumbnail, $"thumbnails/{videoId}", cancellation))?.Replace("thumbnails/", "");
 
     /// <summary>
     /// Download image and upload it to Blob Storage
@@ -129,7 +129,7 @@ public abstract class PlatformService : IPlatformService
     /// <param name="cancellation"></param>
     /// <returns></returns>
     /// <exception cref="ArgumentNullException"></exception>
-    protected async Task<string?> DownloadImageAndUploadToBlobStorage(string url, string path, CancellationToken cancellation)
+    protected async Task<string?> DownloadImageAndUploadToBlobStorageAsync(string url, string path, CancellationToken cancellation)
     {
         if (string.IsNullOrEmpty(url))
         {
@@ -169,8 +169,8 @@ public abstract class PlatformService : IPlatformService
         {
             List<Task> tasks = new()
             {
-                _storageService.UploadPublicFile(contentType, pathInStorage, tempPath, cancellation),
-                _storageService.UploadPublicFile(KnownMimeTypes.Avif, $"{path}.avif", await ImageHelper.ConvertToAvifAsync(tempPath), cancellation)
+                _storageService.UploadPublicFileAsync(contentType, pathInStorage, tempPath, cancellation),
+                _storageService.UploadPublicFileAsync(KnownMimeTypes.Avif, $"{path}.avif", await ImageHelper.ConvertToAvifAsync(tempPath), cancellation)
             };
 
             await Task.WhenAll(tasks);

@@ -7,9 +7,9 @@ public interface IRepository<T> where T : IEntity
 {
     string CollectionName { get; }
 
-    Task<T> AddOrUpdate(T entity);
+    Task<T> AddOrUpdateAsync(T entity);
     IQueryable<T> All();
-    Task Delete(T entity);
+    Task DeleteAsync(T entity);
     bool Exists(string id);
 
     /// <summary>
@@ -17,8 +17,8 @@ public interface IRepository<T> where T : IEntity
     /// </summary>
     /// <param name="id"></param>
     /// <returns></returns>
-    Task<T?> GetById(string id);
+    Task<T?> GetByIdAsync(string id);
     IQueryable<T> GetByPartitionKey(string partitionKey);
-    Task<T?> ReloadEntityFromDB(T entity);
+    Task<T?> ReloadEntityFromDBAsync(T entity);
     IQueryable<T> Where(Expression<Func<T, bool>> predicate);
 }

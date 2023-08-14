@@ -20,9 +20,9 @@ public class UserRepository :
     {
     }
 
-    public override Task<User?> GetById(string id)
+    public override Task<User?> GetByIdAsync(string id)
 #if COUCHDB
-        => base.GetById($"{id}:{id}");
+        => base.GetByIdAsync($"{id}:{id}");
 #elif COSMOSDB
         => base.GetByPartitionKey(id)
                .Where(p => p.id == id)

@@ -22,13 +22,13 @@ public class S3Service : IStorageService
         _options = options.Value;
     }
 
-    public async Task<bool> IsVideoFileExists(string filename, CancellationToken cancellation = default)
+    public async Task<bool> IsVideoFileExistsAsync(string filename, CancellationToken cancellation = default)
     {
         try
         {
             var stat = await _minioClient.StatObjectAsync(new StatObjectArgs()
-                                                .WithBucket(_options.BucketName_Private)
-                                                .WithObject($"videos/{filename}"), cancellation);
+                                         .WithBucket(_options.BucketName_Private)
+                                         .WithObject($"videos/{filename}"), cancellation);
             return !stat.DeleteMarker;
         }
         catch (MinioException e)
@@ -38,13 +38,13 @@ public class S3Service : IStorageService
         }
     }
 
-    public async Task<bool> DeleteVideoBlob(string filename, CancellationToken cancellation = default)
+    public async Task<bool> DeleteVideoBlobAsync(string filename, CancellationToken cancellation = default)
     {
         try
         {
             await _minioClient.RemoveObjectAsync(new RemoveObjectArgs()
-                                .WithBucket(_options.BucketName_Private)
-                                .WithObject($"videos/{filename}"), cancellation);
+                              .WithBucket(_options.BucketName_Private)
+                              .WithObject($"videos/{filename}"), cancellation);
             return true;
         }
         catch (MinioException e)
@@ -54,15 +54,15 @@ public class S3Service : IStorageService
         }
     }
 
-    public async Task UploadPublicFile(string? contentType, string pathInStorage, string tempPath, CancellationToken cancellation = default)
+    public async Task UploadPublicFileAsync(string? contentType, string pathInStorage, string tempPath, CancellationToken cancellation = default)
     {
         try
         {
             var response = await _minioClient.PutObjectAsync(new PutObjectArgs()
-                                                .WithBucket(_options.BucketName_Public)
-                                                .WithObject(pathInStorage)
-                                                .WithFileName(tempPath)
-                                                .WithContentType(contentType), cancellation);
+                                             .WithBucket(_options.BucketName_Public)
+                                             .WithObject(pathInStorage)
+                                             .WithFileName(tempPath)
+                                             .WithContentType(contentType), cancellation);
         }
         catch (MinioException e)
         {

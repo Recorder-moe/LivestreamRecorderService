@@ -2,7 +2,7 @@
 
 public interface IStorageService
 {
-    Task<bool> IsVideoFileExists(string filename, CancellationToken cancellation = default);
-    Task<bool> DeleteVideoBlob(string filename, CancellationToken cancellation = default);
-    Task UploadPublicFile(string? contentType, string pathInStorage, string filePathToUpload, CancellationToken cancellation = default);
+    Task<bool> IsVideoFileExistsAsync(string filename, CancellationToken cancellation = default);
+    Task<bool> DeleteVideoBlobAsync(string filename, CancellationToken cancellation = default);
+    Task UploadPublicFileAsync(string? contentType, string pathInStorage, string filePathToUpload, CancellationToken cancellation = default);
 }

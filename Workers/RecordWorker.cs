@@ -48,7 +48,7 @@ public class RecordWorker : BackgroundService
                 var uploaded = await _recordService.MonitorUploadedVideosAsync(videoService, stoppingToken);
                 foreach (var video in uploaded)
                 {
-                    await _recordService.ProcessUploadedVideo(videoService, channelService, video, stoppingToken);
+                    await _recordService.ProcessUploadedVideoAsync(videoService, channelService, video, stoppingToken);
 
                     // Avoid concurrency requests
                     await Task.Delay(TimeSpan.FromSeconds(10), stoppingToken);
@@ -57,7 +57,7 @@ public class RecordWorker : BackgroundService
                 var finished = await _recordService.MonitorRecordingVideosAsync(videoService, stoppingToken);
                 foreach (var video in finished)
                 {
-                    await _recordService.PcocessFinishedVideo(videoService, channelService, video, stoppingToken);
+                    await _recordService.PcocessFinishedVideoAsync(videoService, channelService, video, stoppingToken);
 
                     // Avoid concurrency requests
                     await Task.Delay(TimeSpan.FromSeconds(10), stoppingToken);

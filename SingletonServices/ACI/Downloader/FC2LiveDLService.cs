@@ -31,7 +31,7 @@ public class FC2LiveDLService : ACIServiceBase, IFC2LiveDLService
     {
         string filename = NameHelper.GetFileName(video, IFC2LiveDLService.name);
         video.Filename = filename;
-        return InitJobAsyncWithChannelName(videoId: videoId,
+        return InitJobWithChannelNameAsync(videoId: videoId,
                                            video: video,
                                            useCookiesFile: useCookiesFile,
                                            cancellation: cancellation);

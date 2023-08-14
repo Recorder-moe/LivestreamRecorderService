@@ -64,7 +64,7 @@ public class YoutubeService : PlatformService, IPlatformService
         using var _ = LogContext.PushProperty("Platform", PlatformName);
         using var __ = LogContext.PushProperty("channelId", channel.id);
 
-        var feed = await _rSSService.ReadRSS(GetRSSFeed(channel), cancellation);
+        var feed = await _rSSService.ReadRSSAsync(GetRSSFeed(channel), cancellation);
 
         if (null == feed)
         {
@@ -97,7 +97,7 @@ public class YoutubeService : PlatformService, IPlatformService
         // So we add a prefix 'Y' to it.
         var videoId = "Y" + item.Id.Split(':').Last();
         using var _ = LogContext.PushProperty("videoId", videoId);
-        var video = await _videoRepository.GetByVideoIdAndChannelId(videoId, channel.id);
+        var video = await _videoRepository.GetVideoByIdAndChannelIdAsync(videoId, channel.id);
 
         if (null != video)
         {
@@ -151,7 +151,7 @@ public class YoutubeService : PlatformService, IPlatformService
         }
 
         // Note: The channel can be null by design.
-        Channel? channel = await _channelRepository.GetByChannelIdAndSource(video.ChannelId, video.Source);
+        Channel? channel = await _channelRepository.GetChannelByIdAndSourceAsync(video.ChannelId, video.Source);
 
         // Download thumbnail for new videos
         if (video.Status == VideoStatus.Unknown
@@ -336,7 +336,7 @@ public class YoutubeService : PlatformService, IPlatformService
 
         if (!string.IsNullOrEmpty(video.Filename))
         {
-            if (!await _storageService.IsVideoFileExists(video.Filename, cancellation))
+            if (!await _storageService.IsVideoFileExistsAsync(video.Filename, cancellation))
             {
                 if (video.SourceStatus == VideoStatus.Deleted
                     && video.Status < VideoStatus.Recording)
@@ -458,7 +458,7 @@ public class YoutubeService : PlatformService, IPlatformService
         if (video.Status < 0)
             _logger.LogError("Video {videoId} has a Unknown status!", video.id);
 
-        await _videoRepository.AddOrUpdate(video);
+        await _videoRepository.AddOrUpdateAsync(video);
         _unitOfWork_Public.Commit();
     }
 
@@ -477,20 +477,20 @@ public class YoutubeService : PlatformService, IPlatformService
         var avatarUrl = thumbnails.FirstOrDefault()?.Url;
         if (!string.IsNullOrEmpty(avatarUrl))
         {
-            avatarBlobUrl = await DownloadImageAndUploadToBlobStorage(avatarUrl, $"avatar/{channel.id}", cancellation);
+            avatarBlobUrl = await DownloadImageAndUploadToBlobStorageAsync(avatarUrl, $"avatar/{channel.id}", cancellation);
         }
 
         var bannerUrl = thumbnails.Skip(1).FirstOrDefault()?.Url;
         if (!string.IsNullOrEmpty(bannerUrl))
         {
-            bannerBlobUrl = await DownloadImageAndUploadToBlobStorage(bannerUrl, $"banner/{channel.id}", cancellation);
+            bannerBlobUrl = await DownloadImageAndUploadToBlobStorageAsync(bannerUrl, $"banner/{channel.id}", cancellation);
         }
 
-        channel = await _channelRepository.ReloadEntityFromDB(channel) ?? channel;
+        channel = await _channelRepository.ReloadEntityFromDBAsync(channel) ?? channel;
         channel.ChannelName = info.Uploader;
         channel.Avatar = avatarBlobUrl?.Replace("avatar/", "");
         channel.Banner = bannerBlobUrl?.Replace("banner/", "");
-        await _channelRepository.AddOrUpdate(channel);
+        await _channelRepository.AddOrUpdateAsync(channel);
         _unitOfWork_Public.Commit();
     }
 }

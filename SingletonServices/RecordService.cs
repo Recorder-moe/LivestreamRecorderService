@@ -70,12 +70,12 @@ public class RecordService
                 switch (video.Source)
                 {
                     case "Youtube":
-                        await videoService.UpdateVideoStatus(video, VideoStatus.Pending);
+                        await videoService.UpdateVideoStatusAsync(video, VideoStatus.Pending);
                         _logger.LogWarning("{videoId} is failed. Set status to {status}", video.id, video.Status);
                         break;
                     default:
-                        await videoService.UpdateVideoStatus(video, VideoStatus.Error);
-                        await videoService.UpdateVideoNote(video, $"This recording FAILED! Please contact admin if you see this message.");
+                        await videoService.UpdateVideoStatusAsync(video, VideoStatus.Error);
+                        await videoService.UpdateVideoNoteAsync(video, $"This recording FAILED! Please contact admin if you see this message.");
                         _logger.LogWarning("{videoId} is failed.", video.id);
                         break;
                 }
@@ -143,8 +143,8 @@ public class RecordService
 
                 var filename = video.Filename;
 
-                await videoService.UpdateVideoFilename(video, filename);
-                await videoService.UpdateVideoStatus(video, VideoStatus.Recording);
+                await videoService.UpdateVideoFilenameAsync(video, filename);
+                await videoService.UpdateVideoStatusAsync(video, VideoStatus.Recording);
 
                 _logger.LogInformation("Job deployed: {videoId} ", video.id);
                 _logger.LogInformation("Start to record {videoId}", video.id);
@@ -152,8 +152,8 @@ public class RecordService
             catch (Exception e)
             {
                 _logger.LogError(e, "Job deployment FAILED: {videoId}", video.id);
-                await videoService.UpdateVideoStatus(video, VideoStatus.Error);
-                await videoService.UpdateVideoNote(video, "Exception happened when starting recording job. Please contact admin if you see this message");
+                await videoService.UpdateVideoStatusAsync(video, VideoStatus.Error);
+                await videoService.UpdateVideoNoteAsync(video, "Exception happened when starting recording job. Please contact admin if you see this message");
             }
         }
     }
@@ -220,8 +220,8 @@ public class RecordService
 
                 var filename = video.Filename;
 
-                await videoService.UpdateVideoFilename(video, filename);
-                await videoService.UpdateVideoStatus(video, VideoStatus.Downloading);
+                await videoService.UpdateVideoFilenameAsync(video, filename);
+                await videoService.UpdateVideoStatusAsync(video, VideoStatus.Downloading);
 
                 _logger.LogInformation("Job deployed: {videoId} ", video.id);
                 _logger.LogInformation("Start to download {videoId}", video.id);
@@ -229,8 +229,8 @@ public class RecordService
             catch (Exception e)
             {
                 _logger.LogError(e, "Job deployment FAILED: {videoId}", video.id);
-                await videoService.UpdateVideoStatus(video, VideoStatus.Error);
-                await videoService.UpdateVideoNote(video, "Exception happened when starting downloading job. Please contact admin if you see this message");
+                await videoService.UpdateVideoStatusAsync(video, VideoStatus.Error);
+                await videoService.UpdateVideoNoteAsync(video, "Exception happened when starting downloading job. Please contact admin if you see this message");
             }
         }
     }
@@ -284,7 +284,7 @@ public class RecordService
         return result;
     }
 
-    public async Task PcocessFinishedVideo(VideoService videoService, ChannelService channelService, Video video, CancellationToken stoppingToken = default)
+    public async Task PcocessFinishedVideoAsync(VideoService videoService, ChannelService channelService, Video video, CancellationToken stoppingToken = default)
     {
         using var __ = LogContext.PushProperty("videoId", video.id);
 
@@ -294,8 +294,8 @@ public class RecordService
         }
         catch (Exception)
         {
-            await videoService.UpdateVideoStatus(video, VideoStatus.Error);
-            await videoService.UpdateVideoNote(video, $"This recording is FAILED! Please contact admin if you see this message.");
+            await videoService.UpdateVideoStatusAsync(video, VideoStatus.Error);
+            await videoService.UpdateVideoNoteAsync(video, $"This recording is FAILED! Please contact admin if you see this message.");
             _logger.LogError("Recording FAILED: {videoId}", video.id);
             return;
         }
@@ -308,7 +308,7 @@ public class RecordService
         _ = videoService.TransferVideoFromSharedVolumeToStorageAsync(video, stoppingToken).ConfigureAwait(false);
     }
 
-    public async Task ProcessUploadedVideo(VideoService videoService, ChannelService channelService, Video video, CancellationToken stoppingToken = default)
+    public async Task ProcessUploadedVideoAsync(VideoService videoService, ChannelService channelService, Video video, CancellationToken stoppingToken = default)
     {
         using var _ = LogContext.PushProperty("videoId", video.id);
 
@@ -318,15 +318,15 @@ public class RecordService
         }
         catch (Exception)
         {
-            await videoService.UpdateVideoStatus(video, VideoStatus.Error);
-            await videoService.UpdateVideoNote(video, $"This recording is FAILED! Please contact admin if you see this message.");
+            await videoService.UpdateVideoStatusAsync(video, VideoStatus.Error);
+            await videoService.UpdateVideoNoteAsync(video, $"This recording is FAILED! Please contact admin if you see this message.");
             _logger.LogError("Uploading FAILED: {videoId}", video.id);
             return;
         }
 
         await _discordService.SendArchivedMessage(video, await channelService.GetByChannelIdAndSource(video.ChannelId, video.Source));
         _logger.LogInformation("Video {videoId} is successfully uploaded to Storage.", video.id);
-        await videoService.UpdateVideoStatus(video, VideoStatus.Archived);
+        await videoService.UpdateVideoStatusAsync(video, VideoStatus.Archived);
     }
 
 }

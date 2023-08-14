@@ -4,6 +4,6 @@ namespace LivestreamRecorder.DB.Interfaces;
 
 public interface IChannelRepository : IRepository<Channel>
 {
-    Task<Channel?> GetByChannelIdAndSource(string channelId, string source);
+    Task<Channel?> GetChannelByIdAndSourceAsync(string channelId, string source);
     IQueryable<Channel> GetChannelsBySource(string source);
 }

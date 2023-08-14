@@ -20,9 +20,9 @@ public class VideoRepository :
     {
     }
 
-    public Task<Video?> GetByVideoIdAndChannelId(string videoId, string channelId)
+    public Task<Video?> GetVideoByIdAndChannelIdAsync(string videoId, string channelId)
 #if COUCHDB
-        => base.GetById($"{channelId}:{videoId}");
+        => base.GetByIdAsync($"{channelId}:{videoId}");
 #elif COSMOSDB
         => base.GetByPartitionKey(channelId)
                .Where(p => p.id == videoId)

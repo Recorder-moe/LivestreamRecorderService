@@ -25,14 +25,14 @@ public class ChannelService
 
     public async Task UpdateChannelLatestVideoAsync(Video video)
     {
-        var channel = await _channelRepository.GetByChannelIdAndSource(video.ChannelId, video.Source);
+        var channel = await _channelRepository.GetChannelByIdAndSourceAsync(video.ChannelId, video.Source);
         if (null == channel) return;
 
         channel!.LatestVideoId = video.id;
-        await _channelRepository.AddOrUpdate(channel);
+        await _channelRepository.AddOrUpdateAsync(channel);
         _unitOfWork_Public.Commit();
     }
 
     public Task<Channel?> GetByChannelIdAndSource(string channelId, string source)
-        => _channelRepository.GetByChannelIdAndSource(channelId, source);
+        => _channelRepository.GetChannelByIdAndSourceAsync(channelId, source);
 }

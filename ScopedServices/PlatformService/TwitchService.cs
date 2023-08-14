@@ -66,7 +66,7 @@ public class TwitchService : PlatformService, IPlatformService
         {
             using var ___ = LogContext.PushProperty("videoId", stream.Id);
 
-            Video? video = await _videoRepository.GetByVideoIdAndChannelId(stream.Id, channel.id);
+            Video? video = await _videoRepository.GetVideoByIdAndChannelIdAsync(stream.Id, channel.id);
 
             if (null != video)
             {
@@ -131,7 +131,7 @@ public class TwitchService : PlatformService, IPlatformService
                 }
             }
 
-            await _videoRepository.AddOrUpdate(video);
+            await _videoRepository.AddOrUpdateAsync(video);
             _unitOfWork_Public.Commit();
         }
         else
@@ -142,7 +142,7 @@ public class TwitchService : PlatformService, IPlatformService
 
     public override async Task UpdateVideoDataAsync(Video video, CancellationToken cancellation = default)
     {
-        await _videoRepository.ReloadEntityFromDB(video);
+        await _videoRepository.ReloadEntityFromDBAsync(video);
         if (null == video.Timestamps.ActualStartTime)
         {
             video.Timestamps.ActualStartTime = video.Timestamps.PublishedAt;
@@ -155,7 +155,7 @@ public class TwitchService : PlatformService, IPlatformService
 
         if (!string.IsNullOrEmpty(video.Filename))
         {
-            if (!await _storageService.IsVideoFileExists(video.Filename, cancellation))
+            if (!await _storageService.IsVideoFileExistsAsync(video.Filename, cancellation))
             {
                 if (video.Status >= VideoStatus.Archived && video.Status < VideoStatus.Expired)
                 {
@@ -172,7 +172,7 @@ public class TwitchService : PlatformService, IPlatformService
             }
         }
 
-        await _videoRepository.AddOrUpdate(video);
+        await _videoRepository.AddOrUpdateAsync(video);
         _unitOfWork_Public.Commit();
     }
 

@@ -20,9 +20,9 @@ public class ChannelRepository :
     {
     }
 
-    public Task<Channel?> GetByChannelIdAndSource(string channelId, string source)
+    public Task<Channel?> GetChannelByIdAndSourceAsync(string channelId, string source)
 #if COUCHDB
-        => base.GetById($"{source}:{channelId}");
+        => base.GetByIdAsync($"{source}:{channelId}");
 #elif COSMOSDB
         => base.GetByPartitionKey(source)
                .Where(p => p.id == channelId)

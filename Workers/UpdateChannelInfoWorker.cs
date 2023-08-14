@@ -35,15 +35,15 @@ public class UpdateChannelInfoWorker : BackgroundService
             FC2Service fC2Service = scope.ServiceProvider.GetRequiredService<FC2Service>();
             #endregion
 
-            await UpdatePlatform(youtubeSerivce, stoppingToken);
-            await UpdatePlatform(fC2Service, stoppingToken);
+            await UpdatePlatformAsync(youtubeSerivce, stoppingToken);
+            await UpdatePlatformAsync(fC2Service, stoppingToken);
 
             _logger.LogTrace("{Worker} ends. Sleep 1 day.", nameof(UpdateChannelInfoWorker));
             await Task.Delay(TimeSpan.FromDays(1), stoppingToken);
         }
     }
 
-    private async Task UpdatePlatform(IPlatformService platformService, CancellationToken stoppingToken = default)
+    private async Task UpdatePlatformAsync(IPlatformService platformService, CancellationToken stoppingToken = default)
     {
         var channels = platformService.GetMonitoringChannels();
         _logger.LogDebug("Get {channelCount} channels for {platform}", channels.Count, platformService.PlatformName);

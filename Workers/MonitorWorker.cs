@@ -46,14 +46,14 @@ public class MonitorWorker : BackgroundService
                 var videoService = scope.ServiceProvider.GetRequiredService<VideoService>();
                 #endregion
 
-                await MonitorPlatform(youtubeSerivce, videoService, stoppingToken);
-                await MonitorPlatform(twitcastingService, videoService, stoppingToken);
-                await MonitorPlatform(fc2Service, videoService, stoppingToken);
+                await MonitorPlatformAsync(youtubeSerivce, videoService, stoppingToken);
+                await MonitorPlatformAsync(twitcastingService, videoService, stoppingToken);
+                await MonitorPlatformAsync(fc2Service, videoService, stoppingToken);
 
                 if (_twitchOption.Enabled)
                 {
                     var twitchService = scope.ServiceProvider.GetRequiredService<TwitchService>();
-                    await MonitorPlatform(twitchService, videoService, stoppingToken);
+                    await MonitorPlatformAsync(twitchService, videoService, stoppingToken);
                 }
             }
 
@@ -62,7 +62,7 @@ public class MonitorWorker : BackgroundService
         }
     }
 
-    private async Task MonitorPlatform(IPlatformService PlatformService, VideoService videoService, CancellationToken cancellation = default)
+    private async Task MonitorPlatformAsync(IPlatformService PlatformService, VideoService videoService, CancellationToken cancellation = default)
     {
         if (!PlatformService.StepInterval(_interval)) return;
 

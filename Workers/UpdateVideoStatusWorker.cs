@@ -78,7 +78,7 @@ public class UpdateVideoStatusWorker : BackgroundService
                 if (videos.Count > 0)
                 {
                     if (i >= videos.Count) i = 0;
-                    await UpdateVideo(i, videos, youtubeService, twitcastingService, fc2Service, twitchService, stoppingToken);
+                    await UpdateVideoAsync(i, videos, youtubeService, twitcastingService, fc2Service, twitchService, stoppingToken);
                 }
 
                 // Expire videos once a day
@@ -94,7 +94,7 @@ public class UpdateVideoStatusWorker : BackgroundService
         }
     }
 
-    private async Task UpdateVideo(int i, List<Video> videos, IPlatformService youtubeService, IPlatformService twitcastingService, IPlatformService fc2Service, IPlatformService? twitchService, CancellationToken stoppingToken)
+    private async Task UpdateVideoAsync(int i, List<Video> videos, IPlatformService youtubeService, IPlatformService twitcastingService, IPlatformService fc2Service, IPlatformService? twitchService, CancellationToken stoppingToken)
     {
         _logger.LogInformation("Process: {index}/{amount}", i, videos.Count);
 
@@ -150,17 +150,17 @@ public class UpdateVideoStatusWorker : BackgroundService
             }
 
             if (!string.IsNullOrEmpty(video.Filename)
-                && await _storageService.DeleteVideoBlob(video.Filename, cancellation))
+                && await _storageService.DeleteVideoBlobAsync(video.Filename, cancellation))
             {
                 _logger.LogInformation("Delete blob {path}", video.Filename);
-                await videoService.UpdateVideoStatus(video, VideoStatus.Expired);
-                await videoService.UpdateVideoNote(video, $"Video expired after {retentionDays} days.");
+                await videoService.UpdateVideoStatusAsync(video, VideoStatus.Expired);
+                await videoService.UpdateVideoNoteAsync(video, $"Video expired after {retentionDays} days.");
             }
             else
             {
                 _logger.LogError("FAILED to Delete blob {path}", video.Filename);
-                await videoService.UpdateVideoStatus(video, VideoStatus.Error);
-                await videoService.UpdateVideoNote(video, $"Failed to delete blob after {retentionDays} days. Please contact admin if you see this message.");
+                await videoService.UpdateVideoStatusAsync(video, VideoStatus.Error);
+                await videoService.UpdateVideoNoteAsync(video, $"Failed to delete blob after {retentionDays} days. Please contact admin if you see this message.");
             }
         }
     }

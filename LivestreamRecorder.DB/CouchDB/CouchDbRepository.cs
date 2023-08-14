@@ -36,27 +36,27 @@ public abstract class CouchDbRepository<T> : IRepository<T> where T : Entity
     public virtual IQueryable<T> Where(Expression<Func<T, bool>> predicate)
         => Database.Where(predicate);
 
-    public virtual Task<T?> GetById(string id)
-        => Database.FindAsync(id);
+    public virtual Task<T?> GetByIdAsync(string Id)
+        => Database.FindAsync(Id);
 
     public virtual IQueryable<T> GetByPartitionKey(string partitionKey)
         => Database.Where(p => p.Id.IsMatch(@$"^{partitionKey}:.*$"))
             ?? throw new EntityNotFoundException($"Entity with partition key: {partitionKey} was not found.");
 
-    public virtual bool Exists(string id)
-        => Database.Any(p => p.Id == id);
+    public virtual bool Exists(string Id)
+        => Database.Any(p => p.Id == Id);
 
-    public virtual Task<T> AddOrUpdate(T entity)
+    public virtual Task<T> AddOrUpdateAsync(T entity)
         => Database.AddOrUpdateAsync(entity);
 
-    public virtual async Task Delete(T entity)
+    public virtual async Task DeleteAsync(T entity)
     {
-        T? entityToDelete = await GetById(entity.Id);
+        T? entityToDelete = await GetByIdAsync(entity.Id);
         if (null == entityToDelete) throw new EntityNotFoundException($"Entity with id: {entity.Id} was not found.");
 
         await Database.RemoveAsync(entityToDelete);
     }
 
-    public Task<T?> ReloadEntityFromDB(T entity) => GetById(entity.Id);
+    public Task<T?> ReloadEntityFromDBAsync(T entity) => GetByIdAsync(entity.Id);
 }
 #endif

@@ -35,7 +35,7 @@ public abstract class CosmosDbRepository<T> : IRepository<T> where T : Entity
     public virtual IQueryable<T> Where(Expression<Func<T, bool>> predicate)
         => All().Where(predicate);
 
-    public virtual Task<T?> GetById(string id)
+    public virtual Task<T?> GetByIdAsync(string id)
         => All().SingleOrDefaultAsync(p => p.id == id);
 
     public virtual IQueryable<T> GetByPartitionKey(string partitionKey)
@@ -47,34 +47,34 @@ public abstract class CosmosDbRepository<T> : IRepository<T> where T : Entity
         => All().Where(p => p.id == id).Count() > 0;
 #pragma warning restore CA1827 // 不要在可使用 Any() 時使用 Count() 或 LongCount()
 
-    public virtual Task<T> Add(T entity)
+    public virtual Task<T> AddAsync(T entity)
         => null == entity
             ? throw new ArgumentNullException(nameof(entity))
             : Task.FromResult(ObjectSet.Add(entity).Entity);
 
-    public virtual async Task<T> Update(T entity)
+    public virtual async Task<T> UpdateAsync(T entity)
     {
-        var entityToUpdate = await GetById(entity.id);
+        var entityToUpdate = await GetByIdAsync(entity.id);
         if (null == entityToUpdate) throw new EntityNotFoundException($"Entity with id: {entity.id} was not found.");
 
         entityToUpdate.InjectFrom(entity);
         return ObjectSet.Update(entityToUpdate!).Entity;
     }
 
-    public virtual Task<T> AddOrUpdate(T entity)
+    public virtual Task<T> AddOrUpdateAsync(T entity)
         => Exists(entity.id)
-            ? Update(entity)
-            : Add(entity);
+            ? UpdateAsync(entity)
+            : AddAsync(entity);
 
-    public virtual async Task Delete(T entity)
+    public virtual async Task DeleteAsync(T entity)
     {
-        var entityToDelete = await GetById(entity.id);
+        var entityToDelete = await GetByIdAsync(entity.id);
         if (null == entityToDelete) throw new EntityNotFoundException($"Entity with id: {entity.id} was not found.");
 
         ObjectSet.Remove(entityToDelete!);
     }
 
-    public Task<T?> ReloadEntityFromDB(T entity)
+    public Task<T?> ReloadEntityFromDBAsync(T entity)
     {
         try
         {

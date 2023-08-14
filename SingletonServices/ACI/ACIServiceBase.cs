@@ -51,7 +51,7 @@ public abstract class ACIServiceBase : IJobServiceBase
                                 cancellation: cancellation);
     }
 
-    protected async Task InitJobAsyncWithChannelName(string videoId,
+    protected async Task InitJobWithChannelNameAsync(string videoId,
                                                      Video video,
                                                      bool useCookiesFile = false,
                                                      CancellationToken cancellation = default)
@@ -81,7 +81,7 @@ public abstract class ACIServiceBase : IJobServiceBase
             case "Failed":
             case "Stopped":
                 // 啟動舊的Channel Instance
-                await StartOldJob(job: job,
+                await StartOldJobAsync(job: job,
                                   video: video,
                                   useCookiesFile: useCookiesFile,
                                   cancellation: cancellation);
@@ -141,11 +141,11 @@ public abstract class ACIServiceBase : IJobServiceBase
     public string GetInstanceName(string videoId)
         => (Name + NameHelper.GetInstanceName(videoId)).ToLower();
 
-    private async Task StartOldJob(GenericResource job,
-                                   Video video,
-                                   int retry = 0,
-                                   bool useCookiesFile = false,
-                                   CancellationToken cancellation = default)
+    private async Task StartOldJobAsync(GenericResource job,
+                                        Video video,
+                                        int retry = 0,
+                                        bool useCookiesFile = false,
+                                        CancellationToken cancellation = default)
     {
         if (retry > 3)
         {
@@ -166,11 +166,11 @@ public abstract class ACIServiceBase : IJobServiceBase
         catch (RequestFailedException e)
         {
             _logger.LogWarning(e, "Start ACI {ACIName} failed, retry {retry}", job.Id, ++retry);
-            await StartOldJob(job: job,
-                              video: video,
-                              retry: retry,
-                              useCookiesFile: useCookiesFile,
-                              cancellation: cancellation);
+            await StartOldJobAsync(job: job,
+                                   video: video,
+                                   retry: retry,
+                                   useCookiesFile: useCookiesFile,
+                                   cancellation: cancellation);
         }
     }
 
