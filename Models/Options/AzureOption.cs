@@ -53,17 +53,6 @@ public class CosmosDBOptions
 public class ContextInfo
 {
     public required string DatabaseName { get; set; }
-    public required List<CollectionInfo> CollectionNames { get; set; }
-
-    public void Deconstruct(out string databaseName, out List<CollectionInfo> collectionNames)
-    {
-        databaseName = DatabaseName;
-        collectionNames = CollectionNames;
-    }
+    public required string ConnectionStrings { get; set; }
 }
 
-public class CollectionInfo
-{
-    public required string Name { get; set; }
-    public string? PartitionKey { get; set; }
-}

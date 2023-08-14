@@ -24,8 +24,8 @@ namespace LivestreamRecorderService.DependencyInjection
                 var azureOptions = services.BuildServiceProvider().GetRequiredService<IOptions<AzureOption>>().Value;
 
                 if (null == azureOptions.CosmosDB
-                    || string.IsNullOrEmpty(configuration.GetConnectionString("Public"))
-                    || string.IsNullOrEmpty(configuration.GetConnectionString("Private")))
+                    || null == azureOptions.CosmosDB.Public.ConnectionStrings
+                    || null == azureOptions.CosmosDB.Private.ConnectionStrings)
                     throw new ConfigurationErrorsException();
 
                 // Add CosmosDB
@@ -35,7 +35,7 @@ namespace LivestreamRecorderService.DependencyInjection
 #if !RELEASE
                         .EnableSensitiveDataLogging()
 #endif
-                        .UseCosmos(connectionString: configuration.GetConnectionString("Public")!,
+                        .UseCosmos(connectionString: azureOptions.CosmosDB.Public.ConnectionStrings,
                                    databaseName: azureOptions.CosmosDB.Public.DatabaseName,
                                    cosmosOptionsAction: option => option.GatewayModeMaxConnectionLimit(380));
                 });
@@ -45,7 +45,7 @@ namespace LivestreamRecorderService.DependencyInjection
 #if !RELEASE
                         .EnableSensitiveDataLogging()
 #endif
-                        .UseCosmos(connectionString: configuration.GetConnectionString("Private")!,
+                        .UseCosmos(connectionString: azureOptions.CosmosDB.Private.ConnectionStrings,
                                    databaseName: azureOptions.CosmosDB.Private.DatabaseName,
                                    cosmosOptionsAction: option => option.GatewayModeMaxConnectionLimit(380));
                 });
@@ -59,8 +59,8 @@ namespace LivestreamRecorderService.DependencyInjection
             }
             catch (ConfigurationErrorsException)
             {
-                Log.Fatal("Missing CosmosDB Settings. Please set CosmosDB and ConnectionStrings:Public ConnectionStrings:Private in appsettings.json.");
-                throw new ConfigurationErrorsException("Missing CosmosDB Settings. Please set CosmosDB and ConnectionStrings:Public ConnectionStrings:Private in appsettings.json.");
+                Log.Fatal("Missing CosmosDB Settings. Please setup CosmosDB in appsettings.json.");
+                throw new ConfigurationErrorsException("Missing CosmosDB Settings. Please setup CosmosDB in appsettings.json.");
             }
 #endif
         }
