@@ -36,9 +36,22 @@ namespace LivestreamRecorderService.DependencyInjection
                         .UseEndpoint(couchDBOptions.Endpoint)
                         .UseCookieAuthentication(username: couchDBOptions.Username, password: couchDBOptions.Password)
 #if !RELEASE
-                        .ConfigureFlurlClient(setting
-                            => setting.BeforeCall = call
-                                => Log.Debug("Sending request to couch: {request} {body}", call, call.RequestBody))
+                        .ConfigureFlurlClient(setting =>
+                        {
+                            setting.BeforeCall = call
+                                => Log.Debug("Sending request to couch: {request} {body}", call, call.RequestBody);
+                            setting.AfterCall = call =>
+                            {
+                                if (call.Succeeded)
+                                {
+                                    Log.Debug("Received response from couch: {response} {body}", call, call.Response.ResponseMessage.Content.ReadAsStringAsync().Result);
+                                }
+                                else
+                                {
+                                    Log.Error("Response Failed: {response} {body}", call, call.Response.ResponseMessage.Content.ReadAsStringAsync().Result);
+                                }
+                            };
+                        })
 #endif
                         .SetPropertyCase(PropertyCaseType.None);
                 });

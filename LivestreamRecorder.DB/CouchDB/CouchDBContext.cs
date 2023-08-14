@@ -1,5 +1,6 @@
 ﻿#if COUCHDB
 using CouchDB.Driver;
+using CouchDB.Driver.Indexes;
 using CouchDB.Driver.Options;
 using LivestreamRecorder.DB.Models;
 
@@ -13,6 +14,53 @@ public class CouchDBContext : CouchContext
     {
     }
 
+    internal Dictionary<string, Action<IIndexBuilder<Video>>> _videoIndexs = new()
+    {
+        #region Used by frontend
+        {
+            "TimestampsPublishedAt, _id",
+            (builder) => builder.IndexByDescending(p => p.Timestamps.PublishedAt)
+                                .ThenByDescending(p => p.Id)
+        },
+        {
+            "ArchivedTime, Status",
+            (builder) => builder.IndexByDescending(p => p.ArchivedTime)
+                                .ThenByDescending(p => p.Status)
+        },
+        {
+            "ArchivedTime, Status, SourceStatus",
+            (builder) => builder.IndexByDescending(p => p.ArchivedTime)
+                                .ThenByDescending(p => p.Status)
+                                .ThenByDescending(p => p.SourceStatus)
+        },
+        #endregion
+        #region Used by service
+        {
+            "Status",
+            (builder) => builder.IndexByDescending(p => p.Status)
+        },
+        {
+            "Source",
+            (builder) => builder.IndexByDescending(p => p.Source)
+        }
+        #endregion
+    };
+
+    internal Dictionary<string, Action<IIndexBuilder<Channel>>> _channelIndexs = new()
+    {
+        #region Used by service
+        {
+            "Status",
+            (builder) => builder.IndexBy(p => p.Id)
+                                .ThenBy(p => p.Monitoring)
+        },
+        {
+            "Source",
+            (builder) => builder.IndexByDescending(p => p.Source)
+        }
+        #endregion
+    };
+
     protected override void OnDatabaseCreating(CouchDatabaseBuilder databaseBuilder)
     {
         #region Videos
@@ -21,6 +69,12 @@ public class CouchDBContext : CouchContext
 
         databaseBuilder.Document<Video>()
             .IsPartitioned();
+
+        foreach (var index in _videoIndexs)
+        {
+            databaseBuilder.Document<Video>()
+                .HasIndex(index.Key, index.Value, new() { Partitioned = false, });
+        }
         #endregion
 
         #region Channels
@@ -29,6 +83,12 @@ public class CouchDBContext : CouchContext
 
         databaseBuilder.Document<Channel>()
             .IsPartitioned();
+
+        foreach (var index in _channelIndexs)
+        {
+            databaseBuilder.Document<Channel>()
+                .HasIndex(index.Key, index.Value, new() { Partitioned = false, });
+        }
         #endregion
 
         #region Users
