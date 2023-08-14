@@ -29,7 +29,7 @@ public class YtarchiveService : KubernetesServiceBase, IYtarchiveService
                                                      bool useCookiesFile,
                                                      CancellationToken cancellation)
     {
-        if (!url.StartsWith("http")) url = $"https://youtu.be/{url}";
+        if (!url.StartsWith("http")) url = $"https://youtu.be/{url[1..]}";
 
         try
         {
@@ -51,15 +51,11 @@ public class YtarchiveService : KubernetesServiceBase, IYtarchiveService
                 {
                     "/usr/bin/dumb-init", "--",
                     "sh", "-c",
-                    // It is possible for Youtube to use "-" at the beginning of an id, which can cause errors when using the id as a file name.
-                    // Therefore, we add "_" before the file name to avoid such issues.
                     $"/ytarchive --add-metadata --merge --retry-frags 30 --thumbnail -o '{filename.Replace(".mp4", "")}' -c /sharedvolume/cookies/{video.ChannelId}.txt '{url}' best && mv *.mp4 /sharedvolume/"
                 }
                 : new string[] {
                     "/usr/bin/dumb-init", "--",
                     "sh", "-c",
-                    // It is possible for Youtube to use "-" at the beginning of an id, which can cause errors when using the id as a file name.
-                    // Therefore, we add "_" before the file name to avoid such issues.
                     $"/ytarchive --add-metadata --merge --retry-frags 30 --thumbnail -o '{filename.Replace(".mp4", "")}' '{url}' best && mv *.mp4 /sharedvolume/"
                 };
 

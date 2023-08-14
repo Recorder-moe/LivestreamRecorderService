@@ -185,7 +185,7 @@ public class RecordService
                 {
                     case "Youtube":
                         await _ytdlpService.InitJobAsync(
-                            url: $"https://youtu.be/{video.id}",
+                            url: $"https://youtu.be/{video.id[1..]}",
                             video: video,
                             useCookiesFile: channel?.UseCookiesFile == true,
                             cancellation: stoppingToken);

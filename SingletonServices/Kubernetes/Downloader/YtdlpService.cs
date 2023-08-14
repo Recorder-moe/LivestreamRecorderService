@@ -65,13 +65,6 @@ public class YtdlpService : KubernetesServiceBase, IYtdlpService
                 command[4] = command[4].Replace("--ignore-config --retries 30", "--ignore-config --retries 30 --downloader ffmpeg");
             }
 
-            // It is possible for Youtube to use "-" at the beginning of an id, which can cause errors when using the id as a file name.
-            // Therefore, we add "_" before the file name to avoid such issues.
-            if (url.Contains("youtu"))
-            {
-                command[4] = command[4].Replace("-o '%(id)s.%(ext)s'", "-o '_%(id)s.%(ext)s'");
-            }
-
             return CreateInstanceAsync(
                     parameters: new
                     {

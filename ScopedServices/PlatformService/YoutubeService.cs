@@ -93,7 +93,9 @@ public class YoutubeService : PlatformService, IPlatformService
     /// <returns></returns>
     private async Task AddOrUpdateVideoAsync(Channel channel, FeedItem item, CancellationToken cancellation = default)
     {
-        var videoId = item.Id.Split(':').Last();
+        // Youtube video id may start with '_' which is not allowed in CouchDB.
+        // So we add a prefix 'Y' to it.
+        var videoId = "Y" + item.Id.Split(':').Last();
         using var _ = LogContext.PushProperty("videoId", videoId);
         var video = await _videoRepository.GetByVideoIdAndChannelId(videoId, channel.id);
 
@@ -137,7 +139,9 @@ public class YoutubeService : PlatformService, IPlatformService
     public override async Task UpdateVideoDataAsync(Video video, CancellationToken cancellation = default)
     {
         using var __ = LogContext.PushProperty("videoId", video.id);
-        YtdlpVideoData? videoData = await GetVideoInfoByYtdlpAsync($"https://youtu.be/{video.id}", cancellation);
+        // Youtube video id may start with '_' which is not allowed in CouchDB.
+        // So we add a prefix 'Y' to it.
+        YtdlpVideoData? videoData = await GetVideoInfoByYtdlpAsync($"https://youtu.be/{video.id[1..]}", cancellation);
 
         if (null == videoData)
         {
