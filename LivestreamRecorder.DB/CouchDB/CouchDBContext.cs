@@ -14,7 +14,7 @@ public class CouchDBContext : CouchContext
     {
     }
 
-    internal Dictionary<string, Action<IIndexBuilder<Video>>> _videoIndexs = new()
+    internal Dictionary<string, Action<IIndexBuilder<Video>>> _videoIndexes = new()
     {
         #region Used by frontend
         {
@@ -46,7 +46,7 @@ public class CouchDBContext : CouchContext
         #endregion
     };
 
-    internal Dictionary<string, Action<IIndexBuilder<Channel>>> _channelIndexs = new()
+    internal Dictionary<string, Action<IIndexBuilder<Channel>>> _channelIndexes = new()
     {
         #region Used by service
         {
@@ -70,7 +70,7 @@ public class CouchDBContext : CouchContext
         databaseBuilder.Document<Video>()
             .IsPartitioned();
 
-        foreach (var index in _videoIndexs)
+        foreach (var index in _videoIndexes)
         {
             databaseBuilder.Document<Video>()
                 .HasIndex(index.Key, index.Value, new() { Partitioned = false, });
@@ -84,7 +84,7 @@ public class CouchDBContext : CouchContext
         databaseBuilder.Document<Channel>()
             .IsPartitioned();
 
-        foreach (var index in _channelIndexs)
+        foreach (var index in _channelIndexes)
         {
             databaseBuilder.Document<Channel>()
                 .HasIndex(index.Key, index.Value, new() { Partitioned = false, });

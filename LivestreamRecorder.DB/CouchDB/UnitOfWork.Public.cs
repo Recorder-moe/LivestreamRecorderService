@@ -11,10 +11,10 @@ namespace LivestreamRecorder.DB.CouchDB
             : base(context)
         {
             _context = context;
-            PrepareIndexsAsync().ConfigureAwait(false).GetAwaiter();
+            PrepareIndexesAsync().ConfigureAwait(false).GetAwaiter();
         }
 
-        protected async Task PrepareIndexsAsync()
+        protected async Task PrepareIndexesAsync()
         {
             var tasks = new List<Task>();
             await prepareVideoIndex(tasks);
@@ -24,10 +24,10 @@ namespace LivestreamRecorder.DB.CouchDB
             async Task prepareVideoIndex(List<Task> tasks)
             {
                 var database = _context.Client.GetDatabase<Video>();
-                var existIndexs = await database.GetIndexesAsync();
-                foreach (var index in _context._videoIndexs)
+                var existIndexes = await database.GetIndexesAsync();
+                foreach (var index in _context._videoIndexes)
                 {
-                    if (existIndexs.All(p => p.Name != index.Key))
+                    if (existIndexes.All(p => p.Name != index.Key))
                     {
                         tasks.Add(database.CreateIndexAsync(index.Key, index.Value, new() { Partitioned = false, }));
                     }
@@ -37,14 +37,13 @@ namespace LivestreamRecorder.DB.CouchDB
             async Task prepareChannelIndex(List<Task> tasks)
             {
                 var database = _context.Client.GetDatabase<Channel>();
-                var existIndexs = await database.GetIndexesAsync();
-                foreach (var index in _context._channelIndexs)
+                var existIndexes = await database.GetIndexesAsync();
+                foreach (var index in _context._channelIndexes)
                 {
-                    if (existIndexs.All(p => p.Name != index.Key))
+                    if (existIndexes.All(p => p.Name != index.Key))
                     {
                         tasks.Add(database.CreateIndexAsync(index.Key, index.Value, new() { Partitioned = false, }));
                     }
-
                 }
             }
         }

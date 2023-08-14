@@ -32,7 +32,9 @@ namespace LivestreamRecorderService.DependencyInjection
                 services.AddDbContext<PublicContext>((options) =>
                 {
                     options
-                        //.EnableSensitiveDataLogging()
+#if !RELEASE
+                        .EnableSensitiveDataLogging()
+#endif
                         .UseCosmos(connectionString: configuration.GetConnectionString("Public")!,
                                    databaseName: azureOptions.CosmosDB.Public.DatabaseName,
                                    cosmosOptionsAction: option => option.GatewayModeMaxConnectionLimit(380));
@@ -40,7 +42,9 @@ namespace LivestreamRecorderService.DependencyInjection
                 services.AddDbContext<PrivateContext>((options) =>
                 {
                     options
-                        //.EnableSensitiveDataLogging()
+#if !RELEASE
+                        .EnableSensitiveDataLogging()
+#endif
                         .UseCosmos(connectionString: configuration.GetConnectionString("Private")!,
                                    databaseName: azureOptions.CosmosDB.Private.DatabaseName,
                                    cosmosOptionsAction: option => option.GatewayModeMaxConnectionLimit(380));
