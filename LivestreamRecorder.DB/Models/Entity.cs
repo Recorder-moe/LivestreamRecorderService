@@ -17,7 +17,9 @@ public abstract class Entity :
     /// <summary>
     /// Entity identifier
     /// </summary>
+#pragma warning disable CA1507 // 使用 nameof 表示符號名稱
     [JsonProperty("id", NullValueHandling = NullValueHandling.Ignore)]
+#pragma warning restore CA1507 // 使用 nameof 表示符號名稱
     public virtual string id
     {
         get
@@ -38,7 +40,7 @@ public abstract class Entity :
 
 #if COUCHDB
     [JsonProperty("_id", NullValueHandling = NullValueHandling.Ignore)]
-    public virtual new string Id
+    public override string Id
     {
         get => $"{id}:{id}";
         set => id = value?.Split(':').Last() ?? "";
