@@ -33,7 +33,14 @@ public class S3Service : IStorageService
         }
         catch (MinioException e)
         {
-            _logger.LogError(e, "Failed to check video file: {filename}", filename);
+            if (e is ObjectNotFoundException)
+            {
+                _logger.LogWarning(e, "Video file not found: {filename}", filename);
+            }
+            else
+            {
+                _logger.LogError(e, "Failed to check video file: {filename}", filename);
+            }
             return false;
         }
     }
@@ -49,7 +56,14 @@ public class S3Service : IStorageService
         }
         catch (MinioException e)
         {
-            _logger.LogError(e, "Failed to delete video file: {filename}", filename);
+            if (e is ObjectNotFoundException)
+            {
+                _logger.LogWarning(e, "Video file not found: {filename}", filename);
+            }
+            else
+            {
+                _logger.LogError(e, "Failed to delete video file: {filename}", filename);
+            }
             return false;
         }
     }
