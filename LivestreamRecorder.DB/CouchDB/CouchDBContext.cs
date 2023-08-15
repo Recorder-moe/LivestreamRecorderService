@@ -18,18 +18,29 @@ public class CouchDBContext : CouchContext
     {
         #region Used by frontend
         {
+            "_id",
+            (builder) => builder.IndexBy(p => p.Id)
+        },
+        {
             "TimestampsPublishedAt, _id",
             (builder) => builder.IndexByDescending(p => p.Timestamps.PublishedAt)
                                 .ThenByDescending(p => p.Id)
         },
         {
-            "ArchivedTime, Status",
+            "TimestampsPublishedAt, ChannelId",
+            (builder) => builder.IndexByDescending(p => p.Timestamps.PublishedAt)
+                                .ThenByDescending(p => p.ChannelId)
+        },
+        {
+            "ArchivedTime, _id, Status",
             (builder) => builder.IndexByDescending(p => p.ArchivedTime)
+                                .ThenByDescending(p => p.Id)
                                 .ThenByDescending(p => p.Status)
         },
         {
-            "ArchivedTime, Status, SourceStatus",
+            "ArchivedTime, _id, Status, SourceStatus",
             (builder) => builder.IndexByDescending(p => p.ArchivedTime)
+                                .ThenByDescending(p => p.Id)
                                 .ThenByDescending(p => p.Status)
                                 .ThenByDescending(p => p.SourceStatus)
         },
@@ -50,7 +61,11 @@ public class CouchDBContext : CouchContext
     {
         #region Used by service
         {
-            "Status",
+            "_id",
+            (builder) => builder.IndexBy(p => p.Id)
+        },
+        {
+            "_id, Monitoring",
             (builder) => builder.IndexBy(p => p.Id)
                                 .ThenBy(p => p.Monitoring)
         },
