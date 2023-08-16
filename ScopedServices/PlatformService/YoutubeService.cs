@@ -269,9 +269,15 @@ public class YoutubeService : PlatformService, IPlatformService
                 {
                     switch (video.Status)
                     {
-                        // Old unarchived video.
-                        // Will fall in here when adding a new channel.
                         case VideoStatus.Unknown:
+                            // New uploaded video.
+                            if (DateTime.UtcNow - video.Timestamps.PublishedAt < TimeSpan.FromHours(1))
+                            {
+                                goto case VideoStatus.Scheduled;
+                            }
+
+                            // Old unarchived video.
+                            // Will fall in here when adding a new channel.
                             video.Status = VideoStatus.Expired;
                             video.Note = $"Video expired because it is an old video.";
                             _logger.LogInformation("Change video {videoId} status to {videoStatus}", video.id, Enum.GetName(typeof(VideoStatus), video.Status));
