@@ -146,7 +146,7 @@ public partial class DiscordService
 
         embedBuilder.AddField("Source Url", video.Source switch
         {
-            "Youtube" => $"https://www.youtube.com/watch?v={video.id}",
+            "Youtube" => $"https://www.youtube.com/watch?v={video.id[1..]}",
             "Twitcasting" => $"https://twitcasting.tv/{video.ChannelId}/movie/{video.id}",
             "Twitch" => $"https://www.twitch.tv/{video.ChannelId}",
             "FC2" => $"https://live.fc2.com/{video.ChannelId}/",
@@ -187,7 +187,7 @@ public partial class DiscordService
                                     style: ButtonStyle.Link,
                                     url: video.Source switch
                                     {
-                                        "Youtube" => $"https://www.youtube.com/watch?v={video.id}",
+                                        "Youtube" => $"https://www.youtube.com/watch?v={video.id[1..]}",
                                         "Twitcasting" => $"https://twitcasting.tv/{video.ChannelId}/movie/{video.id}",
                                         "Twitch" => $"https://twitch.tv/{video.ChannelId}",
                                         "FC2" => $"https://live.fc2.com/{video.ChannelId}/",
