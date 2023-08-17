@@ -1,0 +1,3 @@
+[submodule "LivestreamRecorder.DB"]
+	path = LivestreamRecorder.DB
+	url = https://github.com/Recorder-moe/LivestreamRecorder.DB.git
