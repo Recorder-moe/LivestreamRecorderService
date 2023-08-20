@@ -23,6 +23,12 @@ public class UpdateChannelInfoWorker : BackgroundService
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
         using var _ = LogContext.PushProperty("Worker", nameof(UpdateChannelInfoWorker));
+
+#if RELEASE
+        _logger.LogInformation("{Worker} will sleep 60 seconds avoid being overloaded with {WorkerToWait}.", nameof(RecordWorker), nameof(MonitorWorker));
+        await Task.Delay(TimeSpan.FromSeconds(60), stoppingToken);
+#endif
+
         _logger.LogTrace("{Worker} starts...", nameof(UpdateChannelInfoWorker));
 
         while (!stoppingToken.IsCancellationRequested)

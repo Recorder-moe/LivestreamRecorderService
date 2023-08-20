@@ -151,9 +151,9 @@ try
 
         services.AddDiscordService(configuration);
 
+        services.AddHostedService<MonitorWorker>();
         services.AddHostedService<RecordWorker>();
         services.AddSingleton<RecordService>();
-        services.AddHostedService<MonitorWorker>();
         services.AddHostedService<UpdateChannelInfoWorker>();
         services.AddHostedService<UpdateVideoStatusWorker>();
         services.AddHeartbeatWorker(configuration);
