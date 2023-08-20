@@ -3,6 +3,7 @@ using LivestreamRecorder.DB.CosmosDB;
 #elif COUCHDB
 using LivestreamRecorder.DB.CouchDB;
 #endif
+using HtmlAgilityPack;
 using LivestreamRecorder.DB.Enums;
 using LivestreamRecorder.DB.Interfaces;
 using LivestreamRecorder.DB.Models;
@@ -30,12 +31,6 @@ public class TwitcastingService : PlatformService, IPlatformService
     public override int Interval => 10;
 
     private const string _streamServerApi = "https://twitcasting.tv/streamserver.php";
-    private const string _frontendApi = "https://frontendapi.twitcasting.tv";
-
-    // TODO: Become failing since mid-2023/7.
-    // Twitcasting has changed the method for obtaining tokens, and it is no longer possible to reproduce it.
-    // Happy token is no longer happy :(
-    private const string _happytokenApi = "https://twitcasting.tv/happytoken.php";
 
     public TwitcastingService(
         ILogger<TwitcastingService> logger,
@@ -119,9 +114,9 @@ public class TwitcastingService : PlatformService, IPlatformService
 
             video.Thumbnail = await DownloadThumbnailAsync($"https://twitcasting.tv/{channel.id}/thumb/{videoId}", video.id, cancellation);
 
-            if (await GetTwitcastingIsPublicAsync(videoId, cancellation))
+            if (await GetTwitcastingIsPublicAsync(video, cancellation))
             {
-                var (title, telop) = await GetTwitcastingStreamTitleAsync(videoId, cancellation);
+                var (title, telop) = await GetTwitcastingStreamTitleAsync(video, cancellation);
                 video.Title ??= title ?? "";
                 video.Description ??= telop ?? "";
                 video.SourceStatus = VideoStatus.Exist;
@@ -156,8 +151,6 @@ public class TwitcastingService : PlatformService, IPlatformService
         }
     }
 
-    // Example
-    // https://github.com/kkent030315/twitcasting-py/blob/main/src/twitcasting.py
     private async Task<(bool Live, string? Id)> GetTwitcastingLiveStatusAsync(Channel channel, CancellationToken cancellation = default)
     {
         try
@@ -183,53 +176,28 @@ public class TwitcastingService : PlatformService, IPlatformService
         }
     }
 
-    private async Task<(string? title, string? telop)> GetTwitcastingStreamTitleAsync(string videoId, CancellationToken cancellation = default)
+    private async Task<(string? title, string? telop)> GetTwitcastingStreamTitleAsync(Video video, CancellationToken cancellation = default)
     {
-        // TODO: Get the title from webpages instead of using the API.
-        return ("(Unknown)", "");
+        using var client = _httpFactory.CreateClient();
 
-        //using var client = _httpFactory.CreateClient();
+        var response = await client.GetAsync($@"https://twitcasting.tv/{video.ChannelId}/movie/{video.id}", cancellation);
 
-        //var token = await GetTwitcastingTokenAsync(videoId, cancellation);
-        //if (null == token)
-        //{
-        //    _logger.LogWarning("Failed to get video title because token in null! {videoId}", videoId);
-        //    return default;
-        //}
+        if (!response.IsSuccessStatusCode)
+            return ("(Unknown)", "");
 
-        //var response = await client.GetAsync($@"{_frontendApi}/movies/{videoId}/status/viewer?token={token}", cancellation);
-        //var data = await response.Content.ReadFromJsonAsync<TwitcastingViewerData>(cancellationToken: cancellation);
+        string responseBody = await response.Content.ReadAsStringAsync(cancellation);
 
-        //return !string.IsNullOrEmpty(data?.Movie.Title)
-        //        ? (data?.Movie.Title, data?.Movie.Telop)
-        //        : (data?.Movie.Telop, "");
+        var htmlDocument = new HtmlDocument();
+        htmlDocument.LoadHtml(responseBody);
+
+        var ogTitleNode = htmlDocument.DocumentNode.SelectSingleNode("//head/meta[@property='og:title']");
+        var descriptionNode = htmlDocument.DocumentNode.SelectSingleNode("//head/meta[@name='description']");
+
+        string title = ogTitleNode?.Attributes["content"]?.Value.Trim() ?? "(Unknown)";
+        string description = descriptionNode?.Attributes["content"]?.Value.Trim() ?? "";
+
+        return (title, description);
     }
-
-    //private async Task<string?> GetTwitcastingTokenAsync(string videoId, CancellationToken cancellation = default)
-    //{
-    //    using var client = _httpFactory.CreateClient();
-    //    int epochTimeStamp = (int)(DateTime.UtcNow - new DateTime(1970, 1, 1)).TotalSeconds;
-    //    using var content = new MultipartFormDataContent("------WebKitFormBoundary")
-    //    {
-    //        { new StringContent(videoId), "movie_id" }
-    //    };
-    //    try
-    //    {
-    //        var response = await client.PostAsync($@"{_happytokenApi}?__n={epochTimeStamp}", content, cancellation);
-    //        response.EnsureSuccessStatusCode();
-    //        var data = await response.Content.ReadFromJsonAsync<TwitcastingTokenData>(cancellationToken: cancellation);
-
-    //        return null != data
-    //                && !string.IsNullOrEmpty(data.Token)
-    //                    ? data.Token
-    //                    : throw new Exception();
-    //    }
-    //    catch (Exception)
-    //    {
-    //        _logger.LogWarning("Failed to get Twitcasting token!");
-    //    }
-    //    return null;
-    //}
 
     /// <summary>
     /// 檢查影片是否公開(沒有密碼鎖或是瀏覧限制)
@@ -237,27 +205,31 @@ public class TwitcastingService : PlatformService, IPlatformService
     /// <param name="videoId"></param>
     /// <param name="cancellation"></param>
     /// <returns></returns>
-    private async Task<bool> GetTwitcastingIsPublicAsync(string videoId, CancellationToken cancellation = default)
+    private async Task<bool> GetTwitcastingIsPublicAsync(Video video, CancellationToken cancellation = default)
     {
-        return true;
-        //var data = await GetTwitcastingInfoDataAsync(videoId, cancellation);
-        //// 事實上，私人影片會在取得token時失敗，並不會回傳TwitcastingInfoData物件
-        //return null != data
-        //    && data.Visibility?.Type == "public";
+        try
+        {
+            // Web page will contains this string if the video is password locked
+            var keyword = "tw-empty-state-action";
+
+            using var client = _httpFactory.CreateClient();
+            var response = await client.GetAsync($"https://twitcasting.tv/{video.ChannelId}/movie/{video.id}", cancellation);
+            response.EnsureSuccessStatusCode();
+
+            var data = await response.Content.ReadAsStringAsync(cancellation);
+            return !data.Contains(keyword);
+        }
+        catch (HttpRequestException e)
+        {
+            _logger.LogError(e, "Get twitcasting IsPublic failed with {StatusCode}. {channelId} Be careful if this happens repeatedly.", e.StatusCode, video.ChannelId);
+            throw;
+        }
+        catch (Exception e)
+        {
+            _logger.LogError(e, "Get twitcasting IsPublic failed. {channelId} Be careful if this happens repeatedly.", video.ChannelId);
+            throw;
+        }
     }
-
-    //private async Task<TwitcastingInfoData?> GetTwitcastingInfoDataAsync(string videoId, CancellationToken cancellation = default)
-    //{
-    //    using var client = _httpFactory.CreateClient();
-    //    int epochTimeStamp = (int)(DateTime.UtcNow - new DateTime(1970, 1, 1)).TotalSeconds;
-
-    //    var token = await GetTwitcastingTokenAsync(videoId, cancellation);
-    //    if (null == token) return null;
-    //    var response = await client.GetAsync($@"{_frontendApi}/movies/{videoId}/info?__n={epochTimeStamp}&token={token}", cancellation);
-    //    response.EnsureSuccessStatusCode();
-    //    var data = await response.Content.ReadFromJsonAsync<TwitcastingInfoData>(cancellationToken: cancellation);
-    //    return data;
-    //}
 
     /// <summary>
     /// 檢查影片是否發佈
@@ -267,13 +239,28 @@ public class TwitcastingService : PlatformService, IPlatformService
     /// <returns></returns>
     private async Task<bool> GetTwitcastingIsPublishAsync(Video video, CancellationToken cancellation = default)
     {
-        // Web page will contains this string if the video is not published
-        var keyword = "tw-player-empty-message";
+        try
+        {
+            // Web page will contains this string if the video is not published
+            var keyword = "tw-player-empty-message";
 
-        using var client = _httpFactory.CreateClient();
-        var response = await client.GetAsync($"https://twitcasting.tv/{video.ChannelId}/movie/{video.id}", cancellation);
-        var data = await response.Content.ReadAsStringAsync(cancellation);
-        return !data.Contains(keyword);
+            using var client = _httpFactory.CreateClient();
+            var response = await client.GetAsync($"https://twitcasting.tv/{video.ChannelId}/movie/{video.id}", cancellation);
+            response.EnsureSuccessStatusCode();
+
+            var data = await response.Content.ReadAsStringAsync(cancellation);
+            return !data.Contains(keyword);
+        }
+        catch (HttpRequestException e)
+        {
+            _logger.LogError(e, "Get twitcasting IsPublish failed with {StatusCode}. {channelId} Be careful if this happens repeatedly.", e.StatusCode, video.ChannelId);
+            throw;
+        }
+        catch (Exception e)
+        {
+            _logger.LogError(e, "Get twitcasting IsPublish failed. {channelId} Be careful if this happens repeatedly.", video.ChannelId);
+            throw;
+        }
     }
 
     public override async Task UpdateVideoDataAsync(Video video, CancellationToken cancellation = default)
@@ -290,58 +277,65 @@ public class TwitcastingService : PlatformService, IPlatformService
             video.Thumbnail = await DownloadThumbnailAsync($"https://twitcasting.tv/{video.ChannelId}/thumb/{video.id}", video.id, cancellation);
         }
 
-        if (await GetTwitcastingIsPublishAsync(video, cancellation))
+        try
         {
-            if (await GetTwitcastingIsPublicAsync(video.id, cancellation))
+            if (await GetTwitcastingIsPublishAsync(video, cancellation))
             {
-                var (title, telop) = await GetTwitcastingStreamTitleAsync(video.id, cancellation);
-                video.Title = title ?? video.Title;
-                video.Description = telop ?? video.Description;
-                video.SourceStatus = VideoStatus.Exist;
-
-                if (video.Status <= VideoStatus.Pending)
+                if (await GetTwitcastingIsPublicAsync(video, cancellation))
                 {
-                    video.Status = VideoStatus.WaitingToDownload;
+                    var (title, telop) = await GetTwitcastingStreamTitleAsync(video, cancellation);
+                    video.Title = title ?? video.Title;
+                    video.Description = telop ?? video.Description;
+                    video.SourceStatus = VideoStatus.Exist;
+
+                    if (video.Status <= VideoStatus.Pending)
+                    {
+                        video.Status = VideoStatus.WaitingToDownload;
+                    }
+                }
+                else
+                {
+                    // 有發佈，但是有瀏覧限制
+                    // First detected
+                    if (video.SourceStatus != VideoStatus.Reject)
+                    {
+                        video.SourceStatus = VideoStatus.Reject;
+                        video.Note = $"Video source is detected access required.";
+                        if (null != discordService)
+                        {
+                            await discordService.SendDeletedMessage(video, channel);
+                        }
+                        _logger.LogInformation("Video source is {status} because it is detected access required.", Enum.GetName(typeof(VideoStatus), video.SourceStatus));
+                    }
+                    video.SourceStatus = VideoStatus.Reject;
                 }
             }
             else
             {
-                // 有發佈，但是有瀏覧限制
-                // First detected
-                if (video.SourceStatus != VideoStatus.Reject)
+                if (video.SourceStatus != VideoStatus.Deleted)
                 {
-                    video.SourceStatus = VideoStatus.Reject;
-                    video.Note = $"Video source is detected access required.";
-                    if (null != discordService)
+                    if (video.Status >= VideoStatus.Archived
+                        && video.Status < VideoStatus.Expired)
                     {
-                        await discordService.SendDeletedMessage(video, channel);
+                        video.SourceStatus = VideoStatus.Deleted;
+                        if (null != discordService)
+                        {
+                            // First detected
+                            await discordService.SendDeletedMessage(video, channel);
+                        }
                     }
-                    _logger.LogInformation("Video source is {status} because it is detected access required.", Enum.GetName(typeof(VideoStatus), video.SourceStatus));
+                    video.SourceStatus = VideoStatus.Deleted;
+                    video.Note = "Video is not published.";
+                    _logger.LogInformation("Twitcasting video {videoId} is not published.", video.id);
                 }
-                video.SourceStatus = VideoStatus.Reject;
+
+                if (video.Status <= VideoStatus.Recording)
+                    video.Status = VideoStatus.Missing;
             }
         }
-        else
+        catch (HttpRequestException e)
         {
-            if (video.SourceStatus != VideoStatus.Deleted)
-            {
-                if (video.Status >= VideoStatus.Archived
-                    && video.Status < VideoStatus.Expired)
-                {
-                    video.SourceStatus = VideoStatus.Deleted;
-                    if (null != discordService)
-                    {
-                        // First detected
-                        await discordService.SendDeletedMessage(video, channel);
-                    }
-                }
-                video.SourceStatus = VideoStatus.Deleted;
-                video.Note = "Video is not published.";
-                _logger.LogInformation("Twitcasting video {videoId} is not published.", video.id);
-            }
-
-            if (video.Status <= VideoStatus.Recording)
-                video.Status = VideoStatus.Missing;
+            _logger.LogError(e, "Failed to get twitcasting video {videoId} webpage. {channelId} Be careful if this happens repeatedly.", video.id, video.ChannelId);
         }
 
         if (!string.IsNullOrEmpty(video.Filename))
