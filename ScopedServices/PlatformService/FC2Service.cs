@@ -104,7 +104,7 @@ public class FC2Service : PlatformService, IPlatformService
                     id = videoId,
                     Source = PlatformName,
                     Status = VideoStatus.Missing,
-                    SourceStatus = VideoStatus.Unknown,
+                    SourceStatus = VideoStatus.Deleted,
                     IsLiveStream = true,
                     Title = null!,
                     ChannelId = channel.id,
