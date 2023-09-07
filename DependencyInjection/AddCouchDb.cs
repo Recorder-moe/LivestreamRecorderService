@@ -30,34 +30,36 @@ namespace LivestreamRecorderService.DependencyInjection
                     || string.IsNullOrEmpty(couchDBOptions.Password))
                     throw new ConfigurationErrorsException();
 
+                // https://github.com/matteobortolazzo/couchdb-net#dependency-injection
                 services.AddCouchContext<CouchDBContext>((options) =>
                 {
                     options
                         .UseEndpoint(couchDBOptions.Endpoint)
                         .UseCookieAuthentication(username: couchDBOptions.Username, password: couchDBOptions.Password)
-#if !RELEASE
                         .ConfigureFlurlClient(setting =>
                         {
-                            setting.BeforeCall = call
-                                => Log.Debug("Sending request to couch: {request} {body}", call, call.RequestBody);
-                            setting.AfterCall = call =>
+#if !RELEASE
+                            setting.BeforeCallAsync = call
+                                => Task.Run(() => Log.Debug("Sending request to couch: {request} {body}", call, call.RequestBody));
+                            setting.AfterCallAsync = call => Task.Run(() =>
                             {
                                 if (call.Succeeded)
                                 {
                                     Log.Debug("Received response from couch: {response} {body}", call, call.Response.ResponseMessage.Content.ReadAsStringAsync().Result);
                                 }
-                                else
-                                {
-                                    Log.Error("Response Failed: {response} {body}", call, call.Response.ResponseMessage.Content.ReadAsStringAsync().Result);
-                                }
-                            };
-                        })
+                            });
 #endif
+                            setting.OnErrorAsync = call => Task.Run(()
+                                => Log.Error("Request Failed: {request} {body}", call, call?.RequestBody ?? string.Empty));
+                        })
                         .SetPropertyCase(PropertyCaseType.None);
                 });
 
-                services.AddScoped<UnitOfWork_Public>();
-                services.AddScoped<UnitOfWork_Private>();
+                // UnitOfWork is registered as a singleton to align with the registration of CouchContext as a singleton.
+                // This also prevents multiple executions of index creation.
+                services.AddSingleton<UnitOfWork_Public>();
+                services.AddSingleton<UnitOfWork_Private>();
+
                 services.AddScoped<IVideoRepository>((s) => new VideoRepository((IUnitOfWork)s.GetRequiredService(typeof(UnitOfWork_Public))));
                 services.AddScoped<IChannelRepository>((s) => new ChannelRepository((IUnitOfWork)s.GetRequiredService(typeof(UnitOfWork_Public))));
                 services.AddScoped<IUserRepository>((s) => new UserRepository((IUnitOfWork)s.GetRequiredService(typeof(UnitOfWork_Private))));
