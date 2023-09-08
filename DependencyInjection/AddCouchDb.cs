@@ -39,8 +39,8 @@ namespace LivestreamRecorderService.DependencyInjection
                         .ConfigureFlurlClient(setting =>
                         {
 #if !RELEASE
-                            setting.BeforeCallAsync = call
-                                => Task.Run(() => Log.Debug("Sending request to couch: {request} {body}", call, call.RequestBody));
+                            setting.BeforeCall = call
+                                => Log.Debug("Sending request to couch: {request} {body}", call, call.RequestBody);
                             setting.AfterCallAsync = call => Task.Run(() =>
                             {
                                 if (call.Succeeded)
