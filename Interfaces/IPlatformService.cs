@@ -6,7 +6,6 @@ namespace LivestreamRecorderService.Interfaces;
 public interface IPlatformService
 {
     public string PlatformName { get; }
-    List<Channel> GetMonitoringChannels();
     Task UpdateVideosDataAsync(Channel channel, CancellationToken cancellation = default);
     Task UpdateVideoDataAsync(Video video, CancellationToken cancellation = default);
 
@@ -18,6 +17,7 @@ public interface IPlatformService
     public bool StepInterval(int elapsedTime);
     Task<YtdlpVideoData?> GetVideoInfoByYtdlpAsync(string url, CancellationToken cancellation = default);
     Task UpdateChannelDataAsync(Channel channel, CancellationToken stoppingToken);
+    Task<List<Channel>> GetMonitoringChannels();
 
     /// <summary>
     /// 每幾秒執行一次

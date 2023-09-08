@@ -66,7 +66,7 @@ public class MonitorWorker : BackgroundService
     {
         if (!PlatformService.StepInterval(_interval)) return;
 
-        var channels = PlatformService.GetMonitoringChannels();
+        var channels = await PlatformService.GetMonitoringChannels();
         _logger.LogTrace("Get {channelCount} channels for {platform}", channels.Count, PlatformService.PlatformName);
         foreach (var channel in channels)
         {

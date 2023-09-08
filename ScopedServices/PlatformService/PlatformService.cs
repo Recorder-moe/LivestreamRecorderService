@@ -49,10 +49,10 @@ public abstract class PlatformService : IPlatformService
             discordService = serviceProvider.GetRequiredService<DiscordService>();
     }
 
-    public List<Channel> GetMonitoringChannels()
-        => _channelRepository.GetChannelsBySource(PlatformName)
-                             .Where(p => p.Monitoring)
-                             .ToList();
+    public async Task<List<Channel>> GetMonitoringChannels()
+        => (await _channelRepository.GetChannelsBySourceAsync(PlatformName))
+                                    .Where(p => p.Monitoring)
+                                    .ToList();
 
     public abstract Task UpdateVideosDataAsync(Channel channel, CancellationToken cancellation = default);
 

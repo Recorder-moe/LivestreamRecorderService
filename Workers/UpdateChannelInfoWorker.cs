@@ -51,7 +51,7 @@ public class UpdateChannelInfoWorker : BackgroundService
 
     private async Task UpdatePlatformAsync(IPlatformService platformService, CancellationToken stoppingToken = default)
     {
-        var channels = platformService.GetMonitoringChannels();
+        var channels = await platformService.GetMonitoringChannels();
         _logger.LogDebug("Get {channelCount} channels for {platform}", channels.Count, platformService.PlatformName);
         foreach (var channel in channels)
         {
