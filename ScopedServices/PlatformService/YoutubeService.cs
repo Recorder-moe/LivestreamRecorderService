@@ -340,39 +340,37 @@ public class YoutubeService : PlatformService, IPlatformService
             video.Description = videoData.Description;
         }
 
-        if (!string.IsNullOrEmpty(video.Filename))
+        if (string.IsNullOrEmpty(video.Filename)
+            || !await _storageService.IsVideoFileExistsAsync(video.Filename, cancellation))
         {
-            if (!await _storageService.IsVideoFileExistsAsync(video.Filename, cancellation))
+            if (video.SourceStatus == VideoStatus.Deleted
+                && video.Status < VideoStatus.Recording)
             {
-                if (video.SourceStatus == VideoStatus.Deleted
-                    && video.Status < VideoStatus.Recording)
+                video.Note = "This video archive is missing. If you would like to provide it, please contact admin.";
+                if (video.Status != VideoStatus.Missing)
                 {
-                    video.Note = "This video archive is missing. If you would like to provide it, please contact admin.";
-                    if (video.Status != VideoStatus.Missing)
+                    video.SourceStatus = VideoStatus.Missing;
+                    if (null != discordService)
                     {
-                        video.SourceStatus = VideoStatus.Missing;
-                        if (null != discordService)
-                        {
-                            await discordService.SendSkippedMessage(video, channel);
-                        }
+                        await discordService.SendSkippedMessage(video, channel);
                     }
-                    video.Status = VideoStatus.Missing;
-                    _logger.LogInformation("Source removed and not archived, change video status to {status}", Enum.GetName(typeof(VideoStatus), video.Status));
                 }
+                video.Status = VideoStatus.Missing;
+                _logger.LogWarning("Source removed and not archived, change video status to {status}", Enum.GetName(typeof(VideoStatus), video.Status));
+            }
 
-                if (video.Status >= VideoStatus.Archived && video.Status < VideoStatus.Expired)
-                {
-                    video.Status = VideoStatus.Missing;
-                    video.Note = $"Video missing because archived not found.";
-                    _logger.LogInformation("Can not found archived, change video status to {status}", Enum.GetName(typeof(VideoStatus), video.Status));
-                }
-            }
-            else if (video.Status < VideoStatus.Archived || video.Status >= VideoStatus.Expired)
+            if (video.Status >= VideoStatus.Archived && video.Status < VideoStatus.Expired)
             {
-                video.Status = VideoStatus.Archived;
-                video.Note = null;
-                _logger.LogInformation("Correct video status to {status} because archived is exists.", Enum.GetName(typeof(VideoStatus), video.Status));
+                video.Status = VideoStatus.Missing;
+                video.Note = $"Video missing because archived not found.";
+                _logger.LogWarning("Can not found archived, change video status to {status}", Enum.GetName(typeof(VideoStatus), video.Status));
             }
+        }
+        else if (video.Status < VideoStatus.Archived || video.Status >= VideoStatus.Expired)
+        {
+            video.Status = VideoStatus.Archived;
+            video.Note = null;
+            _logger.LogInformation("Correct video status to {status} because archived is exists.", Enum.GetName(typeof(VideoStatus), video.Status));
         }
 
         switch (videoData.Availability)

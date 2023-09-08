@@ -62,46 +62,55 @@ public class MonitorWorker : BackgroundService
         }
     }
 
-    private async Task MonitorPlatformAsync(IPlatformService PlatformService, VideoService videoService, CancellationToken cancellation = default)
+    private async Task MonitorPlatformAsync(IPlatformService platformService, VideoService videoService, CancellationToken cancellation = default)
     {
-        if (!PlatformService.StepInterval(_interval)) return;
+        if (!platformService.StepInterval(_interval)) return;
 
-        var channels = await PlatformService.GetMonitoringChannels();
-        _logger.LogTrace("Get {channelCount} channels for {platform}", channels.Count, PlatformService.PlatformName);
-        foreach (var channel in channels)
-        {
-            await PlatformService.UpdateVideosDataAsync(channel, cancellation);
-        }
+        var channels = await platformService.GetMonitoringChannels();
+        _logger.LogTrace("Get {channelCount} channels for {platform}", channels.Count, platformService.PlatformName);
+        await UpdateVideosDataFromSource();
+        await UpdateScheduledVideosStatus();
 
-        var videos = videoService.GetVideosBySource(PlatformService.PlatformName)
-                                 .Where(p => p.Status == VideoStatus.Scheduled
-                                             || p.Status == VideoStatus.Pending)
-                                 .ToList();
-
-        if (videos.Count == 0)
+        async Task UpdateVideosDataFromSource()
         {
-            _logger.LogTrace("No Scheduled videos for {platform}", PlatformService.PlatformName);
-            return;
-        }
-        else
-        {
-            _logger.LogDebug("Get {videoCount} Scheduled/Pending videos for {platform}", videos.Count, PlatformService.PlatformName);
-        }
-
-        foreach (var video in videos)
-        {
-            var channel = channels.SingleOrDefault(p => p.id == video.ChannelId);
-            // Channel exists and is not monitoring
-            if (null != channel
-                && video.Status == VideoStatus.Scheduled
-                && !channel.Monitoring)
+            foreach (var channel in channels)
             {
-                await videoService.DeleteVideoAsync(video);
-                _logger.LogInformation("Remove scheduled video {videoId} because channel {channelId} is not monitoring.", video.id, channel.id);
+                await platformService.UpdateVideosDataAsync(channel, cancellation);
+            }
+        }
+
+        async Task UpdateScheduledVideosStatus()
+        {
+            var videos = videoService.GetVideosBySource(platformService.PlatformName)
+                                     .Where(p => p.Status == VideoStatus.Scheduled
+                                                 || p.Status == VideoStatus.Pending)
+                                     .ToList();
+
+            if (videos.Count == 0)
+            {
+                _logger.LogTrace("No Scheduled videos for {platform}", platformService.PlatformName);
+                return;
             }
             else
             {
-                await PlatformService.UpdateVideoDataAsync(video, cancellation);
+                _logger.LogDebug("Get {videoCount} Scheduled/Pending videos for {platform}", videos.Count, platformService.PlatformName);
+            }
+
+            foreach (var video in videos)
+            {
+                var channel = channels.SingleOrDefault(p => p.id == video.ChannelId);
+                // Channel exists and is not monitoring
+                if (null != channel
+                    && video.Status == VideoStatus.Scheduled
+                    && !channel.Monitoring)
+                {
+                    await videoService.DeleteVideoAsync(video);
+                    _logger.LogInformation("Remove scheduled video {videoId} because channel {channelId} is not monitoring.", video.id, channel.id);
+                }
+                else
+                {
+                    await platformService.UpdateVideoDataAsync(video, cancellation);
+                }
             }
         }
     }
