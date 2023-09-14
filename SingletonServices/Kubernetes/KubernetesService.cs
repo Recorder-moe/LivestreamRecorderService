@@ -57,22 +57,17 @@ public class KubernetesService : IJobService
         => IsJobSucceededAsync(NameHelper.GetInstanceName(video.id), cancellation);
 
     public async Task<bool> IsJobSucceededAsync(string keyword, CancellationToken cancellation = default)
-    {
-        var job = (await GetJobsByKeywordAsync(keyword, cancellation)).FirstOrDefault();
-        return null != job
-               && (job.Status.Active == null || job.Status.Active == 0)
-               && job.Status.Succeeded > 0;
-    }
+        => (await GetJobsByKeywordAsync(keyword, cancellation))
+                    .Any(job => (job.Status.Active is null or 0)
+                                 && job.Status.Succeeded > 0);
 
     public Task<bool> IsJobFailedAsync(Video video, CancellationToken cancellation = default)
         => IsJobFailedAsync(NameHelper.GetInstanceName(video.id), cancellation);
 
     public async Task<bool> IsJobFailedAsync(string keyword, CancellationToken cancellation = default)
-    {
-        var job = (await GetJobsByKeywordAsync(keyword, cancellation)).FirstOrDefault();
-        return null == job
-               || (job.Status.Failed > 0 && job.Status.Succeeded == 0);
-    }
+        => (await GetJobsByKeywordAsync(keyword, cancellation))
+                    .Any(job => job.Status.Failed > 0
+                                && (job.Status.Succeeded is null or 0));
 
     public async Task RemoveCompletedJobsAsync(Video video, CancellationToken cancellation = default)
     {
