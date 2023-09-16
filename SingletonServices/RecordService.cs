@@ -237,12 +237,12 @@ public class RecordService
 
 
     /// <summary>
-    /// Check recordings status and return uploaded videos
+    /// Check recordings and downloading status and return finished videos
     /// </summary>
     /// <param name="videoService"></param>
     /// <param name="cancellation"></param>
     /// <returns>Videos that finish uploading.</returns>
-    public async Task<List<Video>> MonitorRecordingVideosAsync(VideoService videoService, CancellationToken cancellation = default)
+    public async Task<List<Video>> MonitorRecordingDownloadingVideosAsync(VideoService videoService, CancellationToken cancellation = default)
     {
         var result = new List<Video>();
         var videos = videoService.GetVideosByStatus(VideoStatus.Recording)

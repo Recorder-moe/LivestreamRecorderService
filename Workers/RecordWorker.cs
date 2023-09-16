@@ -54,7 +54,7 @@ public class RecordWorker : BackgroundService
                     await Task.Delay(TimeSpan.FromSeconds(10), stoppingToken);
                 }
 
-                var finished = await _recordService.MonitorRecordingVideosAsync(videoService, stoppingToken);
+                var finished = await _recordService.MonitorRecordingDownloadingVideosAsync(videoService, stoppingToken);
                 foreach (var video in finished)
                 {
                     await _recordService.PcocessFinishedVideoAsync(videoService, channelService, video, stoppingToken);
