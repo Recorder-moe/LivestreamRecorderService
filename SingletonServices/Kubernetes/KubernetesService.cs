@@ -66,7 +66,8 @@ public class KubernetesService : IJobService
 
     public async Task<bool> IsJobFailedAsync(string keyword, CancellationToken cancellation = default)
         => (await GetJobsByKeywordAsync(keyword, cancellation))
-                    .Any(job => job.Status.Failed > 0
+                    .Any(job => (job.Status.Active is null or 0)
+                                && job.Status.Failed > 0
                                 && (job.Status.Succeeded is null or 0));
 
     public async Task RemoveCompletedJobsAsync(Video video, CancellationToken cancellation = default)
