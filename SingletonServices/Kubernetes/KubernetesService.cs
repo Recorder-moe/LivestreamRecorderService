@@ -87,9 +87,9 @@ public class KubernetesService : IJobService
 
         var status = await _client.DeleteNamespacedJobAsync(name: jobName,
                                                             namespaceParameter: job.Namespace(),
-                                                            propagationPolicy: "Foreground",
+                                                            propagationPolicy: "Background",
                                                             cancellationToken: cancellation);
-        if (status.Status == "Failure")
+        if (status.Status != "Success")
         {
             _logger.LogError("Failed to delete job {jobName} {videoId} {status}", jobName, video.id, status.Message);
             throw new Exception($"Failed to delete job {jobName} {video.id} {status.Message}");
