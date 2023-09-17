@@ -292,11 +292,11 @@ public class RecordService
         {
             await _jobService.RemoveCompletedJobsAsync(video, stoppingToken);
         }
-        catch (Exception)
+        catch (Exception e)
         {
             await videoService.UpdateVideoStatusAsync(video, VideoStatus.Error);
             await videoService.UpdateVideoNoteAsync(video, $"This recording is FAILED! Please contact admin if you see this message.");
-            _logger.LogError("Recording FAILED: {videoId}", video.id);
+            _logger.LogError(e, "Recording FAILED: {videoId}", video.id);
             return;
         }
 
@@ -316,11 +316,11 @@ public class RecordService
         {
             await _jobService.RemoveCompletedJobsAsync(video, stoppingToken);
         }
-        catch (Exception)
+        catch (Exception e)
         {
             await videoService.UpdateVideoStatusAsync(video, VideoStatus.Error);
             await videoService.UpdateVideoNoteAsync(video, $"This recording is FAILED! Please contact admin if you see this message.");
-            _logger.LogError("Uploading FAILED: {videoId}", video.id);
+            _logger.LogError(e, "Uploading FAILED: {videoId}", video.id);
             return;
         }
 

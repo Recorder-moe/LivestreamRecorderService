@@ -251,10 +251,10 @@ public partial class DiscordService
                 _logger.LogDebug("Message sent to discord: {title}, {messageId}", embed.Title, messageId);
                 retry = -1;
             }
-            catch (HttpRequestException)
+            catch (HttpRequestException e)
             {
                 // Retry
-                _logger.LogError("Failed to send message to discord, retrying...");
+                _logger.LogError(e, "Failed to send message to discord, retrying...");
             }
         }
     }

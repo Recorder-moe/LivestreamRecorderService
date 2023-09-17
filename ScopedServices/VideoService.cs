@@ -111,7 +111,7 @@ public class VideoService
         {
             await UpdateVideoStatusAsync(video, VideoStatus.Error);
             await UpdateVideoNoteAsync(video, $"Exception happened when uploading files to storage. Please contact admin if you see this message.");
-            _logger.LogError("Exception happened when uploading files to storage: {videoId}, {error}, {message}", video.id, e, e.Message);
+            _logger.LogError(e, "Exception happened when uploading files to storage: {videoId}", video.id, e, e.Message);
         }
     }
 
