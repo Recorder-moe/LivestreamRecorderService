@@ -57,6 +57,7 @@ public class TwitcastingRecorderService : ACIServiceBase, ITwitcastingRecorderSe
 
         Task<ArmOperation<ArmDeploymentResource>> doWithImage(string imageName)
         {
+            string filename = NameHelper.GetFileName(video, ITwitcastingRecorderService.name);
             return CreateResourceAsync(
                     parameters: new
                     {
@@ -73,7 +74,7 @@ public class TwitcastingRecorderService : ACIServiceBase, ITwitcastingRecorderSe
                             value = new string[] {
                                 "/usr/bin/dumb-init", "--",
                                 "/bin/bash", "-c",
-                                $"/bin/bash record_twitcast.sh {video.ChannelId} once && mv /download/*.mp4 /sharedvolume/"
+                                $"/bin/bash record_twitcast.sh {video.ChannelId} once -o {Path.GetFileNameWithoutExtension(filename)} && mv /download/*.mp4 /sharedvolume/"
                             }
                         },
                         storageAccountName = new
