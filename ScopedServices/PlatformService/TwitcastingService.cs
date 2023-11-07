@@ -87,10 +87,14 @@ public class TwitcastingService : PlatformService, IPlatformService
                     case VideoStatus.Skipped:
                         _logger.LogTrace("{videoId} is rejected for recording.", video.id);
                         return;
+                    case VideoStatus.Uploading:
+                        _logger.LogTrace("{videoId} is uploading. We cannot change the video state during uploading. The status will be corrected after it is archived.", video.id);
+                        return;
                     case VideoStatus.Archived:
                     case VideoStatus.PermanentArchived:
-                        _logger.LogWarning("{videoId} is already archived.", video.id);
-                        return;
+                        _logger.LogWarning("{videoId} has already been archived. It is possible that an internet disconnect occurred during the process. Changed its state back to Recording.", video.id);
+                        video.Status = VideoStatus.WaitingToRecord;
+                        break;
                 }
             }
             else
