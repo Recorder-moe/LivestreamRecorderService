@@ -109,6 +109,43 @@ public abstract class PlatformService : IPlatformService
         }
     }
 
+    public async Task<string[]?> GetVideoIdsByYtdlpAsync(string url, int limit = 50, CancellationToken cancellation = default)
+    {
+        if (!File.Exists(_ytdlPath) || !File.Exists(_ffmpegPath))
+        {
+            (string? YtdlPath, _) = YoutubeDL.WhereIs();
+            _ytdlPath = YtdlPath ?? throw new ConfigurationErrorsException("Yt-dlp is missing.");
+        }
+        var ytdl = new YoutubeDLSharp.YoutubeDL
+        {
+            YoutubeDLPath = _ytdlPath,
+        };
+
+        OptionSet optionSet = new();
+        optionSet.AddCustomOption("--ignore-no-formats-error", true);
+        optionSet.IgnoreErrors = true;
+        optionSet.FlatPlaylist = true;
+        optionSet.AddCustomOption("--print", "id");
+        if (limit > 0) optionSet.PlaylistItems = $"1:{limit}";
+
+        try
+        {
+            var res = await ytdl.RunWithOptions(new string[] { url }, optionSet, ct: cancellation);
+            if (!res.Success)
+            {
+                throw new Exception(string.Join(' ', res.ErrorOutput));
+            }
+
+            string[] videoIds = res.Data;
+            return videoIds;
+        }
+        catch (Exception e)
+        {
+            _logger.LogError(e, "An exception occurred while getting video info by yt-dlp: {url}", url);
+            return null;
+        }
+    }
+
     /// <summary>
     /// Download thumbnail.
     /// </summary>

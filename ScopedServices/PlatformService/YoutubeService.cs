@@ -3,7 +3,6 @@ using LivestreamRecorder.DB.CosmosDB;
 #elif COUCHDB
 using LivestreamRecorder.DB.CouchDB;
 #endif
-using CodeHollow.FeedReader;
 using LivestreamRecorder.DB.Enums;
 using LivestreamRecorder.DB.Interfaces;
 using LivestreamRecorderService.Interfaces;
@@ -59,6 +58,8 @@ public class YoutubeService : PlatformService, IPlatformService
     public static string GetRSSFeed(Channel channel)
         => $"https://www.youtube.com/feeds/videos.xml?channel_id={channel.id}";
 
+    private record Item(string Id, string Title = "", DateTime? Date = null);
+
     public override async Task UpdateVideosDataAsync(Channel channel, CancellationToken cancellation = default)
     {
         using var _ = LogContext.PushProperty("Platform", PlatformName);
@@ -74,12 +75,29 @@ public class YoutubeService : PlatformService, IPlatformService
 
         //_rSSService.UpdateChannelName(channel, feed);
 
-        _logger.LogTrace("Get {count} videos for channel {channelId}", feed.Items.Count, channel.id);
-        foreach (var item in feed.Items)
+        _logger.LogTrace("Get {count} videos for channel {channelId} from RSS feed.", feed.Items.Count, channel.id);
+
+        List<Item> items = new();
+        feed.Items.ToList().ForEach(item => items.Add(new Item(item.Id, item.Title, item.PublishingDate)));
+
+        if (channel.UseCookiesFile == true)
+        {
+            var ids = await GetVideoIdsFromMemberPlaylist(channel.id, cancellation);
+
+            _logger.LogTrace("Get {count} videos for channel {channelId} from Member Playlist.", feed.Items.Count, channel.id);
+            ids?.ToList().ForEach(id => items.Add(new Item(id)));
+
+            items = items.Distinct().ToList();
+        }
+
+        foreach (var item in items)
         {
             await AddOrUpdateVideoAsync(channel, item, cancellation);
         }
     }
+
+    private Task<string[]?> GetVideoIdsFromMemberPlaylist(string ChannelId, CancellationToken cancellation)
+        => GetVideoIdsByYtdlpAsync($"https://www.youtube.com/playlist?list=UUMO{ChannelId[2..]}", 15, cancellation);
 
     private Task<YtdlpVideoData?> GetChannelInfoByYtdlpAsync(string ChannelId, CancellationToken cancellation = default)
         => GetVideoInfoByYtdlpAsync($"https://www.youtube.com/channel/{ChannelId}/about", cancellation);
@@ -91,7 +109,7 @@ public class YoutubeService : PlatformService, IPlatformService
     /// <param name="channel"></param>
     /// <param name="item"></param>
     /// <returns></returns>
-    private async Task AddOrUpdateVideoAsync(Channel channel, FeedItem item, CancellationToken cancellation = default)
+    private async Task AddOrUpdateVideoAsync(Channel channel, Item item, CancellationToken cancellation = default)
     {
         // Youtube video id may start with '_' which is not allowed in CouchDB.
         // So we add a prefix 'Y' to it.
@@ -104,7 +122,7 @@ public class YoutubeService : PlatformService, IPlatformService
             // Don't need to track anymore.
             if (video.Status > VideoStatus.Scheduled)
             {
-                _logger.LogTrace("Video {videoId} from RSSFeed is skipped. It is {videoStatus}.", videoId, Enum.GetName(typeof(VideoStatus), video.Status));
+                _logger.LogTrace("Video {videoId} is skipped. It is {videoStatus}.", videoId, Enum.GetName(typeof(VideoStatus), video.Status));
                 return;
             }
         }
@@ -120,7 +138,7 @@ public class YoutubeService : PlatformService, IPlatformService
                 ChannelId = channel.id,
                 Timestamps = new Timestamps()
                 {
-                    PublishedAt = item.PublishingDate
+                    PublishedAt = item.Date
                 },
             };
             _logger.LogInformation("Found a new Video {videoId} from {channelId}", videoId, channel.id);
