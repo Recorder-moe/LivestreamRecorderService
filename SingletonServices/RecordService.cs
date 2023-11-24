@@ -288,6 +288,13 @@ public class RecordService
     {
         using var __ = LogContext.PushProperty("videoId", video.id);
 
+        await channelService.UpdateChannelLatestVideoAsync(video);
+
+        await videoService.UpdateVideoArchivedTimeAsync(video);
+
+        // Fire and forget
+        _ = videoService.TransferVideoFromSharedVolumeToStorageAsync(video, stoppingToken).ConfigureAwait(false);
+
         try
         {
             await _jobService.RemoveCompletedJobsAsync(video, stoppingToken);
@@ -299,18 +306,15 @@ public class RecordService
             _logger.LogError(e, "Recording FAILED: {videoId}", video.id);
             return;
         }
-
-        await channelService.UpdateChannelLatestVideoAsync(video);
-
-        await videoService.UpdateVideoArchivedTimeAsync(video);
-
-        // Fire and forget
-        _ = videoService.TransferVideoFromSharedVolumeToStorageAsync(video, stoppingToken).ConfigureAwait(false);
     }
 
     public async Task ProcessUploadedVideoAsync(VideoService videoService, ChannelService channelService, Video video, CancellationToken stoppingToken = default)
     {
         using var _ = LogContext.PushProperty("videoId", video.id);
+
+        await _discordService.SendArchivedMessage(video, await channelService.GetByChannelIdAndSource(video.ChannelId, video.Source));
+        _logger.LogInformation("Video {videoId} is successfully uploaded to Storage.", video.id);
+        await videoService.UpdateVideoStatusAsync(video, VideoStatus.Archived);
 
         try
         {
@@ -323,10 +327,6 @@ public class RecordService
             _logger.LogError(e, "Uploading FAILED: {videoId}", video.id);
             return;
         }
-
-        await _discordService.SendArchivedMessage(video, await channelService.GetByChannelIdAndSource(video.ChannelId, video.Source));
-        _logger.LogInformation("Video {videoId} is successfully uploaded to Storage.", video.id);
-        await videoService.UpdateVideoStatusAsync(video, VideoStatus.Archived);
     }
 
 }
