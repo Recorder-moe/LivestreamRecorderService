@@ -73,10 +73,10 @@ public class AzureUploaderService : KubernetesServiceBase, IAzureUploaderService
                     deploymentName: instanceName,
                     environment: new List<EnvironmentVariable>
                     {
-                        new EnvironmentVariable("STORAGE_ACCOUNT_NAME", _azureOption.BlobStorage!.StorageAccountName, null),
-                        new EnvironmentVariable("STORAGE_ACCOUNT_KEY", null, _azureOption.BlobStorage.StorageAccountKey),
-                        new EnvironmentVariable("CONTAINER_NAME", _azureOption.BlobStorage.BlobContainerName_Private, null),
-                        new EnvironmentVariable("DESTINATION_DIRECTORY", null, "/videos")
+                        new("STORAGE_ACCOUNT_NAME", _azureOption.BlobStorage!.StorageAccountName, null),
+                        new("STORAGE_ACCOUNT_KEY", null, _azureOption.BlobStorage.StorageAccountKey),
+                        new("CONTAINER_NAME", _azureOption.BlobStorage.BlobContainerName_Private, null),
+                        new("DESTINATION_DIRECTORY", null, "/videos")
                     },
                     cancellation: cancellation);
         }

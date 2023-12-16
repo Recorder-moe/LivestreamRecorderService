@@ -8,21 +8,14 @@ using Microsoft.Extensions.Options;
 
 namespace LivestreamRecorderService.SingletonServices.ACI.Downloader;
 
-public class StreamlinkService : ACIServiceBase, IStreamlinkService
+public class StreamlinkService(
+    ILogger<StreamlinkService> logger,
+    ArmClient armClient,
+    IOptions<AzureOption> options) : ACIServiceBase(logger, armClient, options), IStreamlinkService
 {
-    private readonly AzureOption _azureOption;
-    private readonly ILogger<StreamlinkService> _logger;
+    private readonly AzureOption _azureOption = options.Value;
 
     public override string Name => IStreamlinkService.name;
-
-    public StreamlinkService(
-        ILogger<StreamlinkService> logger,
-        ArmClient armClient,
-        IOptions<AzureOption> options) : base(logger, armClient, options)
-    {
-        _azureOption = options.Value;
-        _logger = logger;
-    }
 
     public override Task InitJobAsync(string videoId,
                                       Video video,
@@ -52,7 +45,7 @@ public class StreamlinkService : ACIServiceBase, IStreamlinkService
         catch (Exception)
         {
             // Use DockerHub as fallback
-            _logger.LogWarning("Failed once, try docker hub as fallback.");
+            logger.LogWarning("Failed once, try docker hub as fallback.");
             return doWithImage("recordermoe/streamlink:5.5.1");
         }
 

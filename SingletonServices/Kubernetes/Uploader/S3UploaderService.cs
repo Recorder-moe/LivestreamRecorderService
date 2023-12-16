@@ -8,24 +8,16 @@ using Microsoft.Extensions.Options;
 
 namespace LivestreamRecorderService.SingletonServices.Kubernetes.Uploader;
 
-public class S3UploaderService : KubernetesServiceBase, IS3UploaderService
+public class S3UploaderService(
+    ILogger<YtdlpService> logger,
+    k8s.Kubernetes kubernetes,
+    IOptions<KubernetesOption> options,
+    IOptions<ServiceOption> serviceOptions,
+    IOptions<S3Option> s3Options,
+    IOptions<AzureOption> azureOptions) : KubernetesServiceBase(logger, kubernetes, options, serviceOptions, azureOptions), IS3UploaderService
 {
-    private readonly ILogger<YtdlpService> _logger;
-
     public override string Name => IS3UploaderService.name;
-    private readonly S3Option _s3Option;
-
-    public S3UploaderService(
-        ILogger<YtdlpService> logger,
-        k8s.Kubernetes kubernetes,
-        IOptions<KubernetesOption> options,
-        IOptions<ServiceOption> serviceOptions,
-        IOptions<S3Option> s3Options,
-        IOptions<AzureOption> azureOptions) : base(logger, kubernetes, options, serviceOptions, azureOptions)
-    {
-        _logger = logger;
-        _s3Option = s3Options.Value;
-    }
+    private readonly S3Option _s3Option = s3Options.Value;
 
     protected override Task<V1Job> CreateNewJobAsync(string _,
                                                      string instanceName,
@@ -40,7 +32,7 @@ public class S3UploaderService : KubernetesServiceBase, IS3UploaderService
         catch (Exception)
         {
             // Use DockerHub as fallback
-            _logger.LogWarning("Failed once, try docker hub as fallback.");
+            logger.LogWarning("Failed once, try docker hub as fallback.");
             return doWithImage("recordermoe/s3-uploader:latest");
         }
 
@@ -68,11 +60,11 @@ public class S3UploaderService : KubernetesServiceBase, IS3UploaderService
                     deploymentName: instanceName,
                     environment: new List<EnvironmentVariable>
                     {
-                        new EnvironmentVariable("S3_ENDPOINT", $"http{(_s3Option.Secure? "s": "")}://{_s3Option.Endpoint}", null),
-                        new EnvironmentVariable("S3_ACCESS_KEY", null, _s3Option.AccessKey),
-                        new EnvironmentVariable("S3_SECRET_KEY", null, _s3Option.SecretKey),
-                        new EnvironmentVariable("DESTINATION_BUCKET", _s3Option.BucketName_Private, null),
-                        new EnvironmentVariable("DESTINATION_DIRECTORY", "videos", null)
+                        new("S3_ENDPOINT", $"http{(_s3Option.Secure? "s": "")}://{_s3Option.Endpoint}", null),
+                        new("S3_ACCESS_KEY", null, _s3Option.AccessKey),
+                        new("S3_SECRET_KEY", null, _s3Option.SecretKey),
+                        new("DESTINATION_BUCKET", _s3Option.BucketName_Private, null),
+                        new("DESTINATION_DIRECTORY", "videos", null)
                     },
                     cancellation: cancellation);
         }

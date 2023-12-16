@@ -6,18 +6,12 @@ using Microsoft.Extensions.Options;
 
 namespace LivestreamRecorderService.SingletonServices;
 
-public class ABSService : IStorageService
+public class ABSService(
+    BlobServiceClient blobServiceClient,
+    IOptions<AzureOption> options) : IStorageService
 {
-    private readonly BlobContainerClient _blobContainerClient;
-    private readonly BlobContainerClient _blobContainerClient_public;
-
-    public ABSService(
-        BlobServiceClient blobServiceClient,
-        IOptions<AzureOption> options)
-    {
-        _blobContainerClient = blobServiceClient.GetBlobContainerClient(options.Value.BlobStorage!.BlobContainerName_Private);
-        _blobContainerClient_public = blobServiceClient.GetBlobContainerClient(options.Value.BlobStorage!.BlobContainerName_Public);
-    }
+    private readonly BlobContainerClient _blobContainerClient = blobServiceClient.GetBlobContainerClient(options.Value.BlobStorage!.BlobContainerName_Private);
+    private readonly BlobContainerClient _blobContainerClient_public = blobServiceClient.GetBlobContainerClient(options.Value.BlobStorage!.BlobContainerName_Public);
 
     public async Task<bool> IsVideoFileExistsAsync(string filename, CancellationToken cancellation = default)
         => (await _blobContainerClient.GetBlobClient($"videos/{filename}")

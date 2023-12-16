@@ -1,33 +1,28 @@
 <Project Sdk="Microsoft.NET.Sdk.Worker">
-
   <PropertyGroup>
-    <TargetFramework>net7.0</TargetFramework>
+    <TargetFramework>net8.0</TargetFramework>
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
     <UserSecretsId>dotnet-LivestreamRecorderService-3a6e3dbc-ab1b-4ee7-bf55-09713c44a431</UserSecretsId>
     <DockerDefaultTargetOS>Linux</DockerDefaultTargetOS>
     <DockerfileContext>.</DockerfileContext>
     <ServerGarbageCollection>false</ServerGarbageCollection>
-<Configurations>CouchDB;CosmosDB;AzureCosmosDB_Release;ApacheCouchDB_Release</Configurations>
-</PropertyGroup>
-
-<PropertyGroup Condition="'$(Configuration)|$(Platform)'=='AzureCosmosDB_Release|AnyCPU'">
-<DefineConstants>$(DefineConstants);COSMOSDB;RELEASE</DefineConstants>
-<Optimize>True</Optimize>
-</PropertyGroup>
-
-<PropertyGroup Condition="'$(Configuration)|$(Platform)'=='ApacheCouchDB_Release|AnyCPU'">
-<DefineConstants>$(DefineConstants);COUCHDB;RELEASE</DefineConstants>
-<Optimize>True</Optimize>
+    <Configurations>CouchDB;CosmosDB;AzureCosmosDB_Release;ApacheCouchDB_Release</Configurations>
   </PropertyGroup>
-
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='AzureCosmosDB_Release|AnyCPU'">
+    <DefineConstants>$(DefineConstants);COSMOSDB;RELEASE</DefineConstants>
+    <Optimize>True</Optimize>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='ApacheCouchDB_Release|AnyCPU'">
+    <DefineConstants>$(DefineConstants);COUCHDB;RELEASE</DefineConstants>
+    <Optimize>True</Optimize>
+  </PropertyGroup>
   <ItemGroup>
     <Compile Remove="LivestreamRecorder.DB\**" />
     <Content Remove="LivestreamRecorder.DB\**" />
     <EmbeddedResource Remove="LivestreamRecorder.DB\**" />
     <None Remove="LivestreamRecorder.DB\**" />
   </ItemGroup>
-
   <ItemGroup>
     <PackageReference Include="Azure.Identity" Version="1.10.2" />
     <PackageReference Include="Azure.ResourceManager" Version="1.7.0" />
@@ -39,17 +34,7 @@
     <PackageReference Include="Discord.Net.Webhook" Version="3.11.0" />
     <PackageReference Include="HtmlAgilityPack" Version="1.11.51" />
     <PackageReference Include="KubernetesClient" Version="11.0.44" />
-    <PackageReference Include="Microsoft.EntityFrameworkCore.Cosmos" Version="7.0.9" />
-    <PackageReference Include="Microsoft.EntityFrameworkCore.Design" Version="7.0.9">
-      <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
-      <PrivateAssets>all</PrivateAssets>
-    </PackageReference>
     <PackageReference Include="Microsoft.Extensions.Azure" Version="1.6.3" />
-    <PackageReference Include="Microsoft.Extensions.Configuration.UserSecrets" Version="7.0.0" />
-    <PackageReference Include="Microsoft.Extensions.DependencyInjection" Version="7.0.0" />
-    <PackageReference Include="Microsoft.Extensions.Hosting" Version="7.0.1" />
-    <PackageReference Include="Microsoft.Extensions.Http" Version="7.0.0" />
-    <PackageReference Include="Microsoft.Extensions.Options.DataAnnotations" Version="7.0.0" />
     <PackageReference Include="Microsoft.VisualStudio.Azure.Containers.Tools.Targets" Version="1.18.1" />
     <PackageReference Include="MimeMapping" Version="2.0.0" />
     <PackageReference Include="Minio" Version="5.0.0" />
@@ -62,12 +47,17 @@
     <PackageReference Include="TwitchLib.Api" Version="3.9.0" />
     <PackageReference Include="Xabe.FFmpeg" Version="5.2.6" />
     <PackageReference Include="YoutubeDLSharp" Version="0.4.3" />
+    <PackageReference Include="Microsoft.EntityFrameworkCore.Cosmos" Version="8.0.0" />
+    <PackageReference Include="Microsoft.EntityFrameworkCore.Design" Version="8.0.0" />
+    <PackageReference Include="Microsoft.Extensions.Configuration.UserSecrets" Version="8.0.0" />
+    <PackageReference Include="Microsoft.Extensions.DependencyInjection" Version="8.0.0" />
+    <PackageReference Include="Microsoft.Extensions.Hosting" Version="8.0.0" />
+    <PackageReference Include="Microsoft.Extensions.Http" Version="8.0.0" />
+    <PackageReference Include="Microsoft.Extensions.Options.DataAnnotations" Version="8.0.0" />
   </ItemGroup>
-
   <ItemGroup>
     <ProjectReference Include="LivestreamRecorder.DB\LivestreamRecorder.DB.csproj" />
   </ItemGroup>
-
   <ItemGroup>
     <Content Update="ARMTemplate\ACI_env.json">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>

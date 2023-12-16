@@ -73,7 +73,7 @@ public class KubernetesService : IJobService
     public async Task RemoveCompletedJobsAsync(Video video, CancellationToken cancellation = default)
     {
         var jobs = (await GetJobsByKeywordAsync(video.id, cancellation)).Where(p => p.Status.Conditions.LastOrDefault()?.Type == "Complete").ToList();
-        if (!jobs.Any())
+        if (jobs.Count == 0)
         {
             _logger.LogError("Failed to retrieve K8s job for {videoId} while removing completed job. Please verify if any job exists.", video.id);
             throw new Exception($"No K8s jobs found! {video.id}");

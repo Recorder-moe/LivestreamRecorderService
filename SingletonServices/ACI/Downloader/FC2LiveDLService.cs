@@ -8,21 +8,14 @@ using Microsoft.Extensions.Options;
 
 namespace LivestreamRecorderService.SingletonServices.ACI.Downloader;
 
-public class FC2LiveDLService : ACIServiceBase, IFC2LiveDLService
+public class FC2LiveDLService(
+    ILogger<FC2LiveDLService> logger,
+    ArmClient armClient,
+    IOptions<AzureOption> options) : ACIServiceBase(logger, armClient, options), IFC2LiveDLService
 {
-    private readonly AzureOption _azureOption;
-    private readonly ILogger<FC2LiveDLService> _logger;
+    private readonly AzureOption _azureOption = options.Value;
 
     public override string Name => IFC2LiveDLService.name;
-
-    public FC2LiveDLService(
-        ILogger<FC2LiveDLService> logger,
-        ArmClient armClient,
-        IOptions<AzureOption> options) : base(logger, armClient, options)
-    {
-        _azureOption = options.Value;
-        _logger = logger;
-    }
 
     public override Task InitJobAsync(string videoId,
                                       Video video,
@@ -52,24 +45,28 @@ public class FC2LiveDLService : ACIServiceBase, IFC2LiveDLService
         catch (Exception)
         {
             // Use DockerHub as fallback
-            _logger.LogWarning("Failed once, try docker hub as fallback.");
+            logger.LogWarning("Failed once, try docker hub as fallback.");
             return doWithImage("recordermoe/fc2-live-dl:2.2.0");
         }
 
         Task<ArmOperation<ArmDeploymentResource>> doWithImage(string imageName)
         {
             string[] command = useCookiesFile
-                ? new string[]
-                {
-                    "/usr/bin/dumb-init", "--",
-                    "sh", "-c",
+                ?
+                [
+                    "/usr/bin/dumb-init",
+                    "--",
+                    "sh",
+                    "-c",
                     $"/venv/bin/fc2-live-dl --latency high --threads 1 -o '{Path.ChangeExtension(filename, ".%(ext)s")}' --log-level trace --cookies /sharedvolume/cookies/{video.ChannelId}.txt 'https://live.fc2.com/{video.ChannelId}/' && mv '/app/{filename}' /sharedvolume/"
-                }
-                : new string[] {
-                    "/usr/bin/dumb-init", "--",
-                    "sh", "-c",
+                ]
+                : [
+                    "/usr/bin/dumb-init",
+                    "--",
+                    "sh",
+                    "-c",
                     $"/venv/bin/fc2-live-dl --latency high --threads 1 -o '{Path.ChangeExtension(filename, ".%(ext)s")}' --log-level trace 'https://live.fc2.com/{video.ChannelId}/' && mv '/app/{filename}' /sharedvolume/"
-                };
+                ];
 
             return CreateResourceAsync(
                     parameters: new

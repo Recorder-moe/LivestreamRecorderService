@@ -9,25 +9,18 @@ using LivestreamRecorder.DB.Models;
 
 namespace LivestreamRecorderService.ScopedServices;
 
-public class RSSService
+public class RSSService(
+    ILogger<RSSService> logger,
+    UnitOfWork_Public unitOfWork_Public,
+    IChannelRepository channelRepository)
 {
-    private readonly ILogger<RSSService> _logger;
-    private readonly IUnitOfWork _unitOfWork_Public;
-    private readonly IChannelRepository _channelRepository;
-
-    public RSSService(
-        ILogger<RSSService> logger,
-        UnitOfWork_Public unitOfWork_Public,
-        IChannelRepository channelRepository)
-    {
-        _logger = logger;
-        _unitOfWork_Public = unitOfWork_Public;
-        _channelRepository = channelRepository;
-    }
+#pragma warning disable CA1859 // 盡可能使用具象類型以提高效能
+    private readonly IUnitOfWork _unitOfWork_Public = unitOfWork_Public;
+#pragma warning restore CA1859 // 盡可能使用具象類型以提高效能
 
     public async Task<Feed?> ReadRSSAsync(string url, CancellationToken cancellation = default)
     {
-        _logger.LogTrace("Start to get RSS feed: {url}", url);
+        logger.LogTrace("Start to get RSS feed: {url}", url);
         Feed? feed = null;
         try
         {
@@ -35,7 +28,7 @@ public class RSSService
         }
         catch (Exception e)
         {
-            _logger.LogWarning(e, "Failed to get feed: {feed}", url);
+            logger.LogWarning(e, "Failed to get feed: {feed}", url);
         }
         return feed;
     }
@@ -44,9 +37,9 @@ public class RSSService
     {
         if (feed.Title != channel.ChannelName)
         {
-            _logger.LogInformation("Update channel name from {oldName} to {newName}", channel.ChannelName, feed.Title);
+            logger.LogInformation("Update channel name from {oldName} to {newName}", channel.ChannelName, feed.Title);
             channel.ChannelName = feed.Title;
-            _channelRepository.AddOrUpdateAsync(channel);
+            channelRepository.AddOrUpdateAsync(channel);
             _unitOfWork_Public.Commit();
         }
     }

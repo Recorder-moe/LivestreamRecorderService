@@ -2,22 +2,15 @@
 
 namespace LivestreamRecorderService.Models;
 
-public readonly struct EnvironmentVariable
+[method: JsonConstructor]
+public readonly struct EnvironmentVariable(string name, string? value, string? secureValue)
 {
     [JsonPropertyName("name")]
-    public string Name { get; }
+    public string Name { get; } = name;
 
     [JsonPropertyName("value")]
-    public string? Value { get; }
+    public string? Value { get; } = value;
 
     [JsonPropertyName("secureValue")]
-    public string? SecureValue { get; }
-
-    [JsonConstructor]
-    public EnvironmentVariable(string name, string? value, string? secureValue)
-    {
-        Name = name;
-        Value = value;
-        SecureValue = secureValue;
-    }
+    public string? SecureValue { get; } = secureValue;
 }

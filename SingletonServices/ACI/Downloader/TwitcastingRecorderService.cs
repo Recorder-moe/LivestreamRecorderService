@@ -8,21 +8,14 @@ using Microsoft.Extensions.Options;
 
 namespace LivestreamRecorderService.SingletonServices.ACI.Downloader;
 
-public class TwitcastingRecorderService : ACIServiceBase, ITwitcastingRecorderService
+public class TwitcastingRecorderService(
+    ILogger<TwitcastingRecorderService> logger,
+    ArmClient armClient,
+    IOptions<AzureOption> options) : ACIServiceBase(logger, armClient, options), ITwitcastingRecorderService
 {
-    private readonly AzureOption _azureOption;
-    private readonly ILogger<TwitcastingRecorderService> _logger;
+    private readonly AzureOption _azureOption = options.Value;
 
     public override string Name => ITwitcastingRecorderService.name;
-
-    public TwitcastingRecorderService(
-        ILogger<TwitcastingRecorderService> logger,
-        ArmClient armClient,
-        IOptions<AzureOption> options) : base(logger, armClient, options)
-    {
-        _azureOption = options.Value;
-        _logger = logger;
-    }
 
     public override Task InitJobAsync(string videoId,
                                       Video video,
@@ -51,7 +44,7 @@ public class TwitcastingRecorderService : ACIServiceBase, ITwitcastingRecorderSe
         catch (Exception)
         {
             // Use DockerHub as fallback
-            _logger.LogWarning("Failed once, try docker hub as fallback.");
+            logger.LogWarning("Failed once, try docker hub as fallback.");
             return doWithImage("recordermoe/twitcasting-recorder:latest");
         }
 

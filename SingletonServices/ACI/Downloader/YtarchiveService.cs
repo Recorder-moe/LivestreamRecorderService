@@ -8,21 +8,14 @@ using Microsoft.Extensions.Options;
 
 namespace LivestreamRecorderService.SingletonServices.ACI.Downloader;
 
-public class YtarchiveService : ACIServiceBase, IYtarchiveService
+public class YtarchiveService(
+    ILogger<YtarchiveService> logger,
+    ArmClient armClient,
+    IOptions<AzureOption> options) : ACIServiceBase(logger, armClient, options), IYtarchiveService
 {
-    private readonly ILogger<YtarchiveService> _logger;
-    private readonly AzureOption _azureOption;
+    private readonly AzureOption _azureOption = options.Value;
 
     public override string Name => IYtarchiveService.name;
-
-    public YtarchiveService(
-        ILogger<YtarchiveService> logger,
-        ArmClient armClient,
-        IOptions<AzureOption> options) : base(logger, armClient, options)
-    {
-        _logger = logger;
-        _azureOption = options.Value;
-    }
 
     protected override Task<ArmOperation<ArmDeploymentResource>> CreateNewJobAsync(
         string url,
@@ -40,7 +33,7 @@ public class YtarchiveService : ACIServiceBase, IYtarchiveService
         catch (Exception)
         {
             // Use DockerHub as fallback
-            _logger.LogWarning("Failed once, try docker hub as fallback.");
+            logger.LogWarning("Failed once, try docker hub as fallback.");
             return doWithImage("recordermoe/ytarchive:distroless");
         }
 
@@ -49,15 +42,17 @@ public class YtarchiveService : ACIServiceBase, IYtarchiveService
             string filename = NameHelper.GetFileName(video, IYtarchiveService.name);
             video.Filename = filename;
             string[] command = useCookiesFile
-                ? new string[]
-                {
-                    "sh", "-c",
+                ?
+                [
+                    "sh",
+                    "-c",
                     $"/usr/local/bin/ytarchive --add-metadata --merge --retry-frags 30 --thumbnail -o '{filename.Replace(".mp4", "")}' -c /sharedvolume/cookies/{video.ChannelId}.txt '{url}' best && mv *.mp4 /sharedvolume/"
-                }
-                : new string[] {
-                    "sh", "-c",
+                ]
+                : [
+                    "sh",
+                    "-c",
                     $"/usr/local/bin/ytarchive --add-metadata --merge --retry-frags 30 --thumbnail -o '{filename.Replace(".mp4", "")}' '{url}' best && mv *.mp4 /sharedvolume/"
-                };
+                ];
 
             return CreateResourceAsync(
                     parameters: new

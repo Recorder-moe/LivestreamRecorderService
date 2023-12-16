@@ -62,7 +62,7 @@ internal static partial class YoutubeDL
             videoData = Newtonsoft.Json.JsonConvert.DeserializeObject<YtdlpVideoData>(data);
         };
         FieldInfo fieldInfo = typeof(YoutubeDLSharp.YoutubeDL).GetField("runner", BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.GetField | BindingFlags.SetField);
-        (int code, string[] errors) = await (fieldInfo.GetValue(ytdl) as ProcessRunner).RunThrottled(youtubeDLProcess, new[] { url }, optionSet, ct);
+        (int code, string[] errors) = await (fieldInfo.GetValue(ytdl) as ProcessRunner).RunThrottled(youtubeDLProcess, [url], optionSet, ct);
         return new RunResult<YtdlpVideoData>(code == 0, errors, videoData);
     }
 #nullable enable 
@@ -83,8 +83,8 @@ internal static partial class YoutubeDL
         DirectoryInfo TempDirectory = Directory.CreateDirectory(Path.Combine(Path.GetTempPath(), nameof(LivestreamRecorderService)));
 
         // https://stackoverflow.com/a/63021455
-        string[] paths = Environment.GetEnvironmentVariable("PATH")?.Split(';') ?? Array.Empty<string>();
-        string[] extensions = Environment.GetEnvironmentVariable("PATHEXT")?.Split(';') ?? Array.Empty<string>();
+        string[] paths = Environment.GetEnvironmentVariable("PATH")?.Split(';') ?? [];
+        string[] extensions = Environment.GetEnvironmentVariable("PATHEXT")?.Split(';') ?? [];
 
         string? _YtdlpPath = (from p in new[] { Environment.CurrentDirectory, TempDirectory.FullName }.Concat(paths)
                               from e in extensions

@@ -7,21 +7,14 @@ using Microsoft.Extensions.Options;
 
 namespace LivestreamRecorderService.SingletonServices.Kubernetes.Downloader;
 
-public class YtdlpService : KubernetesServiceBase, IYtdlpService
+public class YtdlpService(
+    ILogger<YtdlpService> logger,
+    k8s.Kubernetes kubernetes,
+    IOptions<KubernetesOption> options,
+    IOptions<ServiceOption> serviceOptions,
+    IOptions<AzureOption> azureOptions) : KubernetesServiceBase(logger, kubernetes, options, serviceOptions, azureOptions), IYtdlpService
 {
-    private readonly ILogger<YtdlpService> _logger;
-
     public override string Name => IYtdlpService.name;
-
-    public YtdlpService(
-        ILogger<YtdlpService> logger,
-        k8s.Kubernetes kubernetes,
-        IOptions<KubernetesOption> options,
-        IOptions<ServiceOption> serviceOptions,
-        IOptions<AzureOption> azureOptions) : base(logger, kubernetes, options, serviceOptions, azureOptions)
-    {
-        _logger = logger;
-    }
 
     protected override Task<V1Job> CreateNewJobAsync(string url,
                                                      string instanceName,
@@ -36,7 +29,7 @@ public class YtdlpService : KubernetesServiceBase, IYtdlpService
         catch (Exception)
         {
             // Use DockerHub as fallback
-            _logger.LogWarning("Failed once, try docker hub as fallback.");
+            logger.LogWarning("Failed once, try docker hub as fallback.");
             return doWithImage("recordermoe/yt-dlp:2023.07.06");
         }
 
@@ -45,18 +38,22 @@ public class YtdlpService : KubernetesServiceBase, IYtdlpService
             string filename = NameHelper.GetFileName(video, IYtdlpService.name);
             video.Filename = filename;
             string[] command = useCookiesFile
-                ? new string[]
-                {
-                    "dumb-init", "--",
-                    "sh", "-c",
+                ?
+                [
+                    "dumb-init",
+                    "--",
+                    "sh",
+                    "-c",
                     $"yt-dlp --ignore-config --retries 30 --concurrent-fragments 16 --merge-output-format mp4 -S '+proto:http,+codec:h264' --embed-thumbnail --embed-metadata --no-part --cookies /sharedvolume/cookies/{video.ChannelId}.txt -o '{filename}' '{url}' && mv *.mp4 /sharedvolume/"
-                }
-                : new string[]
-                {
-                    "dumb-init", "--",
-                    "sh", "-c",
+                ]
+                :
+                [
+                    "dumb-init",
+                    "--",
+                    "sh",
+                    "-c",
                     $"yt-dlp --ignore-config --retries 30 --concurrent-fragments 16 --merge-output-format mp4 -S '+proto:http,+codec:h264' --embed-thumbnail --embed-metadata --no-part -o '{filename}' '{url}' && mv *.mp4 /sharedvolume/"
-                };
+                ];
 
             // Workground for twitcasting ERROR: Initialization fragment found after media fragments, unable to download
             // https://github.com/yt-dlp/yt-dlp/issues/5497

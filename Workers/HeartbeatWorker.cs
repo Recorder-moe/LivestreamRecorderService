@@ -4,28 +4,19 @@ using Serilog.Context;
 
 namespace LivestreamRecorderService.Workers;
 
-public class HeartbeatWorker : BackgroundService
+public class HeartbeatWorker(
+    ILogger<HeartbeatWorker> logger,
+    IHttpClientFactory httpFactory,
+    IOptions<HeartbeatOption> options) : BackgroundService
 {
-    private readonly ILogger<HeartbeatWorker> _logger;
-    private readonly IHttpClientFactory _httpFactory;
-    private readonly HeartbeatOption _option;
-
-    public HeartbeatWorker(
-        ILogger<HeartbeatWorker> logger,
-        IHttpClientFactory httpFactory,
-        IOptions<HeartbeatOption> options)
-    {
-        _logger = logger;
-        _httpFactory = httpFactory;
-        _option = options.Value;
-    }
+    private readonly HeartbeatOption _option = options.Value;
 
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
         using var _ = LogContext.PushProperty("Worker", nameof(HeartbeatWorker));
         if (!_option.Enabled) return;
 
-        _logger.LogTrace("{Worker} starts...", nameof(HeartbeatWorker));
+        logger.LogTrace("{Worker} starts...", nameof(HeartbeatWorker));
 
         while (!stoppingToken.IsCancellationRequested)
         {
@@ -33,7 +24,7 @@ public class HeartbeatWorker : BackgroundService
 
             await SendHeartbeatAsync();
 
-            _logger.LogTrace("{Worker} ends. Sleep {interval} seconds.", nameof(HeartbeatWorker), _option.Interval);
+            logger.LogTrace("{Worker} ends. Sleep {interval} seconds.", nameof(HeartbeatWorker), _option.Interval);
             await Task.Delay(TimeSpan.FromSeconds(_option.Interval), stoppingToken);
         }
     }
@@ -42,16 +33,16 @@ public class HeartbeatWorker : BackgroundService
     {
         if (!_option.Enabled) return;
 
-        using var client = _httpFactory.CreateClient();
+        using var client = httpFactory.CreateClient();
         try
         {
             var response = await client.GetAsync(_option.Endpoint);
             response.EnsureSuccessStatusCode();
-            _logger.LogTrace("Heartbeat sent successfully.");
+            logger.LogTrace("Heartbeat sent successfully.");
         }
         catch (Exception e)
         {
-            _logger.LogError(e, "Heartbeat sent failed.");
+            logger.LogError(e, "Heartbeat sent failed.");
         }
     }
 

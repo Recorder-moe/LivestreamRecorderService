@@ -11,30 +11,19 @@ using System.Configuration;
 
 namespace LivestreamRecorderService.SingletonServices.Kubernetes;
 
-public abstract class KubernetesServiceBase : IJobServiceBase
+public abstract class KubernetesServiceBase(
+    ILogger<KubernetesServiceBase> logger,
+    k8s.Kubernetes kubernetes,
+    IOptions<KubernetesOption> options,
+    IOptions<ServiceOption> serviceOptions,
+    IOptions<AzureOption> azureOptions) : IJobServiceBase
 {
-    private readonly ILogger<KubernetesServiceBase> _logger;
-    private readonly k8s.Kubernetes _client;
-    private readonly KubernetesOption _option;
-    private readonly ServiceOption _serviceOption;
-    private readonly AzureOption _azureOption;
+    private readonly KubernetesOption _option = options.Value;
+    private readonly ServiceOption _serviceOption = serviceOptions.Value;
+    private readonly AzureOption _azureOption = azureOptions.Value;
 
     public abstract string Name { get; }
     protected static string KubernetesNamespace => KubernetesService.KubernetesNamespace;
-
-    public KubernetesServiceBase(
-        ILogger<KubernetesServiceBase> logger,
-        k8s.Kubernetes kubernetes,
-        IOptions<KubernetesOption> options,
-        IOptions<ServiceOption> serviceOptions,
-        IOptions<AzureOption> azureOptions)
-    {
-        _logger = logger;
-        _client = kubernetes;
-        _option = options.Value;
-        _serviceOption = serviceOptions.Value;
-        _azureOption = azureOptions.Value;
-    }
 
     public virtual async Task InitJobAsync(string videoId, Video video, bool useCookiesFile = false, CancellationToken cancellation = default)
     {
@@ -43,11 +32,11 @@ public abstract class KubernetesServiceBase : IJobServiceBase
         var job = await GetJobByKeywordAsync(jobName, cancellation);
         if (null != job && job.Status.Active != 0)
         {
-            _logger.LogWarning("An already active job found for {videoId} {name}!! A new job will now be created with different name. Please pay attention if this happens repeatedly.", videoId, jobName);
+            logger.LogWarning("An already active job found for {videoId} {name}!! A new job will now be created with different name. Please pay attention if this happens repeatedly.", videoId, jobName);
             jobName += DateTimeOffset.UtcNow.ToUnixTimeMilliseconds();
         }
 
-        _logger.LogInformation("Start new K8s job for {videoId} {name}.", videoId, jobName);
+        logger.LogInformation("Start new K8s job for {videoId} {name}.", videoId, jobName);
         await CreateNewJobAsync(id: videoId,
                                 instanceName: jobName,
                                 video: video,
@@ -57,7 +46,7 @@ public abstract class KubernetesServiceBase : IJobServiceBase
 
     protected async Task<V1Job?> GetJobByKeywordAsync(string keyword, CancellationToken cancellation)
     {
-        var jobs = await _client.ListNamespacedJobAsync(KubernetesNamespace, cancellationToken: cancellation);
+        var jobs = await kubernetes.ListNamespacedJobAsync(KubernetesNamespace, cancellationToken: cancellation);
         return jobs.Items.FirstOrDefault(p => p.Name().Contains(keyword));
     }
 
@@ -82,8 +71,7 @@ public abstract class KubernetesServiceBase : IJobServiceBase
                         RestartPolicy = "Never",
                         Containers = new List<V1Container>
                         {
-                            new V1Container
-                            {
+                            new() {
                                 Name = parameters.containerName.value,
                                 Image = parameters.dockerImageName.value,
                                 Command = parameters.commandOverrideArray.value,
@@ -111,7 +99,7 @@ public abstract class KubernetesServiceBase : IJobServiceBase
             job.Spec.Template.Spec.Containers[0].Env = environment.Select(p => new V1EnvVar(p.Name, p.Value ?? p.SecureValue)).ToList();
         }
 
-        return _client.CreateNamespacedJobAsync(body: job,
+        return kubernetes.CreateNamespacedJobAsync(body: job,
                                                 namespaceParameter: KubernetesNamespace,
                                                 cancellationToken: cancellation);
     }

@@ -14,15 +14,15 @@ namespace LivestreamRecorderService.ScopedServices.PlatformService;
 
 public abstract class PlatformService : IPlatformService
 {
-    private readonly IChannelRepository _channelRepository;
-    private readonly IStorageService _storageService;
-    private readonly IHttpClientFactory _httpFactory;
+    protected readonly IChannelRepository channelRepository;
+    protected readonly IStorageService storageService;
+    protected readonly IHttpClientFactory httpClientFactory;
     private readonly ILogger<PlatformService> _logger;
 
     public abstract string PlatformName { get; }
     public abstract int Interval { get; }
 
-    private static readonly Dictionary<string, int> _elapsedTime = new();
+    private static readonly Dictionary<string, int> _elapsedTime = [];
     protected readonly DiscordService? discordService = null;
 
     private string _ffmpegPath = "/usr/bin/ffmpeg";
@@ -36,21 +36,17 @@ public abstract class PlatformService : IPlatformService
         IOptions<DiscordOption> discordOptions,
         IServiceProvider serviceProvider)
     {
-        _channelRepository = channelRepository;
-        _storageService = storageService;
-        _httpFactory = httpClientFactory;
+        this.channelRepository = channelRepository;
+        this.storageService = storageService;
+        this.httpClientFactory = httpClientFactory;
         _logger = logger;
-        if (!_elapsedTime.ContainsKey(PlatformName))
-        {
-            _elapsedTime.Add(PlatformName, 0);
-        }
-
+        _elapsedTime.TryAdd(PlatformName, 0);
         if (discordOptions.Value.Enabled)
             discordService = serviceProvider.GetRequiredService<DiscordService>();
     }
 
     public async Task<List<Channel>> GetMonitoringChannels()
-        => (await _channelRepository.GetChannelsBySourceAsync(PlatformName))
+        => (await channelRepository.GetChannelsBySourceAsync(PlatformName))
                                     .Where(p => p.Monitoring)
                                     .ToList();
 
@@ -181,7 +177,7 @@ public abstract class PlatformService : IPlatformService
         string? extension, contentType, pathInStorage, tempPath;
         try
         {
-            using var client = _httpFactory.CreateClient();
+            using var client = httpClientFactory.CreateClient();
             var response = await client.GetAsync(url, cancellation);
             response.EnsureSuccessStatusCode();
 
@@ -204,11 +200,11 @@ public abstract class PlatformService : IPlatformService
 
         try
         {
-            List<Task> tasks = new()
-            {
-                _storageService.UploadPublicFileAsync(contentType, pathInStorage, tempPath, cancellation),
-                _storageService.UploadPublicFileAsync(KnownMimeTypes.Avif, $"{path}.avif", await ImageHelper.ConvertToAvifAsync(tempPath), cancellation)
-            };
+            List<Task> tasks =
+            [
+                storageService.UploadPublicFileAsync(contentType, pathInStorage, tempPath, cancellation),
+                storageService.UploadPublicFileAsync(KnownMimeTypes.Avif, $"{path}.avif", await ImageHelper.ConvertToAvifAsync(tempPath), cancellation)
+            ];
 
             await Task.WhenAll(tasks);
             return pathInStorage;

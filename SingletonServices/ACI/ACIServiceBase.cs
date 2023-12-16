@@ -11,22 +11,12 @@ using Microsoft.Extensions.Options;
 
 namespace LivestreamRecorderService.SingletonServices.ACI;
 
-public abstract class ACIServiceBase : IJobServiceBase
+public abstract class ACIServiceBase(
+    ILogger<ACIServiceBase> logger,
+    ArmClient armClient,
+    IOptions<AzureOption> options) : IJobServiceBase
 {
-    private readonly ILogger<ACIServiceBase> _logger;
-    private readonly ArmClient _armClient;
-    private readonly string _resourceGroupName;
-
-    public ACIServiceBase(
-        ILogger<ACIServiceBase> logger,
-        ArmClient armClient,
-        IOptions<AzureOption> options
-    )
-    {
-        _logger = logger;
-        _armClient = armClient;
-        _resourceGroupName = options.Value.ContainerInstance!.ResourceGroupName;
-    }
+    private readonly string _resourceGroupName = options.Value.ContainerInstance!.ResourceGroupName;
 
     public abstract string Name { get; }
 
@@ -39,11 +29,11 @@ public abstract class ACIServiceBase : IJobServiceBase
         var job = await GetJobByKeywordAsync(jobName, cancellation);
         if (null != job && !job.HasData)
         {
-            _logger.LogWarning("An active job already exists! Fixed {videoId} status mismatch.", videoId);
+            logger.LogWarning("An active job already exists! Fixed {videoId} status mismatch.", videoId);
             return;
         }
 
-        _logger.LogInformation("Start new ACI job for {videoId} {name}.", videoId, jobName);
+        logger.LogInformation("Start new ACI job for {videoId} {name}.", videoId, jobName);
         await CreateNewJobAsync(id: videoId,
                                 jobName: jobName,
                                 video: video,
@@ -65,7 +55,7 @@ public abstract class ACIServiceBase : IJobServiceBase
         var job = await GetJobByKeywordAsync(instanceNameChannelId, cancellation);
         if (null == job || !job.HasData)
         {
-            _logger.LogWarning("Does not get ACI instance for {videoId} {name}. A new instance will now be created.", videoId, instanceNameChannelId);
+            logger.LogWarning("Does not get ACI instance for {videoId} {name}. A new instance will now be created.", videoId, instanceNameChannelId);
             // 啟動新的Channel Instance
             await CreateNewJobAsync(id: videoId,
                                     jobName: instanceNameChannelId,
@@ -149,7 +139,7 @@ public abstract class ACIServiceBase : IJobServiceBase
     {
         if (retry > 3)
         {
-            _logger.LogError("Retry too many times for {videoId} {ACIName}, create new resource.", video.id, job.Id);
+            logger.LogError("Retry too many times for {videoId} {ACIName}, create new resource.", video.id, job.Id);
             await CreateNewJobAsync(id: video.id,
                                     jobName: GetInstanceName(video.id),
                                     video: video,
@@ -160,12 +150,12 @@ public abstract class ACIServiceBase : IJobServiceBase
 
         try
         {
-            _logger.LogInformation("Detect ACI {ACIName} ProvisioningState as {ProvisioningState}", job.Id, job.Data.ProvisioningState);
-            await _armClient.GetContainerGroupResource(job.Id).StartAsync(WaitUntil.Started, cancellation);
+            logger.LogInformation("Detect ACI {ACIName} ProvisioningState as {ProvisioningState}", job.Id, job.Data.ProvisioningState);
+            await armClient.GetContainerGroupResource(job.Id).StartAsync(WaitUntil.Started, cancellation);
         }
         catch (RequestFailedException e)
         {
-            _logger.LogWarning(e, "Start ACI {ACIName} failed, retry {retry}", job.Id, ++retry);
+            logger.LogWarning(e, "Start ACI {ACIName} failed, retry {retry}", job.Id, ++retry);
             await StartOldJobAsync(job: job,
                                    video: video,
                                    retry: retry,
@@ -176,7 +166,7 @@ public abstract class ACIServiceBase : IJobServiceBase
 
     private async Task<ResourceGroupResource> GetResourceGroupAsync(CancellationToken cancellation = default)
     {
-        var subscriptionResource = await _armClient.GetDefaultSubscriptionAsync(cancellation);
+        var subscriptionResource = await armClient.GetDefaultSubscriptionAsync(cancellation);
         return await subscriptionResource.GetResourceGroupAsync(_resourceGroupName, cancellation);
     }
 }

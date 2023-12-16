@@ -9,21 +9,13 @@ using Microsoft.Extensions.Options;
 
 namespace LivestreamRecorderService.SingletonServices.ACI.Uploader;
 
-public class AzureUploaderService : ACIServiceBase, IAzureUploaderService
+public class AzureUploaderService(
+    ILogger<YtdlpService> logger,
+    ArmClient armClient,
+    IOptions<AzureOption> options) : ACIServiceBase(logger, armClient, options), IAzureUploaderService
 {
-    private readonly ILogger<YtdlpService> _logger;
-
     public override string Name => IAzureUploaderService.name;
-    private readonly AzureOption _azureOption;
-    public AzureUploaderService(
-        ILogger<YtdlpService> logger,
-        ArmClient armClient,
-        IOptions<AzureOption> options) : base(logger, armClient, options)
-    {
-        _azureOption = options.Value;
-        _logger = logger;
-    }
-
+    private readonly AzureOption _azureOption = options.Value;
 
     protected override Task<ArmOperation<ArmDeploymentResource>> CreateNewJobAsync(
         string _,
@@ -39,7 +31,7 @@ public class AzureUploaderService : ACIServiceBase, IAzureUploaderService
         catch (Exception)
         {
             // Use DockerHub as fallback
-            _logger.LogWarning("Failed once, try docker hub as fallback.");
+            logger.LogWarning("Failed once, try docker hub as fallback.");
             return doWithImage("recordermoe/azure-uploader:latest");
         }
 
@@ -79,10 +71,10 @@ public class AzureUploaderService : ACIServiceBase, IAzureUploaderService
                         {
                             value = new List<EnvironmentVariable>
                             {
-                                new EnvironmentVariable("STORAGE_ACCOUNT_NAME", _azureOption.BlobStorage!.StorageAccountName, null),
-                                new EnvironmentVariable("STORAGE_ACCOUNT_KEY", null, _azureOption.BlobStorage.StorageAccountKey),
-                                new EnvironmentVariable("CONTAINER_NAME", _azureOption.BlobStorage.BlobContainerName_Private, null),
-                                new EnvironmentVariable("DESTINATION_DIRECTORY", null, "/videos")
+                                new("STORAGE_ACCOUNT_NAME", _azureOption.BlobStorage!.StorageAccountName, null),
+                                new("STORAGE_ACCOUNT_KEY", null, _azureOption.BlobStorage.StorageAccountKey),
+                                new("CONTAINER_NAME", _azureOption.BlobStorage.BlobContainerName_Private, null),
+                                new("DESTINATION_DIRECTORY", null, "/videos")
                             }
                         }
                     },

@@ -7,21 +7,14 @@ using Microsoft.Extensions.Options;
 
 namespace LivestreamRecorderService.SingletonServices.Kubernetes.Downloader;
 
-public class TwitcastingRecorderService : KubernetesServiceBase, ITwitcastingRecorderService
+public class TwitcastingRecorderService(
+    ILogger<TwitcastingRecorderService> logger,
+    k8s.Kubernetes kubernetes,
+    IOptions<KubernetesOption> options,
+    IOptions<ServiceOption> serviceOptions,
+    IOptions<AzureOption> azureOptions) : KubernetesServiceBase(logger, kubernetes, options, serviceOptions, azureOptions), ITwitcastingRecorderService
 {
-    private readonly ILogger<TwitcastingRecorderService> _logger;
-
     public override string Name => ITwitcastingRecorderService.name;
-
-    public TwitcastingRecorderService(
-        ILogger<TwitcastingRecorderService> logger,
-        k8s.Kubernetes kubernetes,
-        IOptions<KubernetesOption> options,
-        IOptions<ServiceOption> serviceOptions,
-        IOptions<AzureOption> azureOptions) : base(logger, kubernetes, options, serviceOptions, azureOptions)
-    {
-        _logger = logger;
-    }
 
     protected override Task<V1Job> CreateNewJobAsync(string _,
                                                      string instanceName,
@@ -36,7 +29,7 @@ public class TwitcastingRecorderService : KubernetesServiceBase, ITwitcastingRec
         catch (Exception)
         {
             // Use DockerHub as fallback
-            _logger.LogWarning("Failed once, try docker hub as fallback.");
+            logger.LogWarning("Failed once, try docker hub as fallback.");
             return doWithImage("recordermoe/twitcasting-recorder:latest");
         }
 

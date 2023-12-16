@@ -11,38 +11,24 @@ using Serilog.Context;
 
 namespace LivestreamRecorderService.Workers;
 
-public class UpdateVideoStatusWorker : BackgroundService
+public class UpdateVideoStatusWorker(
+    ILogger<UpdateVideoStatusWorker> logger,
+    IStorageService storageService,
+    IOptions<AzureOption> azureOptions,
+    IOptions<TwitchOption> twitchOptions,
+    IOptions<ServiceOption> serviceOptions,
+    IOptions<S3Option> s3Options,
+    IServiceProvider serviceProvider) : BackgroundService
 {
-    private readonly ILogger<UpdateVideoStatusWorker> _logger;
-    private readonly IStorageService _storageService;
-    private readonly AzureOption _azureOption;
-    private readonly TwitchOption _twitchOption;
-    private readonly ServiceOption _serviceOption;
-    private readonly S3Option _s3Option;
-    private readonly IServiceProvider _serviceProvider;
-
-    public UpdateVideoStatusWorker(
-        ILogger<UpdateVideoStatusWorker> logger,
-        IStorageService storageService,
-        IOptions<AzureOption> azureOptions,
-        IOptions<TwitchOption> twitchOptions,
-        IOptions<ServiceOption> serviceOptions,
-        IOptions<S3Option> s3Options,
-        IServiceProvider serviceProvider)
-    {
-        _logger = logger;
-        _storageService = storageService;
-        _azureOption = azureOptions.Value;
-        _twitchOption = twitchOptions.Value;
-        _serviceOption = serviceOptions.Value;
-        _s3Option = s3Options.Value;
-        _serviceProvider = serviceProvider;
-    }
+    private readonly AzureOption _azureOption = azureOptions.Value;
+    private readonly TwitchOption _twitchOption = twitchOptions.Value;
+    private readonly ServiceOption _serviceOption = serviceOptions.Value;
+    private readonly S3Option _s3Option = s3Options.Value;
 
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
         using var _ = LogContext.PushProperty("Worker", nameof(UpdateVideoStatusWorker));
-        _logger.LogTrace("{Worker} starts...", nameof(UpdateVideoStatusWorker));
+        logger.LogTrace("{Worker} starts...", nameof(UpdateVideoStatusWorker));
 
         var i = 0;
         var videos = new List<Video>();
@@ -52,7 +38,7 @@ public class UpdateVideoStatusWorker : BackgroundService
             using var __ = LogContext.PushProperty("WorkerRunId", $"{nameof(UpdateVideoStatusWorker)}_{DateTime.Now:yyyyMMddHHmmssfff}");
 
             #region DI
-            using (var scope = _serviceProvider.CreateScope())
+            using (var scope = serviceProvider.CreateScope())
             {
                 VideoService videoService = scope.ServiceProvider.GetRequiredService<VideoService>();
                 IVideoRepository videoRepository = scope.ServiceProvider.GetRequiredService<IVideoRepository>();
@@ -68,12 +54,15 @@ public class UpdateVideoStatusWorker : BackgroundService
 
                 // Iterate over all elements, regardless of whether their content has changed.
                 i++;
-                videos = videoRepository.Where(p => p.Status >= VideoStatus.Archived
-                                                    && p.Status < VideoStatus.Expired)
-                                        .ToList()
-                                        // Sort locally to reduce the CPU usage of CosmosDB
-                                        .OrderByDescending(p => p.Timestamps.PublishedAt)
-                                        .ToList();
+                videos =
+                [
+                    .. videoRepository.Where(p => p.Status >= VideoStatus.Archived
+                                                                        && p.Status < VideoStatus.Expired)
+                                      .AsEnumerable()
+                                      // Sort locally to reduce the CPU usage of CosmosDB
+                                      .OrderByDescending(p => p.Timestamps.PublishedAt)
+,
+                ];
 
                 if (videos.Count > 0)
                 {
@@ -89,17 +78,17 @@ public class UpdateVideoStatusWorker : BackgroundService
                 }
             }
 
-            _logger.LogTrace("{Worker} ends. Sleep 5 minutes.", nameof(UpdateVideoStatusWorker));
+            logger.LogTrace("{Worker} ends. Sleep 5 minutes.", nameof(UpdateVideoStatusWorker));
             await Task.Delay(TimeSpan.FromMinutes(5), stoppingToken);
         }
     }
 
     private async Task UpdateVideoAsync(int i, List<Video> videos, IPlatformService youtubeService, IPlatformService twitcastingService, IPlatformService fc2Service, IPlatformService? twitchService, CancellationToken stoppingToken)
     {
-        _logger.LogInformation("Process: {index}/{amount}", i, videos.Count);
+        logger.LogInformation("Process: {index}/{amount}", i, videos.Count);
 
         var video = videos[i];
-        _logger.LogInformation("Update video data: {videoId}", video.id);
+        logger.LogInformation("Update video data: {videoId}", video.id);
 
         switch (video.Source)
         {
@@ -132,33 +121,33 @@ public class UpdateVideoStatusWorker : BackgroundService
 
         if (null == retentionDays)
         {
-            _logger.LogInformation("The RetentionDays setting is not configured. Videos will be skipped for expiration.");
+            logger.LogInformation("The RetentionDays setting is not configured. Videos will be skipped for expiration.");
             return;
         }
 
-        _logger.LogInformation("Start to expire videos.");
+        logger.LogInformation("Start to expire videos.");
         var videos = videoService.GetVideosByStatus(VideoStatus.Archived)
                                  .Where(p => DateTime.Today - (p.ArchivedTime ?? DateTime.Today) > TimeSpan.FromDays(retentionDays.Value))
                                  .ToList();
-        _logger.LogInformation("Get {count} videos to expire.", videos.Count);
+        logger.LogInformation("Get {count} videos to expire.", videos.Count);
         foreach (var video in videos)
         {
             if (video.SourceStatus == VideoStatus.Deleted
                 || video.SourceStatus == VideoStatus.Reject)
             {
-                _logger.LogWarning("The video {videoId} that has expired does not exist on the source platform!!", video.id);
+                logger.LogWarning("The video {videoId} that has expired does not exist on the source platform!!", video.id);
             }
 
             if (!string.IsNullOrEmpty(video.Filename)
-                && await _storageService.DeleteVideoBlobAsync(video.Filename, cancellation))
+                && await storageService.DeleteVideoBlobAsync(video.Filename, cancellation))
             {
-                _logger.LogInformation("Delete blob {path}", video.Filename);
+                logger.LogInformation("Delete blob {path}", video.Filename);
                 await videoService.UpdateVideoStatusAsync(video, VideoStatus.Expired);
                 await videoService.UpdateVideoNoteAsync(video, $"Video expired after {retentionDays} days.");
             }
             else
             {
-                _logger.LogError("FAILED to Delete blob {path}", video.Filename);
+                logger.LogError("FAILED to Delete blob {path}", video.Filename);
                 await videoService.UpdateVideoStatusAsync(video, VideoStatus.Error);
                 await videoService.UpdateVideoNoteAsync(video, $"Failed to delete blob after {retentionDays} days. Please contact admin if you see this message.");
             }

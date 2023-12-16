@@ -15,45 +15,30 @@ using LivestreamRecorder.DB.Models;
 
 namespace LivestreamRecorderService.ScopedServices.PlatformService;
 
-public class YoutubeService : PlatformService, IPlatformService
+public class YoutubeService(
+    ILogger<YoutubeService> logger,
+    UnitOfWork_Public unitOfWork_Public,
+    IVideoRepository videoRepository,
+    IChannelRepository channelRepository,
+    RSSService rSSService,
+    IStorageService storageService,
+    IYtarchiveService ytarchiveService,
+    IHttpClientFactory httpClientFactory,
+    IOptions<DiscordOption> discordOptions,
+    IServiceProvider serviceProvider) : PlatformService(channelRepository,
+                                                        storageService,
+                                                        httpClientFactory,
+                                                        logger,
+                                                        discordOptions,
+                                                        serviceProvider), IPlatformService
 {
-    private readonly ILogger<YoutubeService> _logger;
-    private readonly IUnitOfWork _unitOfWork_Public;
-    private readonly IVideoRepository _videoRepository;
-    private readonly IChannelRepository _channelRepository;
-    private readonly RSSService _rSSService;
-    private readonly IStorageService _storageService;
-    private readonly IYtarchiveService _ytarchiveService;
+#pragma warning disable CA1859 // 盡可能使用具象類型以提高效能
+    private readonly IUnitOfWork _unitOfWork_Public = unitOfWork_Public;
+#pragma warning restore CA1859 // 盡可能使用具象類型以提高效能
 
     public override string PlatformName => "Youtube";
 
     public override int Interval => 5 * 60;
-
-    public YoutubeService(
-        ILogger<YoutubeService> logger,
-        UnitOfWork_Public unitOfWork_Public,
-        IVideoRepository videoRepository,
-        IChannelRepository channelRepository,
-        RSSService rSSService,
-        IStorageService storageService,
-        IYtarchiveService ytarchiveService,
-        IHttpClientFactory httpClientFactory,
-        IOptions<DiscordOption> discordOptions,
-        IServiceProvider serviceProvider) : base(channelRepository,
-                                                 storageService,
-                                                 httpClientFactory,
-                                                 logger,
-                                                 discordOptions,
-                                                 serviceProvider)
-    {
-        _logger = logger;
-        _unitOfWork_Public = unitOfWork_Public;
-        _videoRepository = videoRepository;
-        _channelRepository = channelRepository;
-        _rSSService = rSSService;
-        _storageService = storageService;
-        _ytarchiveService = ytarchiveService;
-    }
 
     public static string GetRSSFeed(Channel channel)
         => $"https://www.youtube.com/feeds/videos.xml?channel_id={channel.id}";
@@ -65,26 +50,26 @@ public class YoutubeService : PlatformService, IPlatformService
         using var _ = LogContext.PushProperty("Platform", PlatformName);
         using var __ = LogContext.PushProperty("channelId", channel.id);
 
-        var feed = await _rSSService.ReadRSSAsync(GetRSSFeed(channel), cancellation);
+        var feed = await rSSService.ReadRSSAsync(GetRSSFeed(channel), cancellation);
 
         if (null == feed)
         {
-            _logger.LogError("Failed to get feed: {channel}", channel.ChannelName);
+            logger.LogError("Failed to get feed: {channel}", channel.ChannelName);
             return;
         }
 
         //_rSSService.UpdateChannelName(channel, feed);
 
-        _logger.LogTrace("Get {count} videos for channel {channelId} from RSS feed.", feed.Items.Count, channel.id);
+        logger.LogTrace("Get {count} videos for channel {channelId} from RSS feed.", feed.Items.Count, channel.id);
 
-        List<Item> items = new();
+        List<Item> items = [];
         feed.Items.ToList().ForEach(item => items.Add(new Item(item.Id, item.Title, item.PublishingDate)));
 
         if (channel.UseCookiesFile == true)
         {
             var ids = await GetVideoIdsFromMemberPlaylist(channel.id, cancellation);
 
-            _logger.LogTrace("Get {count} videos for channel {channelId} from Member Playlist.", feed.Items.Count, channel.id);
+            logger.LogTrace("Get {count} videos for channel {channelId} from Member Playlist.", feed.Items.Count, channel.id);
             ids?.ToList().ForEach(id => items.Add(new Item(id)));
 
             items = items.Distinct().ToList();
@@ -115,14 +100,14 @@ public class YoutubeService : PlatformService, IPlatformService
         // So we add a prefix 'Y' to it.
         var videoId = "Y" + item.Id.Split(':').Last();
         using var _ = LogContext.PushProperty("videoId", videoId);
-        var video = await _videoRepository.GetVideoByIdAndChannelIdAsync(videoId, channel.id);
+        var video = await videoRepository.GetVideoByIdAndChannelIdAsync(videoId, channel.id);
 
         if (null != video)
         {
             // Don't need to track anymore.
             if (video.Status > VideoStatus.Scheduled)
             {
-                _logger.LogTrace("Video {videoId} is skipped. It is {videoStatus}.", videoId, Enum.GetName(typeof(VideoStatus), video.Status));
+                logger.LogTrace("Video {videoId} is skipped. It is {videoStatus}.", videoId, Enum.GetName(typeof(VideoStatus), video.Status));
                 return;
             }
         }
@@ -141,7 +126,7 @@ public class YoutubeService : PlatformService, IPlatformService
                     PublishedAt = item.Date
                 },
             };
-            _logger.LogInformation("Found a new Video {videoId} from {channelId}", videoId, channel.id);
+            logger.LogInformation("Found a new Video {videoId} from {channelId}", videoId, channel.id);
         }
 
         await UpdateVideoDataAsync(video!, cancellation);
@@ -163,13 +148,13 @@ public class YoutubeService : PlatformService, IPlatformService
 
         if (null == videoData)
         {
-            _logger.LogWarning("Failed to get video data for {videoId}", video.id);
+            logger.LogWarning("Failed to get video data for {videoId}", video.id);
             video.Status = VideoStatus.Unknown;
             return;
         }
 
         // Note: The channel can be null by design.
-        Channel? channel = await _channelRepository.GetChannelByIdAndSourceAsync(video.ChannelId, video.Source);
+        Channel? channel = await channelRepository.GetChannelByIdAndSourceAsync(video.ChannelId, video.Source);
 
         // Download thumbnail for new videos
         if (video.Status == VideoStatus.Unknown
@@ -196,7 +181,7 @@ public class YoutubeService : PlatformService, IPlatformService
                             await discordService.SendSkippedMessage(video, channel);
                         }
                         video.Status = VideoStatus.Skipped;
-                        _logger.LogInformation("Change video {videoId} status to {videoStatus}", video.id, Enum.GetName(typeof(VideoStatus), video.Status));
+                        logger.LogInformation("Change video {videoId} status to {videoStatus}", video.id, Enum.GetName(typeof(VideoStatus), video.Status));
                         break;
                     }
                 }
@@ -226,7 +211,7 @@ public class YoutubeService : PlatformService, IPlatformService
                 if (video.Status != VideoStatus.Recording)
                     video.Status = VideoStatus.Pending;
 
-                _logger.LogWarning("Video {videoId} is currently in post_live status. Please wait for YouTube to prepare the video for download. If the admin still wants to download it, please manually change the video status to \"WaitingToDownload\".", video.id);
+                logger.LogWarning("Video {videoId} is currently in post_live status. Please wait for YouTube to prepare the video for download. If the admin still wants to download it, please manually change the video status to \"WaitingToDownload\".", video.id);
                 goto case "_live";
             case "was_live":
                 switch (video.Status)
@@ -236,7 +221,7 @@ public class YoutubeService : PlatformService, IPlatformService
                     case VideoStatus.Unknown:
                         video.Status = VideoStatus.Expired;
                         video.Note = $"Video expired because it is an old live stream.";
-                        _logger.LogInformation("Change video {videoId} status to {videoStatus}", video.id, Enum.GetName(typeof(VideoStatus), video.Status));
+                        logger.LogInformation("Change video {videoId} status to {videoStatus}", video.id, Enum.GetName(typeof(VideoStatus), video.Status));
                         video.Thumbnail = await DownloadThumbnailAsync(videoData.Thumbnail, video.id, cancellation);
                         break;
                     // Should record these streams but not recorded.
@@ -246,7 +231,7 @@ public class YoutubeService : PlatformService, IPlatformService
                     case VideoStatus.WaitingToRecord:
                     case VideoStatus.Missing:
                         video.Status = VideoStatus.WaitingToDownload;
-                        _logger.LogInformation("Change video {videoId} status to {videoStatus}", video.id, Enum.GetName(typeof(VideoStatus), video.Status));
+                        logger.LogInformation("Change video {videoId} status to {videoStatus}", video.id, Enum.GetName(typeof(VideoStatus), video.Status));
                         video.Thumbnail = await DownloadThumbnailAsync(videoData.Thumbnail, video.id, cancellation);
                         break;
                     default:
@@ -281,7 +266,7 @@ public class YoutubeService : PlatformService, IPlatformService
                         await discordService.SendSkippedMessage(video, channel);
                     }
                     video.Status = VideoStatus.Skipped;
-                    _logger.LogInformation("Change video {videoId} status to {videoStatus}", video.id, Enum.GetName(typeof(VideoStatus), video.Status));
+                    logger.LogInformation("Change video {videoId} status to {videoStatus}", video.id, Enum.GetName(typeof(VideoStatus), video.Status));
                 }
                 else
                 {
@@ -298,7 +283,7 @@ public class YoutubeService : PlatformService, IPlatformService
                             // Will fall in here when adding a new channel.
                             video.Status = VideoStatus.Expired;
                             video.Note = $"Video expired because it is an old video.";
-                            _logger.LogInformation("Change video {videoId} status to {videoStatus}", video.id, Enum.GetName(typeof(VideoStatus), video.Status));
+                            logger.LogInformation("Change video {videoId} status to {videoStatus}", video.id, Enum.GetName(typeof(VideoStatus), video.Status));
                             video.Thumbnail = await DownloadThumbnailAsync(videoData.Thumbnail, video.id, cancellation);
                             break;
                         // Should download these video but not downloaded.
@@ -307,7 +292,7 @@ public class YoutubeService : PlatformService, IPlatformService
                         case VideoStatus.Pending:
                         case VideoStatus.Missing:
                             video.Status = VideoStatus.WaitingToDownload;
-                            _logger.LogInformation("Change video {videoId} status to {videoStatus}", video.id, Enum.GetName(typeof(VideoStatus), video.Status));
+                            logger.LogInformation("Change video {videoId} status to {videoStatus}", video.id, Enum.GetName(typeof(VideoStatus), video.Status));
                             video.Thumbnail = await DownloadThumbnailAsync(videoData.Thumbnail, video.id, cancellation);
                             break;
                         default:
@@ -342,7 +327,7 @@ public class YoutubeService : PlatformService, IPlatformService
                     }
 
                     video.SourceStatus = VideoStatus.Deleted;
-                    _logger.LogInformation("Get empty video data, maybe it is deleted! {videoId}", video.id);
+                    logger.LogInformation("Get empty video data, maybe it is deleted! {videoId}", video.id);
                 }
                 else
                 {
@@ -359,7 +344,7 @@ public class YoutubeService : PlatformService, IPlatformService
         }
 
         if (string.IsNullOrEmpty(video.Filename)
-            || !await _storageService.IsVideoFileExistsAsync(video.Filename, cancellation))
+            || !await storageService.IsVideoFileExistsAsync(video.Filename, cancellation))
         {
             if (video.SourceStatus == VideoStatus.Deleted
                 && video.Status < VideoStatus.Recording)
@@ -374,21 +359,21 @@ public class YoutubeService : PlatformService, IPlatformService
                     }
                 }
                 video.Status = VideoStatus.Missing;
-                _logger.LogWarning("Source removed and not archived, change video status to {status}", Enum.GetName(typeof(VideoStatus), video.Status));
+                logger.LogWarning("Source removed and not archived, change video status to {status}", Enum.GetName(typeof(VideoStatus), video.Status));
             }
 
             if (video.Status >= VideoStatus.Archived && video.Status < VideoStatus.Expired)
             {
                 video.Status = VideoStatus.Missing;
                 video.Note = $"Video missing because archived not found.";
-                _logger.LogWarning("Can not found archived, change video status to {status}", Enum.GetName(typeof(VideoStatus), video.Status));
+                logger.LogWarning("Can not found archived, change video status to {status}", Enum.GetName(typeof(VideoStatus), video.Status));
             }
         }
         else if (video.Status < VideoStatus.Archived || video.Status >= VideoStatus.Expired)
         {
             video.Status = VideoStatus.Archived;
             video.Note = null;
-            _logger.LogInformation("Correct video status to {status} because archived is exists.", Enum.GetName(typeof(VideoStatus), video.Status));
+            logger.LogInformation("Correct video status to {status} because archived is exists.", Enum.GetName(typeof(VideoStatus), video.Status));
         }
 
         switch (videoData.Availability)
@@ -423,7 +408,7 @@ public class YoutubeService : PlatformService, IPlatformService
                         }
                     }
                     video.SourceStatus = VideoStatus.Edited;
-                    _logger.LogInformation("Video source is {status} because it has been restored from rejection or deletion.", Enum.GetName(typeof(VideoStatus), video.SourceStatus));
+                    logger.LogInformation("Video source is {status} because it has been restored from rejection or deletion.", Enum.GetName(typeof(VideoStatus), video.SourceStatus));
                 }
                 else if (video.SourceStatus != VideoStatus.Edited)
                 {
@@ -443,7 +428,7 @@ public class YoutubeService : PlatformService, IPlatformService
                         await discordService.SendSkippedMessage(video, channel);
                     }
                     video.Status = VideoStatus.Skipped;
-                    _logger.LogInformation("Video is {status} because it is detected access required or copyright notice.", Enum.GetName(typeof(VideoStatus), video.Status));
+                    logger.LogInformation("Video is {status} because it is detected access required or copyright notice.", Enum.GetName(typeof(VideoStatus), video.Status));
                 }
                 // First detected
                 else if (video.SourceStatus != VideoStatus.Reject)
@@ -457,20 +442,20 @@ public class YoutubeService : PlatformService, IPlatformService
                 }
 
                 video.SourceStatus = VideoStatus.Reject;
-                _logger.LogInformation("Video source is {status} because it is detected access required or copyright notice.", Enum.GetName(typeof(VideoStatus), video.SourceStatus));
+                logger.LogInformation("Video source is {status} because it is detected access required or copyright notice.", Enum.GetName(typeof(VideoStatus), video.SourceStatus));
 
                 break;
         }
 
         if (video.Status == VideoStatus.WaitingToRecord)
         {
-            await _ytarchiveService.InitJobAsync(url: video.id,
+            await ytarchiveService.InitJobAsync(url: video.id,
                                                  video: video,
                                                  useCookiesFile: channel?.UseCookiesFile ?? false,
                                                  cancellation: cancellation);
 
             video.Status = VideoStatus.Recording;
-            _logger.LogInformation("{videoId} is now lived! Start recording.", video.id);
+            logger.LogInformation("{videoId} is now lived! Start recording.", video.id);
             if (null != discordService)
             {
                 await discordService.SendStartRecordingMessage(video, channel);
@@ -478,9 +463,9 @@ public class YoutubeService : PlatformService, IPlatformService
         }
 
         if (video.Status < 0)
-            _logger.LogError("Video {videoId} has a Unknown status!", video.id);
+            logger.LogError("Video {videoId} has a Unknown status!", video.id);
 
-        await _videoRepository.AddOrUpdateAsync(video);
+        await videoRepository.AddOrUpdateAsync(video);
         _unitOfWork_Public.Commit();
     }
 
@@ -491,7 +476,7 @@ public class YoutubeService : PlatformService, IPlatformService
         var info = await GetChannelInfoByYtdlpAsync(channel.id, cancellation);
         if (null == info)
         {
-            _logger.LogWarning("Failed to get channel info for {channelId}", channel.id);
+            logger.LogWarning("Failed to get channel info for {channelId}", channel.id);
             return;
         }
 
@@ -508,11 +493,11 @@ public class YoutubeService : PlatformService, IPlatformService
             bannerBlobUrl = await DownloadImageAndUploadToBlobStorageAsync(bannerUrl, $"banner/{channel.id}", cancellation);
         }
 
-        channel = await _channelRepository.ReloadEntityFromDBAsync(channel) ?? channel;
+        channel = await channelRepository.ReloadEntityFromDBAsync(channel) ?? channel;
         channel.ChannelName = info.Uploader;
         channel.Avatar = avatarBlobUrl?.Replace("avatar/", "");
         channel.Banner = bannerBlobUrl?.Replace("banner/", "");
-        await _channelRepository.AddOrUpdateAsync(channel);
+        await channelRepository.AddOrUpdateAsync(channel);
         _unitOfWork_Public.Commit();
     }
 }

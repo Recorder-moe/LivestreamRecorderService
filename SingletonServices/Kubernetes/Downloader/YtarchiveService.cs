@@ -7,21 +7,14 @@ using Microsoft.Extensions.Options;
 
 namespace LivestreamRecorderService.SingletonServices.Kubernetes.Downloader;
 
-public class YtarchiveService : KubernetesServiceBase, IYtarchiveService
+public class YtarchiveService(
+    ILogger<YtarchiveService> logger,
+    k8s.Kubernetes kubernetes,
+    IOptions<KubernetesOption> options,
+    IOptions<ServiceOption> serviceOptions,
+    IOptions<AzureOption> azureOptions) : KubernetesServiceBase(logger, kubernetes, options, serviceOptions, azureOptions), IYtarchiveService
 {
-    private readonly ILogger<YtarchiveService> _logger;
-
     public override string Name => IYtarchiveService.name;
-
-    public YtarchiveService(
-        ILogger<YtarchiveService> logger,
-        k8s.Kubernetes kubernetes,
-        IOptions<KubernetesOption> options,
-        IOptions<ServiceOption> serviceOptions,
-        IOptions<AzureOption> azureOptions) : base(logger, kubernetes, options, serviceOptions, azureOptions)
-    {
-        _logger = logger;
-    }
 
     protected override Task<V1Job> CreateNewJobAsync(string url,
                                                      string instanceName,
@@ -38,7 +31,7 @@ public class YtarchiveService : KubernetesServiceBase, IYtarchiveService
         catch (Exception)
         {
             // Use DockerHub as fallback
-            _logger.LogWarning("Failed once, try docker hub as fallback.");
+            logger.LogWarning("Failed once, try docker hub as fallback.");
             return doWithImage("recordermoe/ytarchive:distroless");
         }
 
@@ -47,15 +40,17 @@ public class YtarchiveService : KubernetesServiceBase, IYtarchiveService
             string filename = NameHelper.GetFileName(video, IYtarchiveService.name);
             video.Filename = filename;
             string[] command = useCookiesFile
-                ? new string[]
-                {
-                    "sh", "-c",
+                ?
+                [
+                    "sh",
+                    "-c",
                     $"/usr/local/bin/ytarchive --add-metadata --merge --retry-frags 30 --thumbnail -o '{filename.Replace(".mp4", "")}' -c /sharedvolume/cookies/{video.ChannelId}.txt '{url}' best && mv *.mp4 /sharedvolume/"
-                }
-                : new string[] {
-                    "sh", "-c",
+                ]
+                : [
+                    "sh",
+                    "-c",
                     $"/usr/local/bin/ytarchive --add-metadata --merge --retry-frags 30 --thumbnail -o '{filename.Replace(".mp4", "")}' '{url}' best && mv *.mp4 /sharedvolume/"
-                };
+                ];
 
             return CreateInstanceAsync(
                     parameters: new

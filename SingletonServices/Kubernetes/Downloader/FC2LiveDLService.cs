@@ -7,21 +7,14 @@ using Microsoft.Extensions.Options;
 
 namespace LivestreamRecorderService.SingletonServices.Kubernetes.Downloader;
 
-public class FC2LiveDLService : KubernetesServiceBase, IFC2LiveDLService
+public class FC2LiveDLService(
+    ILogger<FC2LiveDLService> logger,
+    k8s.Kubernetes kubernetes,
+    IOptions<KubernetesOption> options,
+    IOptions<ServiceOption> serviceOptions,
+    IOptions<AzureOption> azureOptions) : KubernetesServiceBase(logger, kubernetes, options, serviceOptions, azureOptions), IFC2LiveDLService
 {
-    private readonly ILogger<FC2LiveDLService> _logger;
-
     public override string Name => IFC2LiveDLService.name;
-
-    public FC2LiveDLService(
-        ILogger<FC2LiveDLService> logger,
-        k8s.Kubernetes kubernetes,
-        IOptions<KubernetesOption> options,
-        IOptions<ServiceOption> serviceOptions,
-        IOptions<AzureOption> azureOptions) : base(logger, kubernetes, options, serviceOptions, azureOptions)
-    {
-        _logger = logger;
-    }
 
     protected override Task<V1Job> CreateNewJobAsync(string _,
                                                      string instanceName,
@@ -36,7 +29,7 @@ public class FC2LiveDLService : KubernetesServiceBase, IFC2LiveDLService
         catch (Exception)
         {
             // Use DockerHub as fallback
-            _logger.LogWarning("Failed once, try docker hub as fallback.");
+            logger.LogWarning("Failed once, try docker hub as fallback.");
             return doWithImage("recordermoe/fc2-live-dl:2.2.0");
         }
 
@@ -45,17 +38,21 @@ public class FC2LiveDLService : KubernetesServiceBase, IFC2LiveDLService
             string filename = NameHelper.GetFileName(video, IFC2LiveDLService.name);
             video.Filename = filename;
             string[] command = useCookiesFile
-                ? new string[]
-                {
-                    "/usr/bin/dumb-init", "--",
-                    "sh", "-c",
+                ?
+                [
+                    "/usr/bin/dumb-init",
+                    "--",
+                    "sh",
+                    "-c",
                     $"/venv/bin/fc2-live-dl --latency high --threads 1 -o '{Path.ChangeExtension(filename, ".%(ext)s")}' --log-level trace --cookies /sharedvolume/cookies/{video.ChannelId}.txt 'https://live.fc2.com/{video.ChannelId}/' && mv '/app/{filename}' /sharedvolume/"
-                }
-                : new string[] {
-                    "/usr/bin/dumb-init", "--",
-                    "sh", "-c",
+                ]
+                : [
+                    "/usr/bin/dumb-init",
+                    "--",
+                    "sh",
+                    "-c",
                     $"/venv/bin/fc2-live-dl --latency high --threads 1 -o '{Path.ChangeExtension(filename, ".%(ext)s")}' --log-level trace 'https://live.fc2.com/{video.ChannelId}/' && mv '/app/{filename}' /sharedvolume/"
-                };
+                ];
 
             return CreateInstanceAsync(
                     parameters: new

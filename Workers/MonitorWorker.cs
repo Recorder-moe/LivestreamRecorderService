@@ -9,34 +9,25 @@ using Serilog.Context;
 
 namespace LivestreamRecorderService.Workers;
 
-public class MonitorWorker : BackgroundService
+public class MonitorWorker(
+    ILogger<MonitorWorker> logger,
+    IOptions<TwitchOption> twitchOption,
+    IServiceProvider serviceProvider) : BackgroundService
 {
-    private readonly ILogger<MonitorWorker> _logger;
-    private readonly IServiceProvider _serviceProvider;
-    private readonly TwitchOption _twitchOption;
+    private readonly TwitchOption _twitchOption = twitchOption.Value;
     private const int _interval = 10;   // in seconds
-
-    public MonitorWorker(
-        ILogger<MonitorWorker> logger,
-        IOptions<TwitchOption> twitchOption,
-        IServiceProvider serviceProvider)
-    {
-        _logger = logger;
-        _serviceProvider = serviceProvider;
-        _twitchOption = twitchOption.Value;
-    }
 
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
         using var _ = LogContext.PushProperty("Worker", nameof(MonitorWorker));
-        _logger.LogTrace("{Worker} starts...", nameof(MonitorWorker));
+        logger.LogTrace("{Worker} starts...", nameof(MonitorWorker));
 
         while (!stoppingToken.IsCancellationRequested)
         {
             using var __ = LogContext.PushProperty("WorkerRunId", $"{nameof(MonitorWorker)}_{DateTime.Now:yyyyMMddHHmmssfff}");
 
             #region DI
-            using (var scope = _serviceProvider.CreateScope())
+            using (var scope = serviceProvider.CreateScope())
             {
                 // KubernetesService needed to be initialized first
                 var ___ = scope.ServiceProvider.GetRequiredService<IJobService>();
@@ -57,7 +48,7 @@ public class MonitorWorker : BackgroundService
                 }
             }
 
-            _logger.LogTrace("{Worker} ends. Sleep {interval} seconds.", nameof(MonitorWorker), _interval);
+            logger.LogTrace("{Worker} ends. Sleep {interval} seconds.", nameof(MonitorWorker), _interval);
             await Task.Delay(TimeSpan.FromSeconds(_interval), stoppingToken);
         }
     }
@@ -67,7 +58,7 @@ public class MonitorWorker : BackgroundService
         if (!platformService.StepInterval(_interval)) return;
 
         var channels = await platformService.GetMonitoringChannels();
-        _logger.LogTrace("Get {channelCount} channels for {platform}", channels.Count, platformService.PlatformName);
+        logger.LogTrace("Get {channelCount} channels for {platform}", channels.Count, platformService.PlatformName);
         await UpdateVideosDataFromSource();
         await UpdateScheduledVideosStatus();
 
@@ -88,12 +79,12 @@ public class MonitorWorker : BackgroundService
 
             if (videos.Count == 0)
             {
-                _logger.LogTrace("No Scheduled videos for {platform}", platformService.PlatformName);
+                logger.LogTrace("No Scheduled videos for {platform}", platformService.PlatformName);
                 return;
             }
             else
             {
-                _logger.LogDebug("Get {videoCount} Scheduled/Pending videos for {platform}", videos.Count, platformService.PlatformName);
+                logger.LogDebug("Get {videoCount} Scheduled/Pending videos for {platform}", videos.Count, platformService.PlatformName);
             }
 
             foreach (var video in videos)
@@ -105,7 +96,7 @@ public class MonitorWorker : BackgroundService
                     && !channel.Monitoring)
                 {
                     await videoService.DeleteVideoAsync(video);
-                    _logger.LogInformation("Remove scheduled video {videoId} because channel {channelId} is not monitoring.", video.id, channel.id);
+                    logger.LogInformation("Remove scheduled video {videoId} because channel {channelId} is not monitoring.", video.id, channel.id);
                 }
                 else
                 {

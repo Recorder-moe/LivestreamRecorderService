@@ -6,27 +6,18 @@ using Minio.Exceptions;
 
 namespace LivestreamRecorderService.SingletonServices;
 
-public class S3Service : IStorageService
+public class S3Service(
+    IMinioClient minioClient,
+    IOptions<S3Option> options,
+    ILogger<S3Service> logger) : IStorageService
 {
-    private readonly IMinioClient _minioClient;
-    private readonly ILogger<S3Service> _logger;
-    private readonly S3Option _options;
-
-    public S3Service(
-        IMinioClient minioClient,
-        IOptions<S3Option> options,
-        ILogger<S3Service> logger)
-    {
-        _minioClient = minioClient;
-        _logger = logger;
-        _options = options.Value;
-    }
+    private readonly S3Option _options = options.Value;
 
     public async Task<bool> IsVideoFileExistsAsync(string filename, CancellationToken cancellation = default)
     {
         try
         {
-            var stat = await _minioClient.StatObjectAsync(new StatObjectArgs()
+            var stat = await minioClient.StatObjectAsync(new StatObjectArgs()
                                          .WithBucket(_options.BucketName_Private)
                                          .WithObject($"videos/{filename}"), cancellation);
             return !stat.DeleteMarker;
@@ -35,11 +26,11 @@ public class S3Service : IStorageService
         {
             if (e is ObjectNotFoundException)
             {
-                _logger.LogWarning(e, "Video file not found: {filename}", filename);
+                logger.LogWarning(e, "Video file not found: {filename}", filename);
             }
             else
             {
-                _logger.LogError(e, "Failed to check video file: {filename}", filename);
+                logger.LogError(e, "Failed to check video file: {filename}", filename);
             }
             return false;
         }
@@ -49,7 +40,7 @@ public class S3Service : IStorageService
     {
         try
         {
-            await _minioClient.RemoveObjectAsync(new RemoveObjectArgs()
+            await minioClient.RemoveObjectAsync(new RemoveObjectArgs()
                               .WithBucket(_options.BucketName_Private)
                               .WithObject($"videos/{filename}"), cancellation);
             return true;
@@ -58,11 +49,11 @@ public class S3Service : IStorageService
         {
             if (e is ObjectNotFoundException)
             {
-                _logger.LogWarning(e, "Video file not found: {filename}", filename);
+                logger.LogWarning(e, "Video file not found: {filename}", filename);
             }
             else
             {
-                _logger.LogError(e, "Failed to delete video file: {filename}", filename);
+                logger.LogError(e, "Failed to delete video file: {filename}", filename);
             }
             return false;
         }
@@ -72,7 +63,7 @@ public class S3Service : IStorageService
     {
         try
         {
-            var response = await _minioClient.PutObjectAsync(new PutObjectArgs()
+            var response = await minioClient.PutObjectAsync(new PutObjectArgs()
                                              .WithBucket(_options.BucketName_Public)
                                              .WithObject(pathInStorage)
                                              .WithFileName(tempPath)
@@ -80,7 +71,7 @@ public class S3Service : IStorageService
         }
         catch (MinioException e)
         {
-            _logger.LogError(e, "Failed to upload public file: {filePath}", pathInStorage);
+            logger.LogError(e, "Failed to upload public file: {filePath}", pathInStorage);
         }
     }
 }
