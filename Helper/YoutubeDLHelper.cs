@@ -23,7 +23,7 @@ internal static partial class YoutubeDL
     /// <param name="overrideOptions"></param>
     /// <returns></returns>
 #pragma warning disable CA1068 // CancellationToken 參數必須位於最後
-    public static async Task<RunResult<YtdlpVideoData>> RunVideoDataFetch_Alt(this YoutubeDLSharp.YoutubeDL ytdl, string url, CancellationToken ct = default, bool flat = true, OptionSet overrideOptions = null)
+    public static async Task<RunResult<YtdlpVideoData>> RunVideoDataFetch_Alt(this YoutubeDLSharp.YoutubeDL ytdl, string url, CancellationToken ct = default, bool flat = true, bool fetchComments = false, OptionSet overrideOptions = null)
 #pragma warning restore CA1068 // CancellationToken 參數必須位於最後
     {
         OptionSet optionSet = new()
@@ -31,23 +31,25 @@ internal static partial class YoutubeDL
             IgnoreErrors = ytdl.IgnoreDownloadErrors,
             IgnoreConfig = true,
             NoPlaylist = true,
-            HlsPreferNative = true,
-            ExternalDownloaderArgs = "-nostats -loglevel 0",
+            Downloader = "m3u8:native",
+            DownloaderArgs = "ffmpeg:-nostats -loglevel 0",
             Output = Path.Combine(ytdl.OutputFolder, ytdl.OutputFileTemplate),
             RestrictFilenames = ytdl.RestrictFilenames,
-            NoContinue = ytdl.OverwriteFiles,
+            ForceOverwrites = ytdl.OverwriteFiles,
             NoOverwrites = !ytdl.OverwriteFiles,
             NoPart = true,
             FfmpegLocation = Utils.GetFullPath(ytdl.FFmpegPath),
-            Exec = "echo {}"
+            Exec = "echo outfile: {}",
+            DumpSingleJson = true,
+            FlatPlaylist = flat,
+            WriteComments = fetchComments
         };
+
         if (overrideOptions != null)
         {
             optionSet = optionSet.OverrideOptions(overrideOptions);
         }
 
-        optionSet.DumpSingleJson = true;
-        optionSet.FlatPlaylist = flat;
         YtdlpVideoData videoData = null;
         YoutubeDLProcess youtubeDLProcess = new(ytdl.YoutubeDLPath);
         youtubeDLProcess.OutputReceived += (o, e) =>

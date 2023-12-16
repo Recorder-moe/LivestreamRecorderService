@@ -22,13 +22,12 @@ namespace LivestreamRecorderService.DependencyInjection
                     || string.IsNullOrEmpty(s3Options.BucketName_Private))
                     throw new ConfigurationErrorsException();
 
-                MinioClient minio = new MinioClient()
-                                            .WithEndpoint(s3Options.Endpoint)
-                                            .WithCredentials(s3Options.AccessKey, s3Options.SecretKey)
-                                            .WithSSL(s3Options.Secure)
-                                            .Build();
+                var minio = new MinioClient().WithEndpoint(s3Options.Endpoint)
+                                             .WithCredentials(s3Options.AccessKey, s3Options.SecretKey)
+                                             .WithSSL(s3Options.Secure)
+                                             .Build();
 
-                services.AddSingleton<IMinioClient>(minio);
+                services.AddSingleton(minio);
                 services.AddSingleton<IStorageService, S3Service>();
 
                 return services;
