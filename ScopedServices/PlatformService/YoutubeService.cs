@@ -100,7 +100,7 @@ public class YoutubeService : PlatformService, IPlatformService
         => GetVideoIdsByYtdlpAsync($"https://www.youtube.com/playlist?list=UUMO{ChannelId[2..]}", 15, cancellation);
 
     private Task<YtdlpVideoData?> GetChannelInfoByYtdlpAsync(string ChannelId, CancellationToken cancellation = default)
-        => GetVideoInfoByYtdlpAsync($"https://www.youtube.com/channel/{ChannelId}/about", cancellation);
+        => GetVideoInfoByYtdlpAsync($"https://www.youtube.com/channel/{ChannelId}", cancellation);
 
     /// <summary>
     /// Update video info from RSS feed item. (Which are in Scheduled and Unknown states.)
