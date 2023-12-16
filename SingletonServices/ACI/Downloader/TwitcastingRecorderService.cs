@@ -72,9 +72,9 @@ public class TwitcastingRecorderService : ACIServiceBase, ITwitcastingRecorderSe
                         commandOverrideArray = new
                         {
                             value = new string[] {
-                                "/usr/bin/dumb-init", "--",
-                                "/bin/bash", "-c",
-                                $"/bin/bash record_twitcast.sh {video.ChannelId} once -o {Path.GetFileNameWithoutExtension(filename)} && mv /download/*.mp4 /sharedvolume/"
+                                "dumb-init", "--",
+                                "/bin/sh", "-c",
+                                $"/bin/sh /app/record_twitcast.sh {video.ChannelId} once -o {Path.GetFileNameWithoutExtension(filename)} && mv /download/*.mp4 /sharedvolume/"
                             }
                         },
                         storageAccountName = new
