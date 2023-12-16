@@ -1,217 +1,217 @@
-﻿using Newtonsoft.Json;
+﻿using System.Text.Json.Serialization;
 #nullable disable
 
 namespace LivestreamRecorderService.Models;
 public class FC2MemberData
 {
-    [JsonProperty("status")]
+    [JsonPropertyName("status")]
     public int? Status { get; set; }
 
-    [JsonProperty("data")]
+    [JsonPropertyName("data")]
     public Data Data { get; set; }
 }
 
 public class ChannelData
 {
-    [JsonProperty("channelid")]
+    [JsonPropertyName("channelid")]
     public string Channelid { get; set; }
 
-    [JsonProperty("userid")]
+    [JsonPropertyName("userid")]
     public string Userid { get; set; }
 
-    [JsonProperty("adult")]
+    [JsonPropertyName("adult")]
     public int? Adult { get; set; }
 
-    [JsonProperty("twoshot")]
+    [JsonPropertyName("twoshot")]
     public int? Twoshot { get; set; }
 
-    [JsonProperty("title")]
+    [JsonPropertyName("title")]
     public string Title { get; set; }
 
-    [JsonProperty("info")]
+    [JsonPropertyName("info")]
     public string Info { get; set; }
 
-    [JsonProperty("image")]
+    [JsonPropertyName("image")]
     public string Image { get; set; }
 
-    [JsonProperty("login_only")]
+    [JsonPropertyName("login_only")]
     public int? LoginOnly { get; set; }
 
-    [JsonProperty("gift_limit")]
+    [JsonPropertyName("gift_limit")]
     public int? GiftLimit { get; set; }
 
-    [JsonProperty("gift_list")]
+    [JsonPropertyName("gift_list")]
     public List<GiftList> GiftList { get; set; }
 
-    [JsonProperty("comment_limit")]
+    [JsonPropertyName("comment_limit")]
     public string CommentLimit { get; set; }
 
-    [JsonProperty("tfollow")]
+    [JsonPropertyName("tfollow")]
     public int? Tfollow { get; set; }
 
-    [JsonProperty("tname")]
+    [JsonPropertyName("tname")]
     public string Tname { get; set; }
 
-    [JsonProperty("fee")]
+    [JsonPropertyName("fee")]
     public int? Fee { get; set; }
 
-    [JsonProperty("amount")]
+    [JsonPropertyName("amount")]
     public int? Amount { get; set; }
 
-    [JsonProperty("interval")]
+    [JsonPropertyName("interval")]
     public int? Interval { get; set; }
 
-    [JsonProperty("category")]
+    [JsonPropertyName("category")]
     public string Category { get; set; }
 
-    [JsonProperty("category_name")]
+    [JsonPropertyName("category_name")]
     public string CategoryName { get; set; }
 
-    [JsonProperty("is_official")]
+    [JsonPropertyName("is_official")]
     public int? IsOfficial { get; set; }
 
-    [JsonProperty("is_premium_publisher")]
+    [JsonPropertyName("is_premium_publisher")]
     public int? IsPremiumPublisher { get; set; }
 
-    [JsonProperty("is_link_share")]
+    [JsonPropertyName("is_link_share")]
     public int? IsLinkShare { get; set; }
 
-    [JsonProperty("ticketid")]
+    [JsonPropertyName("ticketid")]
     public int? Ticketid { get; set; }
 
-    [JsonProperty("is_premium")]
+    [JsonPropertyName("is_premium")]
     public int? IsPremium { get; set; }
 
-    [JsonProperty("ticket_price")]
+    [JsonPropertyName("ticket_price")]
     public int? TicketPrice { get; set; }
 
-    [JsonProperty("ticket_only")]
+    [JsonPropertyName("ticket_only")]
     public int? TicketOnly { get; set; }
 
-    [JsonProperty("is_app")]
+    [JsonPropertyName("is_app")]
     public int? IsApp { get; set; }
 
-    [JsonProperty("is_video")]
+    [JsonPropertyName("is_video")]
     public int? IsVideo { get; set; }
 
-    [JsonProperty("is_rest")]
+    [JsonPropertyName("is_rest")]
     public int? IsRest { get; set; }
 
-    [JsonProperty("count")]
+    [JsonPropertyName("count")]
     public int? Count { get; set; }
 
-    [JsonProperty("is_publish")]
+    [JsonPropertyName("is_publish")]
     public int? IsPublish { get; set; }
 
-    [JsonProperty("is_limited")]
+    [JsonPropertyName("is_limited")]
     public int? IsLimited { get; set; }
 
-    [JsonProperty("start")]
+    [JsonPropertyName("start")]
     public long? Start { get; set; }
 
-    [JsonProperty("version")]
+    [JsonPropertyName("version")]
     public string Version { get; set; }
 
-    [JsonProperty("fc2_channel")]
+    [JsonPropertyName("fc2_channel")]
     public Fc2Channel Fc2Channel { get; set; }
 
-    [JsonProperty("control_tag")]
+    [JsonPropertyName("control_tag")]
     public string ControlTag { get; set; }
 
-    [JsonProperty("publish_method")]
+    [JsonPropertyName("publish_method")]
     public string PublishMethod { get; set; }
 
-    [JsonProperty("video_stereo3d")]
+    [JsonPropertyName("video_stereo3d")]
     public int? VideoStereo3d { get; set; }
 
-    [JsonProperty("video_mapping")]
+    [JsonPropertyName("video_mapping")]
     public int? VideoMapping { get; set; }
 
-    [JsonProperty("video_horizontal_view")]
+    [JsonPropertyName("video_horizontal_view")]
     public int? VideoHorizontalView { get; set; }
 }
 
 public class Data
 {
-    [JsonProperty("channel_data")]
+    [JsonPropertyName("channel_data")]
     public ChannelData ChannelData { get; set; }
 
-    [JsonProperty("profile_data")]
+    [JsonPropertyName("profile_data")]
     public ProfileData ProfileData { get; set; }
 
 }
 
 public class Fc2Channel
 {
-    [JsonProperty("result")]
+    [JsonPropertyName("result")]
     public int? Result { get; set; }
 
-    [JsonProperty("userid")]
+    [JsonPropertyName("userid")]
     public int? Userid { get; set; }
 
-    [JsonProperty("fc2id")]
+    [JsonPropertyName("fc2id")]
     public int? Fc2id { get; set; }
 
-    [JsonProperty("adult")]
+    [JsonPropertyName("adult")]
     public int? Adult { get; set; }
 
-    [JsonProperty("title")]
+    [JsonPropertyName("title")]
     public string Title { get; set; }
 
-    [JsonProperty("description")]
+    [JsonPropertyName("description")]
     public string Description { get; set; }
 
-    [JsonProperty("url")]
+    [JsonPropertyName("url")]
     public string Url { get; set; }
 
-    [JsonProperty("images")]
+    [JsonPropertyName("images")]
     public List<object> Images { get; set; }
 }
 
 public class GiftList
 {
-    [JsonProperty("id")]
+    [JsonPropertyName("id")]
     public int? Id { get; set; }
 
-    [JsonProperty("type")]
+    [JsonPropertyName("type")]
     public int? Type { get; set; }
 
-    [JsonProperty("url")]
+    [JsonPropertyName("url")]
     public List<string> Url { get; set; }
 
-    [JsonProperty("name")]
+    [JsonPropertyName("name")]
     public string Name { get; set; }
 
-    [JsonProperty("category")]
+    [JsonPropertyName("category")]
     public int? Category { get; set; }
 
-    [JsonProperty("amount")]
+    [JsonPropertyName("amount")]
     public int? Amount { get; set; }
 }
 
 public class ProfileData
 {
-    [JsonProperty("userid")]
+    [JsonPropertyName("userid")]
     public string Userid { get; set; }
 
-    [JsonProperty("fc2id")]
+    [JsonPropertyName("fc2id")]
     public string Fc2id { get; set; }
 
-    [JsonProperty("name")]
+    [JsonPropertyName("name")]
     public string Name { get; set; }
 
-    [JsonProperty("info")]
+    [JsonPropertyName("info")]
     public string Info { get; set; }
 
-    [JsonProperty("icon")]
+    [JsonPropertyName("icon")]
     public string Icon { get; set; }
 
-    [JsonProperty("image")]
+    [JsonPropertyName("image")]
     public string Image { get; set; }
 
-    [JsonProperty("sex")]
+    [JsonPropertyName("sex")]
     public string Sex { get; set; }
 
-    [JsonProperty("age")]
+    [JsonPropertyName("age")]
     public string Age { get; set; }
 }

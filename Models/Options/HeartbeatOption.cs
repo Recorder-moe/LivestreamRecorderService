@@ -1,4 +1,6 @@
-﻿namespace LivestreamRecorderService.Models.Options;
+﻿using System.ComponentModel.DataAnnotations;
+
+namespace LivestreamRecorderService.Models.Options;
 
 public sealed class HeartbeatOption
 {
@@ -8,8 +10,8 @@ public sealed class HeartbeatOption
 
     public bool Enabled { get; set; } = false;
 
-    public required string Endpoint { get; set; } = "";
+    [Required]
+    public string Endpoint { get; set; } = "";
 
     public int Interval { get; set; } = 300;
 }
-

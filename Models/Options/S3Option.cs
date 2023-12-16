@@ -1,4 +1,6 @@
-﻿namespace LivestreamRecorderService.Models.Options;
+﻿using System.ComponentModel.DataAnnotations;
+
+namespace LivestreamRecorderService.Models.Options;
 
 public sealed class S3Option
 {
@@ -6,11 +8,17 @@ public sealed class S3Option
     public const string ConfigurationSectionName = "S3";
 #pragma warning restore IDE1006 // 命名樣式
 
-    public required string Endpoint { get; set; }
+    [Required]
+    public string Endpoint { get; set; } = "";
     public bool Secure { get; set; } = true;
-    public required string AccessKey { get; set; }
-    public required string SecretKey { get; set; }
-    public required string BucketName_Private { get; set; }
-    public required string BucketName_Public { get; set; }
-    public required int RetentionDays { get; set; }
+    [Required]
+    public string AccessKey { get; set; } = "";
+    [Required]
+    public string SecretKey { get; set; } = "";
+    [Required]
+    public string BucketName_Private { get; set; } = "";
+    [Required]
+    public string BucketName_Public { get; set; } = "";
+    [Required]
+    public int RetentionDays { get; set; } = 4;
 }

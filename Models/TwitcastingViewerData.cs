@@ -1,61 +1,61 @@
-﻿using Newtonsoft.Json;
+﻿using System.Text.Json.Serialization;
 #nullable disable
 
 namespace LivestreamRecorderService.Models;
 
 public class TwitcastingViewerData
 {
-    [JsonProperty("update_interval_sec")]
+    [JsonPropertyName("update_interval_sec")]
     public int? UpdateIntervalSec { get; set; }
 
-    [JsonProperty("movie")]
+    [JsonPropertyName("movie")]
     public Movie Movie { get; set; }
 }
 
 public class Category
 {
-    [JsonProperty("id")]
+    [JsonPropertyName("id")]
     public string Id { get; set; }
 
-    [JsonProperty("name")]
+    [JsonPropertyName("name")]
     public string Name { get; set; }
 }
 
 public class Movie
 {
-    [JsonProperty("id")]
+    [JsonPropertyName("id")]
     public int? Id { get; set; }
 
-    [JsonProperty("telop")]
+    [JsonPropertyName("telop")]
     public string Telop { get; set; }
 
-    [JsonProperty("category")]
+    [JsonPropertyName("category")]
     public Category Category { get; set; }
 
-    [JsonProperty("viewers")]
+    [JsonPropertyName("viewers")]
     public Viewers Viewers { get; set; }
 
-    [JsonProperty("pin_message")]
+    [JsonPropertyName("pin_message")]
     public string PinMessage { get; set; }
 
-    [JsonProperty("dvr")]
+    [JsonPropertyName("dvr")]
     public bool? Dvr { get; set; }
 
-    [JsonProperty("live")]
+    [JsonPropertyName("live")]
     public bool? Live { get; set; }
 
-    [JsonProperty("title")]
+    [JsonPropertyName("title")]
     public string Title { get; set; }
 
-    [JsonProperty("ended_at")]
+    [JsonPropertyName("ended_at")]
     public int? EndedAt { get; set; }
 }
 
 public class Viewers
 {
-    [JsonProperty("current")]
+    [JsonPropertyName("current")]
     public int? Current { get; set; }
 
-    [JsonProperty("total")]
+    [JsonPropertyName("total")]
     public int? Total { get; set; }
 }

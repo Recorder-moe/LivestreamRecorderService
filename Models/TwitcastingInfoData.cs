@@ -1,43 +1,43 @@
-﻿using Newtonsoft.Json;
+﻿using System.Text.Json.Serialization;
 #nullable disable
 
 namespace LivestreamRecorderService.Models;
 
 public class TwitcastingInfoData
 {
-    [JsonProperty("id")]
+    [JsonPropertyName("id")]
     public int? Id { get; set; }
 
-    [JsonProperty("started_at")]
+    [JsonPropertyName("started_at")]
     public int? StartedAt { get; set; }
 
-    [JsonProperty("visibility")]
+    [JsonPropertyName("visibility")]
     public Visibility Visibility { get; set; }
 
-    [JsonProperty("collabo")]
+    [JsonPropertyName("collabo")]
     public object Collabo { get; set; }
 
-    [JsonProperty("is_tool")]
+    [JsonPropertyName("is_tool")]
     public bool? IsTool { get; set; }
 
-    [JsonProperty("is_games")]
+    [JsonPropertyName("is_games")]
     public object IsGames { get; set; }
 
-    [JsonProperty("is_vtuber")]
+    [JsonPropertyName("is_vtuber")]
     public bool? IsVtuber { get; set; }
 
-    [JsonProperty("is_corporate_broadcasting")]
+    [JsonPropertyName("is_corporate_broadcasting")]
     public object IsCorporateBroadcasting { get; set; }
 
-    [JsonProperty("is_portrait")]
+    [JsonPropertyName("is_portrait")]
     public object IsPortrait { get; set; }
 
-    [JsonProperty("is_dvr_supported")]
+    [JsonPropertyName("is_dvr_supported")]
     public bool? IsDvrSupported { get; set; }
 }
 
 public class Visibility
 {
-    [JsonProperty("type")]
+    [JsonPropertyName("type")]
     public string Type { get; set; }
 }

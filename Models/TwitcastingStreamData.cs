@@ -1,63 +1,63 @@
-﻿using Newtonsoft.Json;
+﻿using System.Text.Json.Serialization;
 #nullable disable
 
 namespace LivestreamRecorderService.Models;
 public class TwitcastingStreamData
 {
-    [JsonProperty("movie")]
+    [JsonPropertyName("movie")]
     public Movie Movie { get; set; }
 
-    [JsonProperty("hls")]
+    [JsonPropertyName("hls")]
     public Hls Hls { get; set; }
 
-    [JsonProperty("fmp4")]
+    [JsonPropertyName("fmp4")]
     public Fmp4 Fmp4 { get; set; }
 
-    [JsonProperty("llfmp4")]
+    [JsonPropertyName("llfmp4")]
     public Llfmp4 Llfmp4 { get; set; }
 }
 
 public class Fmp4
 {
-    [JsonProperty("host")]
+    [JsonPropertyName("host")]
     public string Host { get; set; }
 
-    [JsonProperty("proto")]
+    [JsonPropertyName("proto")]
     public string Proto { get; set; }
 
-    [JsonProperty("source")]
+    [JsonPropertyName("source")]
     public bool? Source { get; set; }
 
-    [JsonProperty("mobilesource")]
+    [JsonPropertyName("mobilesource")]
     public bool? Mobilesource { get; set; }
 }
 
 public class Hls
 {
-    [JsonProperty("host")]
+    [JsonPropertyName("host")]
     public string Host { get; set; }
 
-    [JsonProperty("proto")]
+    [JsonPropertyName("proto")]
     public string Proto { get; set; }
 
-    [JsonProperty("source")]
+    [JsonPropertyName("source")]
     public bool? Source { get; set; }
 }
 
 public class Llfmp4
 {
-    [JsonProperty("streams")]
+    [JsonPropertyName("streams")]
     public Streams Streams { get; set; }
 }
 
 public class Streams
 {
-    [JsonProperty("main")]
+    [JsonPropertyName("main")]
     public string Main { get; set; }
 
-    [JsonProperty("mobilesource")]
+    [JsonPropertyName("mobilesource")]
     public string Mobilesource { get; set; }
 
-    [JsonProperty("base")]
+    [JsonPropertyName("base")]
     public string Base { get; set; }
 }

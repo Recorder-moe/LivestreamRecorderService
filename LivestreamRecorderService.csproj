@@ -4,9 +4,16 @@
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
     <UserSecretsId>dotnet-LivestreamRecorderService-3a6e3dbc-ab1b-4ee7-bf55-09713c44a431</UserSecretsId>
+    <ServerGarbageCollection>false</ServerGarbageCollection>
+    <InvariantGlobalization>true</InvariantGlobalization>
+    <PublishTrimmed>true</PublishTrimmed>
+    <PublishSingleFile>false</PublishSingleFile>
+    <EnableConfigurationBindingGenerator>true</EnableConfigurationBindingGenerator>
+    <JsonSerializerIsReflectionEnabledByDefault>true</JsonSerializerIsReflectionEnabledByDefault>
+    <EnableTrimAnalyzer>false</EnableTrimAnalyzer>
     <DockerDefaultTargetOS>Linux</DockerDefaultTargetOS>
     <DockerfileContext>.</DockerfileContext>
-    <ServerGarbageCollection>false</ServerGarbageCollection>
+    <DockerfileFastModeStage>base</DockerfileFastModeStage>
     <Configurations>CouchDB;CosmosDB;AzureCosmosDB_Release;ApacheCouchDB_Release</Configurations>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='AzureCosmosDB_Release|AnyCPU'">
@@ -65,5 +72,28 @@
     <Content Update="ARMTemplate\ACI.json">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </Content>
+  </ItemGroup>
+  <ItemGroup>
+    <TrimmerRootAssembly Include="LivestreamRecorderService" />
+    <TrimmerRootAssembly Include="LivestreamRecorder.DB" />
+    <TrimmerRootAssembly Include="Discord.Net.Rest" />
+    <TrimmerRootAssembly Include="Newtonsoft.Json" />
+    <TrimmerRootAssembly Include="YoutubeDLSharp" />
+    <TrimmerRootAssembly Include="Azure.Core" />
+    <TrimmerRootAssembly Include="Azure.Identity" />
+    <TrimmerRootAssembly Include="Azure.ResourceManager.ContainerInstance" />
+    <TrimmerRootAssembly Include="Azure.ResourceManager.Resources" />
+    <TrimmerRootAssembly Include="Azure.ResourceManager" />
+    <TrimmerRootAssembly Include="CouchDB.NET.DependencyInjection" />
+    <TrimmerRootAssembly Include="Flurl" />
+    <TrimmerRootAssembly Include="IdentityModel.OidcClient" />
+    <TrimmerRootAssembly Include="IdentityModel" />
+    <TrimmerRootAssembly Include="KubernetesClient" />
+    <TrimmerRootAssembly Include="Microsoft.Extensions.Azure" />
+    <TrimmerRootAssembly Include="Minio" />
+    <TrimmerRootAssembly Include="Serilog.Settings.Configuration" />
+    <TrimmerRootAssembly Include="Serilog" />
+    <TrimmerRootAssembly Include="YamlDotNet" />
+    <TrimmerRootAssembly Include="System.Data.Common" />
   </ItemGroup>
 </Project>

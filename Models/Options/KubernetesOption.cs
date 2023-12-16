@@ -1,4 +1,6 @@
-﻿namespace LivestreamRecorderService.Models.Options;
+﻿using System.ComponentModel.DataAnnotations;
+
+namespace LivestreamRecorderService.Models.Options;
 
 public class KubernetesOption
 {
@@ -6,7 +8,8 @@ public class KubernetesOption
     public const string ConfigurationSectionName = "Kubernetes";
 #pragma warning restore IDE1006 // 命名樣式
 
-    public required bool UseTheSameCluster { get; set; } = true;
+    [Required]
+    public bool UseTheSameCluster { get; set; } = true;
     public string? Namespace { get; set; } = "recorder.moe";
     public string? ConfigFile { get; set; }
     public string? PVCName { get; set; }

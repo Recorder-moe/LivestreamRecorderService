@@ -14,6 +14,7 @@ using LivestreamRecorderService.Models.OptionDiscords;
 using Microsoft.Extensions.Options;
 using Serilog.Context;
 using System.Net.Http.Json;
+using LivestreamRecorderService.Json;
 
 namespace LivestreamRecorderService.ScopedServices.PlatformService;
 
@@ -147,7 +148,7 @@ public class TwitcastingService(
             using var client = httpClientFactory.CreateClient();
             var response = await client.GetAsync($@"{_streamServerApi}?target={channel.id}&mode=client", cancellation);
             response.EnsureSuccessStatusCode();
-            var data = await response.Content.ReadFromJsonAsync<TwitcastingStreamData>(cancellationToken: cancellation);
+            var data = await response.Content.ReadFromJsonAsync(SourceGenerationContext.Default.TwitcastingStreamData, cancellationToken: cancellation);
 
             return null == data
                     ? (false, null)

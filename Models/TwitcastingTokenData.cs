@@ -1,10 +1,10 @@
-﻿using Newtonsoft.Json;
+﻿using System.Text.Json.Serialization;
 #nullable disable
 
 namespace LivestreamRecorderService.Models;
 
 public class TwitcastingTokenData
 {
-    [JsonProperty("token")]
+    [JsonPropertyName("token")]
     public string Token { get; set; }
 }

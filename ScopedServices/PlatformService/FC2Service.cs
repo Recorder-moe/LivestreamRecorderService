@@ -8,11 +8,13 @@ using LivestreamRecorder.DB.Interfaces;
 using LivestreamRecorder.DB.Models;
 using LivestreamRecorderService.Interfaces;
 using LivestreamRecorderService.Interfaces.Job.Downloader;
+using LivestreamRecorderService.Json;
 using LivestreamRecorderService.Models;
 using LivestreamRecorderService.Models.OptionDiscords;
 using Microsoft.Extensions.Options;
-using Newtonsoft.Json;
 using Serilog.Context;
+using System.Diagnostics.CodeAnalysis;
+using System.Text.Json;
 
 namespace LivestreamRecorderService.ScopedServices.PlatformService;
 
@@ -45,6 +47,10 @@ public class FC2Service(
 
     private const string _memberApi = "https://live.fc2.com/api/memberApi.php";
 
+    [UnconditionalSuppressMessage(
+        "Trimming",
+        "IL2026:Members annotated with 'RequiresUnreferencedCodeAttribute' require dynamic access otherwise can break functionality when trimming application code",
+        Justification = $"{nameof(SourceGenerationContext)} is set.")]
     public override async Task UpdateVideosDataAsync(Channel channel, CancellationToken cancellation = default)
     {
         using var ____ = LogContext.PushProperty("Platform", PlatformName);
@@ -132,7 +138,12 @@ public class FC2Service(
 
                     video.Status = VideoStatus.Recording;
                     logger.LogInformation("{channelId} is now lived! Start recording.", channel.id);
-                    logger.LogDebug("fc2Info: {info}", JsonConvert.SerializeObject(info));
+                    logger.LogDebug("fc2Info: {info}", JsonSerializer.Serialize(
+                        info,
+                        options: new()
+                        {
+                            TypeInfoResolver = SourceGenerationContext.Default
+                        }));
                     if (null != discordService)
                     {
                         await discordService.SendStartRecordingMessage(video, channel);
@@ -163,6 +174,10 @@ public class FC2Service(
                 : (info.Data.ChannelData.IsPublish == 1, start);
     }
 
+    [UnconditionalSuppressMessage(
+        "Trimming",
+        "IL2026:Members annotated with 'RequiresUnreferencedCodeAttribute' require dynamic access otherwise can break functionality when trimming application code",
+        Justification = $"{nameof(SourceGenerationContext)} is set.")]
     private async Task<FC2MemberData?> GetFC2InfoDataAsync(string channelId, CancellationToken cancellation = default)
     {
         try
@@ -181,7 +196,12 @@ public class FC2Service(
                 cancellationToken: cancellation);
             response.EnsureSuccessStatusCode();
             string jsonString = await response.Content.ReadAsStringAsync(cancellation);
-            FC2MemberData? info = JsonConvert.DeserializeObject<FC2MemberData>(jsonString);
+            FC2MemberData? info = JsonSerializer.Deserialize<FC2MemberData>(
+                jsonString,
+                options: new()
+                {
+                    TypeInfoResolver = SourceGenerationContext.Default
+                });
 
             return info;
         }
