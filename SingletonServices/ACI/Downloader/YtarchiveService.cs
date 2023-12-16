@@ -35,13 +35,13 @@ public class YtarchiveService : ACIServiceBase, IYtarchiveService
 
         try
         {
-            return doWithImage("ghcr.io/recorder-moe/ytarchive:master");
+            return doWithImage("ghcr.io/recorder-moe/ytarchive:distroless");
         }
         catch (Exception)
         {
             // Use DockerHub as fallback
             _logger.LogWarning("Failed once, try docker hub as fallback.");
-            return doWithImage("recordermoe/ytarchive:master");
+            return doWithImage("recordermoe/ytarchive:distroless");
         }
 
         Task<ArmOperation<ArmDeploymentResource>> doWithImage(string imageName)
@@ -51,14 +51,12 @@ public class YtarchiveService : ACIServiceBase, IYtarchiveService
             string[] command = useCookiesFile
                 ? new string[]
                 {
-                    "/usr/bin/dumb-init", "--",
                     "sh", "-c",
-                    $"/ytarchive --add-metadata --merge --retry-frags 30 --thumbnail -o '{filename.Replace(".mp4", "")}' -c /sharedvolume/cookies/{video.ChannelId}.txt '{url}' best && mv *.mp4 /sharedvolume/"
+                    $"/usr/local/bin/ytarchive --add-metadata --merge --retry-frags 30 --thumbnail -o '{filename.Replace(".mp4", "")}' -c /sharedvolume/cookies/{video.ChannelId}.txt '{url}' best && mv *.mp4 /sharedvolume/"
                 }
                 : new string[] {
-                    "/usr/bin/dumb-init", "--",
                     "sh", "-c",
-                    $"/ytarchive --add-metadata --merge --retry-frags 30 --thumbnail -o '{filename.Replace(".mp4", "")}' '{url}' best && mv *.mp4 /sharedvolume/"
+                    $"/usr/local/bin/ytarchive --add-metadata --merge --retry-frags 30 --thumbnail -o '{filename.Replace(".mp4", "")}' '{url}' best && mv *.mp4 /sharedvolume/"
                 };
 
             return CreateResourceAsync(
