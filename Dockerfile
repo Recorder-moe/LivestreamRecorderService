@@ -13,6 +13,8 @@ RUN apk add --no-cache python3 && \
 
 ENV PATH="/venv/bin:$PATH"
 
+COPY --link --from=mwader/static-ffmpeg:6.0 /ffmpeg /usr/local/bin/ffmpeg
+
 ### Base image for yt-dlp
 FROM mcr.microsoft.com/dotnet/runtime-deps:8.0-alpine AS base
 WORKDIR /app
@@ -25,6 +27,8 @@ RUN apk add --no-cache python3 && \
     apk del build-deps
 
 ENV PATH="/venv/bin:$PATH"
+
+COPY --link --from=mwader/static-ffmpeg:6.0 /ffmpeg /usr/local/bin/ffmpeg
 
 ### Build .NET
 FROM --platform=$BUILDPLATFORM mcr.microsoft.com/dotnet/sdk:8.0-alpine AS build
@@ -47,7 +51,7 @@ FROM base AS final
 
 ENV PATH="/app:$PATH"
 
-COPY --from=publish --chown=$APP_UID:$APP_UID /app/publish /app
+COPY --link --from=publish --chown=$APP_UID:$APP_UID /app/publish /app
 
 USER $APP_UID
 ENTRYPOINT ["/app/LivestreamRecorderService"]

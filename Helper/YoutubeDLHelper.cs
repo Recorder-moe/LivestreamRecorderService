@@ -90,14 +90,13 @@ internal static partial class YoutubeDL
     /// <exception cref="BadImageFormatException" >The function is only works in windows.</exception>
     public static (string? YtdlPath, string? FFmpegPath) WhereIs()
     {
-        if (!RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
-            throw new BadImageFormatException("The WhereIs yt-dlp, ffmpeg method is olny works in Windows!");
+        char splitChar = RuntimeInformation.IsOSPlatform(OSPlatform.Windows) ? ';' : ':';
 
         DirectoryInfo TempDirectory = Directory.CreateDirectory(Path.Combine(Path.GetTempPath(), nameof(LivestreamRecorderService)));
 
         // https://stackoverflow.com/a/63021455
-        string[] paths = Environment.GetEnvironmentVariable("PATH")?.Split(';') ?? [];
-        string[] extensions = Environment.GetEnvironmentVariable("PATHEXT")?.Split(';') ?? [];
+        string[] paths = Environment.GetEnvironmentVariable("PATH")?.Split(splitChar) ?? [];
+        string[] extensions = Environment.GetEnvironmentVariable("PATHEXT")?.Split(splitChar) ?? [""];
 
         string? _YtdlpPath = (from p in new[] { Environment.CurrentDirectory, TempDirectory.FullName }.Concat(paths)
                               from e in extensions

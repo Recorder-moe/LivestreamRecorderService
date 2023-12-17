@@ -25,8 +25,8 @@ public abstract class PlatformService : IPlatformService
     private static readonly Dictionary<string, int> _elapsedTime = [];
     protected readonly DiscordService? discordService = null;
 
-    private string _ffmpegPath = "/usr/bin/ffmpeg";
-    private string _ytdlPath = "/usr/bin/yt-dlp";
+    private string _ffmpegPath = "/usr/local/bin/ffmpeg";
+    private string _ytdlPath = "/venv/bin/yt-dlp";
 
     public PlatformService(
         IChannelRepository channelRepository,
