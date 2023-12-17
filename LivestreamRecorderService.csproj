@@ -83,6 +83,7 @@
     <TrimmerRootAssembly Include="Azure.ResourceManager.ContainerInstance" />
     <TrimmerRootAssembly Include="Azure.ResourceManager.Resources" />
     <TrimmerRootAssembly Include="Azure.ResourceManager" />
+    <TrimmerRootAssembly Include="CouchDB.NET" />
     <TrimmerRootAssembly Include="CouchDB.NET.DependencyInjection" />
     <TrimmerRootAssembly Include="Flurl" />
     <TrimmerRootAssembly Include="IdentityModel.OidcClient" />
@@ -101,6 +102,8 @@
     <TrimmerRootAssembly Include="Serilog.Sinks.File" />
     <TrimmerRootAssembly Include="Serilog.Sinks.PeriodicBatching" />
     <TrimmerRootAssembly Include="Serilog.Sinks.Seq" />
+    <TrimmerRootAssembly Include="TwitchLib.Api" />
+    <TrimmerRootAssembly Include="Xabe.FFmpeg" />
     <TrimmerRootAssembly Include="YamlDotNet" />
     <TrimmerRootAssembly Include="System.Data.Common" />
   </ItemGroup>
