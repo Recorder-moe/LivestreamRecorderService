@@ -14,6 +14,7 @@ RUN apk add --no-cache python3 && \
 ENV PATH="/venv/bin:$PATH"
 
 COPY --link --from=mwader/static-ffmpeg:6.0 /ffmpeg /usr/local/bin/ffmpeg
+COPY --link --from=mwader/static-ffmpeg:6.0 /ffprobe /usr/local/bin/ffprobe
 
 ### Base image for yt-dlp
 FROM mcr.microsoft.com/dotnet/runtime-deps:8.0-alpine AS base
@@ -29,6 +30,7 @@ RUN apk add --no-cache python3 && \
 ENV PATH="/venv/bin:$PATH"
 
 COPY --link --from=mwader/static-ffmpeg:6.0 /ffmpeg /usr/local/bin/ffmpeg
+COPY --link --from=mwader/static-ffmpeg:6.0 /ffprobe /usr/local/bin/ffprobe
 
 ### Build .NET
 FROM --platform=$BUILDPLATFORM mcr.microsoft.com/dotnet/sdk:8.0-alpine AS build
