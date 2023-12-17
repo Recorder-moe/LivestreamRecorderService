@@ -28,13 +28,13 @@ public class YtarchiveService(
 
         try
         {
-            return doWithImage("ghcr.io/recorder-moe/ytarchive:distroless");
+            return doWithImage("ghcr.io/recorder-moe/ytarchive:latest");
         }
         catch (Exception)
         {
             // Use DockerHub as fallback
             logger.LogWarning("Failed once, try docker hub as fallback.");
-            return doWithImage("recordermoe/ytarchive:distroless");
+            return doWithImage("recordermoe/ytarchive:latest");
         }
 
         Task<ArmOperation<ArmDeploymentResource>> doWithImage(string imageName)
