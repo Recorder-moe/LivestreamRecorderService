@@ -13,7 +13,7 @@
     <EnableTrimAnalyzer>false</EnableTrimAnalyzer>
     <DockerDefaultTargetOS>Linux</DockerDefaultTargetOS>
     <DockerfileContext>.</DockerfileContext>
-    <DockerfileFastModeStage>base</DockerfileFastModeStage>
+    <DockerfileFastModeStage>debug</DockerfileFastModeStage>
     <Configurations>CouchDB;CosmosDB;AzureCosmosDB_Release;ApacheCouchDB_Release</Configurations>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='AzureCosmosDB_Release|AnyCPU'">

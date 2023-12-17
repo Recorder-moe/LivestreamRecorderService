@@ -71,7 +71,7 @@ jobs:
           tags: ${{ steps.meta_ApacheCouchDB.outputs.tags }}
           labels: ${{ steps.meta_ApacheCouchDB.outputs.labels }}
           build-args: |
-            DatabaseService=ApacheCouchDB
+            BUILD_CONFIGURATION=ApacheCouchDB_Release
 
       - name: Build and push
         uses: docker/build-push-action@v4
@@ -81,4 +81,4 @@ jobs:
           tags: ${{ steps.meta_AzureCosmosDB.outputs.tags }}
           labels: ${{ steps.meta_AzureCosmosDB.outputs.labels }}
           build-args: |
-            DatabaseService=AzureCosmosDB
+            BUILD_CONFIGURATION=AzureCosmosDB_Release
