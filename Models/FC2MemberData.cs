@@ -122,13 +122,13 @@ public class ChannelData
     public string PublishMethod { get; set; }
 
     [JsonPropertyName("video_stereo3d")]
-    public int? VideoStereo3d { get; set; }
+    public string VideoStereo3d { get; set; }
 
     [JsonPropertyName("video_mapping")]
-    public int? VideoMapping { get; set; }
+    public string VideoMapping { get; set; }
 
     [JsonPropertyName("video_horizontal_view")]
-    public int? VideoHorizontalView { get; set; }
+    public string VideoHorizontalView { get; set; }
 }
 
 public class Data
@@ -138,7 +138,6 @@ public class Data
 
     [JsonPropertyName("profile_data")]
     public ProfileData ProfileData { get; set; }
-
 }
 
 public class Fc2Channel
