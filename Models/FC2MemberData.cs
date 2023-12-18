@@ -121,14 +121,14 @@ public class ChannelData
     [JsonPropertyName("publish_method")]
     public string PublishMethod { get; set; }
 
-    [JsonPropertyName("video_stereo3d")]
-    public string VideoStereo3d { get; set; }
+    //[JsonPropertyName("video_stereo3d")]
+    //public object VideoStereo3d { get; set; }
 
-    [JsonPropertyName("video_mapping")]
-    public string VideoMapping { get; set; }
+    //[JsonPropertyName("video_mapping")]
+    //public object VideoMapping { get; set; }
 
-    [JsonPropertyName("video_horizontal_view")]
-    public string VideoHorizontalView { get; set; }
+    //[JsonPropertyName("video_horizontal_view")]
+    //public object VideoHorizontalView { get; set; }
 }
 
 public class Data
