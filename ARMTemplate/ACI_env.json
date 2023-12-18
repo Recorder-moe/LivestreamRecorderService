@@ -22,6 +22,10 @@
         },
         "environmentVariables": {
             "type": "array"
+        },
+        "mountPath": {
+            "type": "string",
+            "defaultValue": "/sharedvolume"
         }
     },
     "resources": [
@@ -54,7 +58,7 @@
                             "volumeMounts": [
                                 {
                                     "name": "sharedvolume",
-                                    "mountPath": "/sharedvolume"
+                                    "mountPath": "[parameters('mountPath')]"
                                 }
                             ],
                             "environmentVariables": "[parameters('environmentVariables')]"

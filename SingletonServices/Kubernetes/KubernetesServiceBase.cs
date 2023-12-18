@@ -53,6 +53,7 @@ public abstract class KubernetesServiceBase(
     protected Task<V1Job> CreateInstanceAsync(dynamic parameters,
                                               string deploymentName,
                                               IList<EnvironmentVariable>? environment = null,
+                                              string mountPath = "/sharedvolume",
                                               CancellationToken cancellation = default)
     {
         V1Job job = new()
@@ -80,7 +81,7 @@ public abstract class KubernetesServiceBase(
                                     new()
                                     {
                                         Name = "sharedvolume",
-                                        MountPath = "/sharedvolume",
+                                        MountPath = mountPath,
                                     }
                                 },
                             }

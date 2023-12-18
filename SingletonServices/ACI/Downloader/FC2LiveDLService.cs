@@ -67,11 +67,7 @@ public class FC2LiveDLService(
                     "trace",
                     "--cookies",
                     $"/sharedvolume/cookies/{video.ChannelId}.txt",
-                    $"https://live.fc2.com/{video.ChannelId}/",
-                    "&&",
-                    "mv",
-                    $"/app/{filename}",
-                    "/sharedvolume/"
+                    $"https://live.fc2.com/{video.ChannelId}/"
                 ]
                 : [
                     "dumb-init",
@@ -85,11 +81,7 @@ public class FC2LiveDLService(
                     Path.ChangeExtension(filename, ".%(ext)s"),
                     "--log-level",
                     "trace",
-                    $"https://live.fc2.com/{video.ChannelId}/",
-                    "&&",
-                    "mv",
-                    $"/app/{filename}",
-                    "/sharedvolume/"
+                    $"https://live.fc2.com/{video.ChannelId}/"
                 ];
 
             return CreateResourceAsync(
@@ -118,7 +110,11 @@ public class FC2LiveDLService(
                         fileshareVolumeName = new
                         {
                             value = _azureOption.FileShare.ShareName
-                        }
+                        },
+                        mountPath = new
+                        {
+                            value = "/recordings"
+                        },
                     },
                     deploymentName: instanceName,
                     cancellation: cancellation);

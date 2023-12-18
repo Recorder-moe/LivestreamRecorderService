@@ -53,11 +53,7 @@ public class FC2LiveDLService(
                     "trace",
                     "--cookies",
                     $"/sharedvolume/cookies/{video.ChannelId}.txt",
-                    $"https://live.fc2.com/{video.ChannelId}/",
-                    "&&",
-                    "mv",
-                    $"/app/{filename}",
-                    "/sharedvolume/"
+                    $"https://live.fc2.com/{video.ChannelId}/"
                 ]
                 : [
                     "dumb-init",
@@ -72,10 +68,6 @@ public class FC2LiveDLService(
                     "--log-level",
                     "trace",
                     $"https://live.fc2.com/{video.ChannelId}/",
-                    "&&",
-                    "mv",
-                    $"/app/{filename}",
-                    "/sharedvolume/"
                 ];
 
             return CreateInstanceAsync(
@@ -95,6 +87,7 @@ public class FC2LiveDLService(
                         },
                     },
                     deploymentName: instanceName,
+                    mountPath: "/recordings",
                     cancellation: cancellation);
         }
     }
