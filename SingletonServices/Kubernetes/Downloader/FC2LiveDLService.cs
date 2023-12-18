@@ -24,13 +24,13 @@ public class FC2LiveDLService(
     {
         try
         {
-            return doWithImage("ghcr.io/recorder-moe/fc2-live-dl:2.2.0");
+            return doWithImage("ghcr.io/recorder-moe/fc2-live-dl:latest");
         }
         catch (Exception)
         {
             // Use DockerHub as fallback
             logger.LogWarning("Failed once, try docker hub as fallback.");
-            return doWithImage("recordermoe/fc2-live-dl:2.2.0");
+            return doWithImage("recordermoe/fc2-live-dl:latest");
         }
 
         Task<V1Job> doWithImage(string imageName)
@@ -40,18 +40,42 @@ public class FC2LiveDLService(
             string[] command = useCookiesFile
                 ?
                 [
-                    "/usr/bin/dumb-init",
+                    "dumb-init",
                     "--",
-                    "sh",
-                    "-c",
-                    $"/venv/bin/fc2-live-dl --latency high --threads 1 -o '{Path.ChangeExtension(filename, ".%(ext)s")}' --log-level trace --cookies /sharedvolume/cookies/{video.ChannelId}.txt 'https://live.fc2.com/{video.ChannelId}/' && mv '/app/{filename}' /sharedvolume/"
+                    "/venv/bin/fc2-live-dl",
+                    "--latency",
+                    "high",
+                    "--threads",
+                    "1",
+                    "-o",
+                    Path.ChangeExtension(filename, ".%(ext)s"),
+                    "--log-level",
+                    "trace",
+                    "--cookies",
+                    $"/sharedvolume/cookies/{video.ChannelId}.txt",
+                    $"https://live.fc2.com/{video.ChannelId}/",
+                    "&&",
+                    "mv",
+                    $"/app/{filename}",
+                    "/sharedvolume/"
                 ]
                 : [
-                    "/usr/bin/dumb-init",
+                    "dumb-init",
                     "--",
-                    "sh",
-                    "-c",
-                    $"/venv/bin/fc2-live-dl --latency high --threads 1 -o '{Path.ChangeExtension(filename, ".%(ext)s")}' --log-level trace 'https://live.fc2.com/{video.ChannelId}/' && mv '/app/{filename}' /sharedvolume/"
+                    "/venv/bin/fc2-live-dl",
+                    "--latency",
+                    "high",
+                    "--threads",
+                    "1",
+                    "-o",
+                    Path.ChangeExtension(filename, ".%(ext)s"),
+                    "--log-level",
+                    "trace",
+                    $"https://live.fc2.com/{video.ChannelId}/",
+                    "&&",
+                    "mv",
+                    $"/app/{filename}",
+                    "/sharedvolume/"
                 ];
 
             return CreateInstanceAsync(
