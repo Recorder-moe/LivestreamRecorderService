@@ -66,7 +66,7 @@ public class FC2LiveDLService(
                     "--log-level",
                     "trace",
                     "--cookies",
-                    $"/sharedvolume/cookies/{video.ChannelId}.txt",
+                    $"/recordings/cookies/{video.ChannelId}.txt",
                     $"https://live.fc2.com/{video.ChannelId}/"
                 ]
                 : [
