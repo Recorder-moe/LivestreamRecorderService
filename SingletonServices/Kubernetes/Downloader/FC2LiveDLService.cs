@@ -53,7 +53,7 @@ public class FC2LiveDLService(
                     "trace",
                     "--cookies",
                     $"/recordings/cookies/{video.ChannelId}.txt",
-                    $"https://live.fc2.com/{video.ChannelId}/"
+                    $"https://live.fc2.com/{NameHelper.ChangeId.ChannelId.PlatformType(video.ChannelId, Name)}/"
                 ]
                 : [
                     "dumb-init",
@@ -67,7 +67,7 @@ public class FC2LiveDLService(
                     Path.ChangeExtension(filename, ".%(ext)s"),
                     "--log-level",
                     "trace",
-                    $"https://live.fc2.com/{video.ChannelId}/",
+                    $"https://live.fc2.com/{NameHelper.ChangeId.ChannelId.PlatformType(video.ChannelId, Name)}/"
                 ];
 
             return CreateInstanceAsync(

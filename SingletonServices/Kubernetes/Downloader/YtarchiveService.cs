@@ -22,7 +22,7 @@ public class YtarchiveService(
                                                      bool useCookiesFile,
                                                      CancellationToken cancellation)
     {
-        if (!url.StartsWith("http")) url = $"https://youtu.be/{url[1..]}";
+        if (!url.StartsWith("http")) url = $"https://youtu.be/{NameHelper.ChangeId.VideoId.PlatformType(url, Name)}";
 
         try
         {

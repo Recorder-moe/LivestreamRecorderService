@@ -24,6 +24,8 @@ public class YtdlpService(
         bool useCookiesFile = false,
         CancellationToken cancellation = default)
     {
+        if (!url.StartsWith("http")) url = $"https://youtu.be/{NameHelper.ChangeId.VideoId.PlatformType(url, Name)}";
+
         try
         {
             return doWithImage("ghcr.io/recorder-moe/yt-dlp:2023.07.06");

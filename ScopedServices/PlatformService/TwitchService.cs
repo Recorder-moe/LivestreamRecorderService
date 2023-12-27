@@ -6,6 +6,7 @@ using LivestreamRecorder.DB.CouchDB;
 using LivestreamRecorder.DB.Enums;
 using LivestreamRecorder.DB.Interfaces;
 using LivestreamRecorder.DB.Models;
+using LivestreamRecorderService.Helper;
 using LivestreamRecorderService.Interfaces;
 using LivestreamRecorderService.Interfaces.Job.Downloader;
 using LivestreamRecorderService.Models.OptionDiscords;
@@ -46,14 +47,16 @@ public class TwitchService(
         using var __ = LogContext.PushProperty("channelId", channel.id);
 
         logger.LogTrace("Start to get Twitch stream: {channelId}", channel.id);
-        var streams = await twitchAPI.Helix.Streams.GetStreamsAsync(userLogins: [channel.id]);
+        var streams = await twitchAPI.Helix.Streams.GetStreamsAsync(
+            userLogins: [NameHelper.ChangeId.ChannelId.PlatformType(channel.id, PlatformName)]);
         if (null != streams
             && streams.Streams.Length > 0
             && streams.Streams.First() is TwitchLib.Api.Helix.Models.Streams.GetStreams.Stream stream)
         {
-            using var ___ = LogContext.PushProperty("videoId", stream.Id);
+            string videoId = NameHelper.ChangeId.VideoId.DatabaseType(stream.Id.TrimStart('v'), PlatformName);
+            using var ___ = LogContext.PushProperty("videoId", videoId);
 
-            Video? video = await videoRepository.GetVideoByIdAndChannelIdAsync(stream.Id, channel.id);
+            Video? video = await videoRepository.GetVideoByIdAndChannelIdAsync(videoId, channel.id);
 
             if (null != video)
             {
@@ -79,7 +82,7 @@ public class TwitchService(
             {
                 video = new Video()
                 {
-                    id = stream.Id,
+                    id = videoId,
                     Source = PlatformName,
                     Status = VideoStatus.WaitingToRecord,
                     SourceStatus = VideoStatus.Unknown,
@@ -106,9 +109,9 @@ public class TwitchService(
                 || video.Status == VideoStatus.Missing)
             {
                 await streamlinkService.InitJobAsync(url: video.id,
-                                                      video: video,
-                                                      useCookiesFile: false,
-                                                      cancellation: cancellation);
+                                                     video: video,
+                                                     useCookiesFile: false,
+                                                     cancellation: cancellation);
 
                 video.Status = VideoStatus.Recording;
                 logger.LogInformation("{channelId} is now lived! Start recording.", channel.id);

@@ -9,12 +9,12 @@ using LivestreamRecorder.DB.Interfaces;
 using LivestreamRecorder.DB.Models;
 using LivestreamRecorderService.Interfaces;
 using LivestreamRecorderService.Interfaces.Job.Downloader;
-using LivestreamRecorderService.Models;
 using LivestreamRecorderService.Models.OptionDiscords;
 using Microsoft.Extensions.Options;
 using Serilog.Context;
 using System.Net.Http.Json;
 using LivestreamRecorderService.Json;
+using LivestreamRecorderService.Helper;
 
 namespace LivestreamRecorderService.ScopedServices.PlatformService;
 
@@ -102,7 +102,7 @@ public class TwitcastingService(
                 };
             }
 
-            video.Thumbnail = await DownloadThumbnailAsync($"https://twitcasting.tv/{channel.id}/thumb/{videoId}", video.id, cancellation);
+            video.Thumbnail = await DownloadThumbnailAsync($"https://twitcasting.tv/{NameHelper.ChangeId.ChannelId.PlatformType(channel.id, PlatformName)}/thumb/{NameHelper.ChangeId.VideoId.PlatformType(videoId, PlatformName)}", video.id, cancellation);
 
             if (await GetTwitcastingIsPublicAsync(video, cancellation))
             {
@@ -146,13 +146,13 @@ public class TwitcastingService(
         try
         {
             using var client = httpClientFactory.CreateClient();
-            var response = await client.GetAsync($@"{_streamServerApi}?target={channel.id}&mode=client", cancellation);
+            var response = await client.GetAsync($@"{_streamServerApi}?target={NameHelper.ChangeId.ChannelId.PlatformType(channel.id, PlatformName)}&mode=client", cancellation);
             response.EnsureSuccessStatusCode();
             var data = await response.Content.ReadFromJsonAsync(SourceGenerationContext.Default.TwitcastingStreamData, cancellationToken: cancellation);
 
-            return null == data
+            return null == data || null == data.Movie.Id
                     ? (false, null)
-                    : (data.Movie.Live ?? false, data.Movie.Id.ToString());
+                    : (data.Movie.Live ?? false, NameHelper.ChangeId.VideoId.DatabaseType(data.Movie.Id.Value.ToString(), PlatformName));
         }
         catch (HttpRequestException e)
         {
@@ -170,7 +170,7 @@ public class TwitcastingService(
     {
         using var client = httpClientFactory.CreateClient();
 
-        var response = await client.GetAsync($@"https://twitcasting.tv/{video.ChannelId}/movie/{video.id}", cancellation);
+        var response = await client.GetAsync($@"https://twitcasting.tv/{NameHelper.ChangeId.ChannelId.PlatformType(video.ChannelId, PlatformName)}/movie/{NameHelper.ChangeId.VideoId.PlatformType(video.id, PlatformName)}", cancellation);
 
         if (!response.IsSuccessStatusCode)
             return ("(Unknown)", "");
@@ -203,7 +203,7 @@ public class TwitcastingService(
             var keyword = "tw-empty-state-action";
 
             using var client = httpClientFactory.CreateClient();
-            var response = await client.GetAsync($"https://twitcasting.tv/{video.ChannelId}/movie/{video.id}", cancellation);
+            var response = await client.GetAsync($"https://twitcasting.tv/{NameHelper.ChangeId.ChannelId.PlatformType(video.ChannelId, PlatformName)}/movie/{NameHelper.ChangeId.VideoId.PlatformType(video.id, PlatformName)}", cancellation);
             response.EnsureSuccessStatusCode();
 
             var data = await response.Content.ReadAsStringAsync(cancellation);
@@ -235,7 +235,7 @@ public class TwitcastingService(
             var keyword = "tw-player-empty-message";
 
             using var client = httpClientFactory.CreateClient();
-            var response = await client.GetAsync($"https://twitcasting.tv/{video.ChannelId}/movie/{video.id}", cancellation);
+            var response = await client.GetAsync($"https://twitcasting.tv/{NameHelper.ChangeId.ChannelId.PlatformType(video.ChannelId, PlatformName)}/movie/{NameHelper.ChangeId.VideoId.PlatformType(video.id, PlatformName)}", cancellation);
             response.EnsureSuccessStatusCode();
 
             var data = await response.Content.ReadAsStringAsync(cancellation);
@@ -264,7 +264,7 @@ public class TwitcastingService(
 
         if (string.IsNullOrEmpty(video.Thumbnail))
         {
-            video.Thumbnail = await DownloadThumbnailAsync($"https://twitcasting.tv/{video.ChannelId}/thumb/{video.id}", video.id, cancellation);
+            video.Thumbnail = await DownloadThumbnailAsync($"https://twitcasting.tv/{NameHelper.ChangeId.ChannelId.PlatformType(video.ChannelId, PlatformName)}/thumb/{NameHelper.ChangeId.VideoId.PlatformType(video.id, PlatformName)}", video.id, cancellation);
         }
 
         try

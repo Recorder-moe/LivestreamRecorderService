@@ -12,6 +12,7 @@ using LivestreamRecorderService.Models.OptionDiscords;
 using Microsoft.Extensions.Options;
 using Serilog.Context;
 using LivestreamRecorder.DB.Models;
+using LivestreamRecorderService.Helper;
 
 namespace LivestreamRecorderService.ScopedServices.PlatformService;
 
@@ -41,7 +42,7 @@ public class YoutubeService(
     public override int Interval => 5 * 60;
 
     public static string GetRSSFeed(Channel channel)
-        => $"https://www.youtube.com/feeds/videos.xml?channel_id={channel.id}";
+        => $"https://www.youtube.com/feeds/videos.xml?channel_id={NameHelper.ChangeId.ChannelId.PlatformType(channel.id, "Youtube")}";
 
     private record Item(string Id, string Title = "", DateTime? Date = null);
 
@@ -82,23 +83,25 @@ public class YoutubeService(
     }
 
     private Task<string[]?> GetVideoIdsFromMemberPlaylist(string ChannelId, CancellationToken cancellation)
-        => GetVideoIdsByYtdlpAsync($"https://www.youtube.com/playlist?list=UUMO{ChannelId[2..]}", 15, cancellation);
+        => GetVideoIdsByYtdlpAsync(
+            url: $"https://www.youtube.com/playlist?list=UUMO{NameHelper.ChangeId.ChannelId.PlatformType(ChannelId, PlatformName)[2..]}",
+            limit: 15,
+            cancellation: cancellation);
 
     private Task<YtdlpVideoData?> GetChannelInfoByYtdlpAsync(string ChannelId, CancellationToken cancellation = default)
-        => GetVideoInfoByYtdlpAsync($"https://www.youtube.com/channel/{ChannelId}", cancellation);
+        => GetVideoInfoByYtdlpAsync(
+            url: $"https://www.youtube.com/channel/{NameHelper.ChangeId.ChannelId.PlatformType(ChannelId, PlatformName)}",
+            cancellation: cancellation);
 
     /// <summary>
     /// Update video info from RSS feed item. (Which are in Scheduled and Unknown states.)
     /// </summary>
-    /// <remarks>!!! Updates will not save to DB !!! Must call SaveChanges yourself !!!</remarks>
     /// <param name="channel"></param>
     /// <param name="item"></param>
     /// <returns></returns>
     private async Task AddOrUpdateVideoAsync(Channel channel, Item item, CancellationToken cancellation = default)
     {
-        // Youtube video id may start with '_' which is not allowed in CouchDB.
-        // So we add a prefix 'Y' to it.
-        var videoId = "Y" + item.Id.Split(':').Last();
+        var videoId = NameHelper.ChangeId.VideoId.DatabaseType(item.Id.Split(':').Last(), PlatformName);
         using var _ = LogContext.PushProperty("videoId", videoId);
         var video = await videoRepository.GetVideoByIdAndChannelIdAsync(videoId, channel.id);
 
@@ -135,16 +138,13 @@ public class YoutubeService(
     /// <summary>
     /// Update video data.
     /// </summary>
-    /// <remarks>!!! Updates will not save to DB !!! Must call SaveChanges yourself !!!</remarks>
     /// <param name="video"></param>
     /// <param name="cancellation"></param>
     /// <returns></returns>
     public override async Task UpdateVideoDataAsync(Video video, CancellationToken cancellation = default)
     {
         using var __ = LogContext.PushProperty("videoId", video.id);
-        // Youtube video id may start with '_' which is not allowed in CouchDB.
-        // So we add a prefix 'Y' to it.
-        YtdlpVideoData? videoData = await GetVideoInfoByYtdlpAsync($"https://youtu.be/{video.id[1..]}", cancellation);
+        YtdlpVideoData? videoData = await GetVideoInfoByYtdlpAsync($"https://youtu.be/{NameHelper.ChangeId.VideoId.PlatformType(video.id, PlatformName)}", cancellation);
 
         if (null == videoData)
         {

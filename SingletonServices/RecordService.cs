@@ -1,5 +1,6 @@
 ﻿using LivestreamRecorder.DB.Enums;
 using LivestreamRecorder.DB.Models;
+using LivestreamRecorderService.Helper;
 using LivestreamRecorderService.Interfaces.Job;
 using LivestreamRecorderService.Interfaces.Job.Downloader;
 using LivestreamRecorderService.ScopedServices;
@@ -89,27 +90,27 @@ public class RecordService(
                 {
                     case "Youtube":
                         await ytarchiveService.InitJobAsync(url: video.id,
-                                                             video: video,
-                                                             useCookiesFile: channel?.UseCookiesFile == true,
-                                                             cancellation: stoppingToken);
+                                                            video: video,
+                                                            useCookiesFile: channel?.UseCookiesFile == true,
+                                                            cancellation: stoppingToken);
                         break;
                     case "Twitcasting":
                         await twitcastingRecorderService.InitJobAsync(url: video.id,
-                                                                       video: video,
-                                                                       useCookiesFile: false,
-                                                                       cancellation: stoppingToken);
+                                                                      video: video,
+                                                                      useCookiesFile: false,
+                                                                      cancellation: stoppingToken);
                         break;
                     case "Twitch":
                         await streamlinkService.InitJobAsync(url: video.id,
-                                                              video: video,
-                                                              useCookiesFile: false,
-                                                              cancellation: stoppingToken);
+                                                             video: video,
+                                                             useCookiesFile: false,
+                                                             cancellation: stoppingToken);
                         break;
                     case "FC2":
                         await fC2LiveDLService.InitJobAsync(url: video.id,
-                                                             video: video,
-                                                             useCookiesFile: channel?.UseCookiesFile == true,
-                                                             cancellation: stoppingToken);
+                                                            video: video,
+                                                            useCookiesFile: channel?.UseCookiesFile == true,
+                                                            cancellation: stoppingToken);
                         break;
 
                     default:
@@ -160,33 +161,40 @@ public class RecordService(
                 switch (video.Source)
                 {
                     case "Youtube":
-                        await ytdlpService.InitJobAsync(
-                            url: $"https://youtu.be/{video.id[1..]}",
-                            video: video,
-                            useCookiesFile: channel?.UseCookiesFile == true,
-                            cancellation: stoppingToken);
+                        {
+                            string id = NameHelper.ChangeId.VideoId.PlatformType(video.id, "Youtube");
+                            await ytdlpService.InitJobAsync(url: $"https://youtu.be/{id}",
+                                                            video: video,
+                                                            useCookiesFile: channel?.UseCookiesFile == true,
+                                                            cancellation: stoppingToken);
+                        }
                         break;
                     case "Twitcasting":
-                        await ytdlpService.InitJobAsync(
-                            url: $"https://twitcasting.tv/{video.ChannelId}/movie/{video.id}",
-                            video: video,
-                            useCookiesFile: false,
-                            cancellation: stoppingToken);
+                        {
+                            string channelId = NameHelper.ChangeId.ChannelId.PlatformType(video.ChannelId, "Twitcasting");
+                            string videoId = NameHelper.ChangeId.VideoId.PlatformType(video.id, "Twitcasting");
+                            await ytdlpService.InitJobAsync(url: $"https://twitcasting.tv/{channelId}/movie/{videoId}",
+                                                            video: video, useCookiesFile: false,
+                                                            cancellation: stoppingToken);
+                        }
                         break;
                     case "Twitch":
-                        var id = video.id.TrimStart('v');
-                        await ytdlpService.InitJobAsync(
-                            url: $"https://www.twitch.tv/videos/{id}",
-                            video: video,
-                            useCookiesFile: false,
-                            cancellation: stoppingToken);
+                        {
+                            var id = NameHelper.ChangeId.VideoId.PlatformType(video.id, "Twitch");
+                            await ytdlpService.InitJobAsync(url: $"https://www.twitch.tv/videos/{id}",
+                                                            video: video,
+                                                            useCookiesFile: false,
+                                                            cancellation: stoppingToken);
+                        }
                         break;
                     case "FC2":
-                        await ytdlpService.InitJobAsync(
-                            url: $"https://video.fc2.com/content/{video.id}",
-                            video: video,
-                            useCookiesFile: channel?.UseCookiesFile == true,
-                            cancellation: stoppingToken);
+                        {
+                            string id = NameHelper.ChangeId.VideoId.PlatformType(video.id, "FC2");
+                            await ytdlpService.InitJobAsync(url: $"https://video.fc2.com/content/{id}",
+                                                            video: video,
+                                                            useCookiesFile: channel?.UseCookiesFile == true,
+                                                            cancellation: stoppingToken);
+                        }
                         break;
 
                     default:
@@ -304,5 +312,4 @@ public class RecordService(
             return;
         }
     }
-
 }

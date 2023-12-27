@@ -6,6 +6,7 @@ using LivestreamRecorder.DB.CouchDB;
 using LivestreamRecorder.DB.Enums;
 using LivestreamRecorder.DB.Interfaces;
 using LivestreamRecorder.DB.Models;
+using LivestreamRecorderService.Helper;
 using LivestreamRecorderService.Interfaces;
 using LivestreamRecorderService.Interfaces.Job.Downloader;
 using LivestreamRecorderService.Json;
@@ -131,10 +132,10 @@ public class FC2Service(
                 if (video.Status < VideoStatus.Recording
                     || video.Status == VideoStatus.Missing)
                 {
-                    await fC2LiveDLService.InitJobAsync(url: $"https://live.fc2.com/{channel.id}/",
-                                                         video: video,
-                                                         useCookiesFile: channel.UseCookiesFile == true,
-                                                         cancellation: cancellation);
+                    await fC2LiveDLService.InitJobAsync(url: $"https://live.fc2.com/{NameHelper.ChangeId.ChannelId.PlatformType(channel.id, PlatformName)}/",
+                                                        video: video,
+                                                        useCookiesFile: channel.UseCookiesFile == true,
+                                                        cancellation: cancellation);
 
                     video.Status = VideoStatus.Recording;
                     logger.LogInformation("{channelId} is now lived! Start recording.", channel.id);
@@ -171,7 +172,7 @@ public class FC2Service(
 
         return null == info || string.IsNullOrEmpty(start) || start == "0"
                 ? (false, null)
-                : (info.Data.ChannelData.IsPublish == 1, start);
+                : (info.Data.ChannelData.IsPublish == 1, NameHelper.ChangeId.VideoId.DatabaseType(start, PlatformName));
     }
 
     [UnconditionalSuppressMessage(
@@ -191,7 +192,7 @@ public class FC2Service(
                         { "channel", "1" },
                         { "profile", "1" },
                         { "user", "0" },
-                        { "streamid", channelId }
+                        { "streamid", NameHelper.ChangeId.ChannelId.PlatformType(channelId, PlatformName) }
                     }),
                 cancellationToken: cancellation);
             response.EnsureSuccessStatusCode();
@@ -228,9 +229,9 @@ public class FC2Service(
         if (video.Status <= VideoStatus.Pending)
         {
             video.Status = VideoStatus.WaitingToDownload;
-            if (video.id.StartsWith("20"))
+            if (NameHelper.ChangeId.VideoId.PlatformType(video.id, PlatformName).StartsWith("20"))
             {
-                YtdlpVideoData? videoData = await GetVideoInfoByYtdlpAsync($"https://video.fc2.com/content/{video.id}", cancellation);
+                YtdlpVideoData? videoData = await GetVideoInfoByYtdlpAsync($"https://video.fc2.com/content/{NameHelper.ChangeId.VideoId.PlatformType(video.id, PlatformName)}", cancellation);
                 if (null != videoData)
                     video.Thumbnail = await DownloadThumbnailAsync(videoData.Thumbnail, video.id, cancellation);
             }

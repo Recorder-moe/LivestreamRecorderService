@@ -3,6 +3,7 @@ using Discord.Webhook;
 using LivestreamRecorder.DB.Enums;
 using LivestreamRecorder.DB.Models;
 using LivestreamRecorderService.Enums;
+using LivestreamRecorderService.Helper;
 using LivestreamRecorderService.Models.OptionDiscords;
 using LivestreamRecorderService.Models.Options;
 using Microsoft.Extensions.Options;
@@ -146,10 +147,10 @@ public partial class DiscordService
 
         embedBuilder.AddField("Source Url", video.Source switch
         {
-            "Youtube" => $"https://www.youtube.com/watch?v={video.id[1..]}",
-            "Twitcasting" => $"https://twitcasting.tv/{video.ChannelId}/movie/{video.id}",
-            "Twitch" => $"https://www.twitch.tv/{video.ChannelId}",
-            "FC2" => $"https://live.fc2.com/{video.ChannelId}/",
+            "Youtube" => $"https://www.youtube.com/watch?v={NameHelper.ChangeId.VideoId.PlatformType(video.id, "Youtube")}",
+            "Twitcasting" => $"https://twitcasting.tv/{NameHelper.ChangeId.ChannelId.PlatformType(video.ChannelId, "Twitcasting")}/movie/{NameHelper.ChangeId.VideoId.PlatformType(video.id, "Twitcasting")}",
+            "Twitch" => $"https://www.twitch.tv/{NameHelper.ChangeId.ChannelId.PlatformType(video.ChannelId, "Twitch")}",
+            "FC2" => $"https://live.fc2.com/{NameHelper.ChangeId.ChannelId.PlatformType(video.ChannelId, "FC2")}/",
             _ => "",
         });
 

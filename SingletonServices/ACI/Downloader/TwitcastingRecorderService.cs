@@ -67,7 +67,7 @@ public class TwitcastingRecorderService(
                             value = new string[] {
                                 "dumb-init", "--",
                                 "/bin/sh", "-c",
-                                $"/bin/sh /app/record_twitcast.sh {video.ChannelId} once -o {Path.GetFileNameWithoutExtension(filename)} && mv /download/*.mp4 /sharedvolume/"
+                                $"/bin/sh /app/record_twitcast.sh {NameHelper.ChangeId.ChannelId.PlatformType(video.ChannelId, Name)} once -o {Path.GetFileNameWithoutExtension(filename)} && mv /download/*.mp4 /sharedvolume/"
                             }
                         },
                         storageAccountName = new
