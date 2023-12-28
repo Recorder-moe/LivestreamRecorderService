@@ -23,52 +23,53 @@ public static class NameHelper
             _ => throw new NotImplementedException(),
         };
 
+    /// <summary>
+    /// Change the id between platform type and database type. This is designed to prevent id conflict and invalid database key.
+    /// </summary>
     public static class ChangeId
     {
         public static class ChannelId
         {
-            // Twitcasting channel id may start with '_' which is not allowed in CouchDB. So we add a prefix 'T' to it.
             public static string PlatformType(string channelId, string Platform)
                 => Platform switch
                 {
-                    "Youtube" or IYtarchiveService.name or IYtdlpService.name => channelId,
-                    "Twitch" or IStreamlinkService.name => channelId,
-                    "Twitcasting" or ITwitcastingRecorderService.name => channelId.TrimStart('T'),
-                    "FC2" or IFC2LiveDLService.name => channelId,
+                    "Youtube" or IYtarchiveService.name or IYtdlpService.name => channelId, // Youtube channelId already starts with "UC"
+                    "Twitch" or IStreamlinkService.name => channelId[2..],
+                    "Twitcasting" or ITwitcastingRecorderService.name => channelId[2..],
+                    "FC2" or IFC2LiveDLService.name => channelId[2..],
                     _ => throw new NotImplementedException(),
                 };
 
             public static string DatabaseType(string channelId, string Platform)
                 => Platform switch
                 {
-                    "Youtube" or IYtarchiveService.name or IYtdlpService.name => channelId,
-                    "Twitch" or IStreamlinkService.name => channelId,
-                    "Twitcasting" or ITwitcastingRecorderService.name => 'T' + channelId,
-                    "FC2" or IFC2LiveDLService.name => channelId,
+                    "Youtube" or IYtarchiveService.name or IYtdlpService.name => channelId, // Youtube channelId always starts with "UC"
+                    "Twitch" or IStreamlinkService.name => "TW" + channelId,
+                    "Twitcasting" or ITwitcastingRecorderService.name => "TC" + channelId,
+                    "FC2" or IFC2LiveDLService.name => "FC" + channelId,
                     _ => throw new NotImplementedException(),
                 };
         }
 
         public static class VideoId
         {
-            // Youtube video id may start with '_' which is not allowed in CouchDB. So we add a prefix 'Y' to it.
             public static string PlatformType(string videoId, string Platform)
                 => Platform switch
                 {
-                    "Youtube" or IYtarchiveService.name or IYtdlpService.name => videoId.TrimStart('Y'),
-                    "Twitch" or IStreamlinkService.name => videoId,
-                    "Twitcasting" or ITwitcastingRecorderService.name => videoId,
-                    "FC2" or IFC2LiveDLService.name => videoId,
+                    "Youtube" or IYtarchiveService.name or IYtdlpService.name => videoId[1..],
+                    "Twitch" or IStreamlinkService.name => videoId[2..],
+                    "Twitcasting" or ITwitcastingRecorderService.name => videoId[2..],
+                    "FC2" or IFC2LiveDLService.name => videoId[2..],
                     _ => throw new NotImplementedException(),
                 };
 
             public static string DatabaseType(string videoId, string Platform)
                 => Platform switch
                 {
-                    "Youtube" or IYtarchiveService.name or IYtdlpService.name => 'Y' + videoId,
-                    "Twitch" or IStreamlinkService.name => videoId,
-                    "Twitcasting" or ITwitcastingRecorderService.name => videoId,
-                    "FC2" or IFC2LiveDLService.name => videoId,
+                    "Youtube" or IYtarchiveService.name or IYtdlpService.name => "Y" + videoId,
+                    "Twitch" or IStreamlinkService.name => "TW" + videoId,
+                    "Twitcasting" or ITwitcastingRecorderService.name => "TC" + videoId,
+                    "FC2" or IFC2LiveDLService.name => "FC" + videoId,
                     _ => throw new NotImplementedException(),
                 };
         }

@@ -151,6 +151,7 @@ try
 
         services.AddDiscordService(configuration);
 
+        services.AddHostedService<MigrationWorker>();
         services.AddHostedService<MonitorWorker>();
         services.AddHostedService<RecordWorker>();
         services.AddSingleton<RecordService>();
