@@ -100,7 +100,6 @@ public abstract class ACIServiceBase(
         dynamic parameters,
         string deploymentName,
         string? templateName = null,
-        string mountPath = "/sharedvolume",
         CancellationToken cancellation = default)
     {
         var resourceGroupResource = await GetResourceGroupAsync(cancellation);

@@ -56,32 +56,16 @@ public class FC2LiveDLService(
                 [
                     "dumb-init",
                     "--",
-                    "/venv/bin/fc2-live-dl",
-                    "--latency",
-                    "high",
-                    "--threads",
-                    "1",
-                    "-o",
-                    Path.ChangeExtension(filename, ".%(ext)s"),
-                    "--log-level",
-                    "trace",
-                    "--cookies",
-                    $"/recordings/cookies/{video.ChannelId}.txt",
-                    $"https://live.fc2.com/{NameHelper.ChangeId.ChannelId.PlatformType(video.ChannelId, Name)}/"
+                    "sh",
+                    "-c",
+                    $"/venv/bin/fc2-live-dl --latency high --threads 1 -o '{Path.ChangeExtension(filename, ".%(ext)s")}' --log-level trace --cookies /sharedvolume/cookies/{video.ChannelId}.txt 'https://live.fc2.com/{NameHelper.ChangeId.ChannelId.PlatformType(video.ChannelId, Name)}' && mv '/recordings/{filename}' /sharedvolume/"
                 ]
                 : [
                     "dumb-init",
                     "--",
-                    "/venv/bin/fc2-live-dl",
-                    "--latency",
-                    "high",
-                    "--threads",
-                    "1",
-                    "-o",
-                    Path.ChangeExtension(filename, ".%(ext)s"),
-                    "--log-level",
-                    "trace",
-                    $"https://live.fc2.com/{NameHelper.ChangeId.ChannelId.PlatformType(video.ChannelId, Name)}/"
+                    "sh",
+                    "-c",
+                    $"/venv/bin/fc2-live-dl --latency high --threads 1 -o '{Path.ChangeExtension(filename, ".%(ext)s")}' --log-level trace 'https://live.fc2.com/{NameHelper.ChangeId.ChannelId.PlatformType(video.ChannelId, Name)}' && mv '/recordings/{filename}' /sharedvolume/"
                 ];
 
             return CreateResourceAsync(
@@ -113,7 +97,7 @@ public class FC2LiveDLService(
                         },
                         mountPath = new
                         {
-                            value = "/recordings"
+                            value = "/sharedvolume"
                         },
                     },
                     deploymentName: instanceName,
