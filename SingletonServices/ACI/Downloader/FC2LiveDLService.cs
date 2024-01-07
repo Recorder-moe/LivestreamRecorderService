@@ -58,14 +58,14 @@ public class FC2LiveDLService(
                     "--",
                     "sh",
                     "-c",
-                    $"/venv/bin/fc2-live-dl --latency high --threads 1 -o '{Path.ChangeExtension(filename, ".%(ext)s")}' --log-level trace --cookies /sharedvolume/cookies/{video.ChannelId}.txt 'https://live.fc2.com/{NameHelper.ChangeId.ChannelId.PlatformType(video.ChannelId, Name)}' && mv '/recordings/{filename}' /sharedvolume/"
+                    $"fc2-live-dl --latency high --threads 1 -o '{Path.ChangeExtension(filename, ".%(ext)s")}' --log-level trace --cookies /sharedvolume/cookies/{video.ChannelId}.txt 'https://live.fc2.com/{NameHelper.ChangeId.ChannelId.PlatformType(video.ChannelId, Name)}' && mv '/recordings/{filename}' /sharedvolume/"
                 ]
                 : [
                     "dumb-init",
                     "--",
                     "sh",
                     "-c",
-                    $"/venv/bin/fc2-live-dl --latency high --threads 1 -o '{Path.ChangeExtension(filename, ".%(ext)s")}' --log-level trace 'https://live.fc2.com/{NameHelper.ChangeId.ChannelId.PlatformType(video.ChannelId, Name)}' && mv '/recordings/{filename}' /sharedvolume/"
+                    $"fc2-live-dl --latency high --threads 1 -o '{Path.ChangeExtension(filename, ".%(ext)s")}' --log-level trace 'https://live.fc2.com/{NameHelper.ChangeId.ChannelId.PlatformType(video.ChannelId, Name)}' && mv '/recordings/{filename}' /sharedvolume/"
                 ];
 
             return CreateResourceAsync(
