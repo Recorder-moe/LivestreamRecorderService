@@ -26,13 +26,13 @@ public class YtdlpService(
 
         try
         {
-            return doWithImage("ghcr.io/recorder-moe/yt-dlp:2023.07.06");
+            return doWithImage("ghcr.io/recorder-moe/yt-dlp:latest");
         }
         catch (Exception)
         {
             // Use DockerHub as fallback
             logger.LogWarning("Failed once, try docker hub as fallback.");
-            return doWithImage("recordermoe/yt-dlp:2023.07.06");
+            return doWithImage("recordermoe/yt-dlp:latest");
         }
 
         Task<V1Job> doWithImage(string imageName)
