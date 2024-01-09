@@ -89,6 +89,12 @@ public abstract class KubernetesServiceBase(
                         Volumes = new List<V1Volume>
                         {
                             GetSharedVolumeDefinition()
+                        },
+                        SecurityContext = new V1PodSecurityContext
+                        {
+                            RunAsUser = 1001,
+                            RunAsGroup = 0,
+                            FsGroup = 0
                         }
                     }
                 }

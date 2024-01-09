@@ -27,7 +27,7 @@
     },
     "resources": [
         {
-            "apiVersion": "2022-09-01",
+            "apiVersion": "2023-05-01",
             "name": "[parameters('containerName')]",
             "location": "eastasia",
             "tags": {},
@@ -57,7 +57,11 @@
                                     "name": "sharedvolume",
                                     "mountPath": "[parameters('mountPath')]"
                                 }
-                            ]
+                            ],
+                            "securityContext": {
+                                "runAsUser": 1001,
+                                "runAsGroup": 0
+                            }
                         }
                     }
                 ],
