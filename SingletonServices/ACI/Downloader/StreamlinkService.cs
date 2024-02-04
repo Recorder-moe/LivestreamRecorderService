@@ -40,13 +40,13 @@ public class StreamlinkService(
         string filename = NameHelper.GetFileName(video, IStreamlinkService.name);
         try
         {
-            return doWithImage("ghcr.io/recorder-moe/streamlink:5.5.1");
+            return doWithImage("ghcr.io/recorder-moe/streamlink:latest");
         }
         catch (Exception)
         {
             // Use DockerHub as fallback
             logger.LogWarning("Failed once, try docker hub as fallback.");
-            return doWithImage("recordermoe/streamlink:5.5.1");
+            return doWithImage("recordermoe/streamlink:latest");
         }
 
         Task<ArmOperation<ArmDeploymentResource>> doWithImage(string imageName)
@@ -66,7 +66,7 @@ public class StreamlinkService(
                         {
                             value = new string[] {
                                 "/bin/sh", "-c",
-                                $"/usr/local/bin/streamlink --twitch-disable-ads -o '/downloads/{filename}' -f 'twitch.tv/{NameHelper.ChangeId.ChannelId.PlatformType(video.ChannelId, Name)}' best && cd /downloads && for file in *.mp4; do ffmpeg -i \"$file\" -map 0:v:0 -map 0:a:0 -c copy -movflags +faststart 'temp.mp4' && mv 'temp.mp4' \"/sharedvolume/$file\"; done"
+                                $"streamlink --twitch-disable-ads -o '/download/{filename}' -f 'twitch.tv/{NameHelper.ChangeId.ChannelId.PlatformType(video.ChannelId, Name)}' best && cd /download && for file in *.mp4; do ffmpeg -i \"$file\" -map 0:v:0 -map 0:a:0 -c copy -movflags +faststart 'temp.mp4' && mv 'temp.mp4' \"/sharedvolume/$file\"; done"
                             }
                         },
                         storageAccountName = new
