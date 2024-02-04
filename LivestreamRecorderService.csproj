@@ -106,6 +106,10 @@
     <TrimmerRootAssembly Include="Serilog.Sinks.PeriodicBatching" />
     <TrimmerRootAssembly Include="Serilog.Sinks.Seq" />
     <TrimmerRootAssembly Include="TwitchLib.Api" />
+    <TrimmerRootAssembly Include="TwitchLib.Api.Core" />
+    <TrimmerRootAssembly Include="TwitchLib.Api.Core.Models" />
+    <TrimmerRootAssembly Include="TwitchLib.Api.Helix" />
+    <TrimmerRootAssembly Include="TwitchLib.Api.Helix.Models" />
     <TrimmerRootAssembly Include="Xabe.FFmpeg" />
     <TrimmerRootAssembly Include="YamlDotNet" />
     <TrimmerRootAssembly Include="System.Data.Common" />
