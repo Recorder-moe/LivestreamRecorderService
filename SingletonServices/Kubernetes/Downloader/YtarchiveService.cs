@@ -28,6 +28,7 @@ public class YtarchiveService(
         {
             return doWithImage("ghcr.io/recorder-moe/ytarchive:latest");
         }
+        // skipcq: CS-R1008
         catch (Exception)
         {
             // Use DockerHub as fallback

@@ -50,6 +50,7 @@ public partial class DiscordService
     /// </summary>
     /// <param name="arg"></param>
     /// <returns></returns>
+    // skipcq: CS-R1073
     private Task DiscordWebhookClient_Log(LogMessage arg)
         => Task.Run(() =>
            {
@@ -70,7 +71,7 @@ public partial class DiscordService
                    case LogSeverity.Verbose:
                        _logger.LogTrace("{message}", arg);
                        break;
-                   case LogSeverity.Debug:
+                   //    case LogSeverity.Debug:
                    default:
                        _logger.LogDebug("{message}", arg);
                        break;
@@ -78,7 +79,7 @@ public partial class DiscordService
            });
     #endregion
 
-    public Task SendStartRecordingMessage(Video video, Channel? channel)
+    public Task SendStartRecordingMessageAsync(Video video, Channel? channel)
     {
         var embedBuilder = GetEmbedBuilder(video, channel);
         embedBuilder.WithTitle("Start Recording");
@@ -89,7 +90,7 @@ public partial class DiscordService
         return SendMessageAsync(embedBuilder.Build(), componentBuilder.Build());
     }
 
-    public Task SendArchivedMessage(Video video, Channel? channel)
+    public Task SendArchivedMessageAsync(Video video, Channel? channel)
     {
         var embedBuilder = GetEmbedBuilder(video, channel);
         embedBuilder.WithTitle("Video archived");
@@ -100,7 +101,7 @@ public partial class DiscordService
         return SendMessageAsync(embedBuilder.Build(), componentBuilder.Build());
     }
 
-    public Task SendSkippedMessage(Video video, Channel? channel)
+    public Task SendSkippedMessageAsync(Video video, Channel? channel)
     {
         var embedBuilder = GetEmbedBuilder(video, channel);
         embedBuilder.WithTitle("Video skipped");
@@ -111,7 +112,7 @@ public partial class DiscordService
         return SendMessageAsync(embedBuilder.Build(), componentBuilder.Build(), video.Note ?? "");
     }
 
-    public Task SendDeletedMessage(Video video, Channel? channel)
+    public Task SendDeletedMessageAsync(Video video, Channel? channel)
     {
         var embedBuilder = GetEmbedBuilder(video, channel);
         embedBuilder.WithTitle("Source " + Enum.GetName(typeof(VideoStatus), video.SourceStatus ?? VideoStatus.Unknown));

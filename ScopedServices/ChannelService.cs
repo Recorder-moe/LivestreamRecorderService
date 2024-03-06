@@ -26,6 +26,6 @@ public class ChannelService(
         _unitOfWork_Public.Commit();
     }
 
-    public Task<Channel?> GetByChannelIdAndSource(string channelId, string source)
+    public Task<Channel?> GetByChannelIdAndSourceAsync(string channelId, string source)
         => channelRepository.GetChannelByIdAndSourceAsync(channelId, source);
 }

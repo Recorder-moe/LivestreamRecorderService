@@ -76,6 +76,9 @@ public class TwitchService(
                     case VideoStatus.Skipped:
                         logger.LogTrace("{videoId} is rejected for recording.", video.id);
                         return;
+                    default:
+                        logger.LogWarning("{videoId} is in {status}, skip.", video.id, Enum.GetName(typeof(VideoStatus), video.Status));
+                        return;
                 }
             }
             else
@@ -117,7 +120,7 @@ public class TwitchService(
                 logger.LogInformation("{channelId} is now lived! Start recording.", channel.id);
                 if (null != discordService)
                 {
-                    await discordService.SendStartRecordingMessage(video, channel);
+                    await discordService.SendStartRecordingMessageAsync(video, channel);
                 }
             }
 
@@ -150,7 +153,7 @@ public class TwitchService(
                 if (video.Status >= VideoStatus.Archived && video.Status < VideoStatus.Expired)
                 {
                     video.Status = VideoStatus.Missing;
-                    video.Note = $"Video missing because archived not found.";
+                    video.Note = "Video missing because archived not found.";
                     logger.LogInformation("Can not found archived, change video status to {status}", Enum.GetName(typeof(VideoStatus), video.Status));
                 }
             }

@@ -29,6 +29,7 @@ public class S3UploaderService(
         {
             return doWithImage("ghcr.io/recorder-moe/s3-uploader:latest");
         }
+        // skipcq: CS-R1008
         catch (Exception)
         {
             // Use DockerHub as fallback
@@ -51,7 +52,7 @@ public class S3UploaderService(
                         },
                         commandOverrideArray = new
                         {
-                            value = new string[] {
+                            value = new[] {
                                 "/bin/sh", "-c",
                                 $"/app/s3-uploader.sh {video.Filename?.Replace(".mp4", "")}"
                             }

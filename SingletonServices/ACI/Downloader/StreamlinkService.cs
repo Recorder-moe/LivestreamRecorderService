@@ -42,6 +42,7 @@ public class StreamlinkService(
         {
             return doWithImage("ghcr.io/recorder-moe/streamlink:latest");
         }
+        // skipcq: CS-R1008
         catch (Exception)
         {
             // Use DockerHub as fallback
@@ -64,7 +65,7 @@ public class StreamlinkService(
                         },
                         commandOverrideArray = new
                         {
-                            value = new string[] {
+                            value = new[] {
                                 "/bin/sh", "-c",
                                 $"streamlink --twitch-disable-ads -o '/download/{filename}' -f 'twitch.tv/{NameHelper.ChangeId.ChannelId.PlatformType(video.ChannelId, Name)}' best && cd /download && for file in *.mp4; do ffmpeg -i \"$file\" -map 0:v:0 -map 0:a:0 -c copy -movflags +faststart 'temp.mp4' && mv 'temp.mp4' \"/sharedvolume/$file\"; done"
                             }

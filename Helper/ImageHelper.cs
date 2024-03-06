@@ -12,7 +12,7 @@ public static class ImageHelper
 
         IConversion conversion = FFmpeg.Conversions.New()
                                    .AddStream(mediaInfo.Streams)
-                                   .AddParameter($"-c:v libaom-av1 -still-picture 1")
+                                   .AddParameter("-c:v libaom-av1 -still-picture 1")
                                    .SetOutput(outputPath)
                                    .SetOverwriteOutput(true);
         conversion.OnProgress += (_, e)

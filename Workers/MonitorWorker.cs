@@ -24,7 +24,7 @@ public class MonitorWorker(
 
         while (!stoppingToken.IsCancellationRequested)
         {
-            using var __ = LogContext.PushProperty("WorkerRunId", $"{nameof(MonitorWorker)}_{DateTime.Now:yyyyMMddHHmmssfff}");
+            using var __ = LogContext.PushProperty("WorkerRunId", $"{nameof(MonitorWorker)}_{DateTime.UtcNow:yyyyMMddHHmmssfff}");
 
             #region DI
             using (var scope = serviceProvider.CreateScope())
@@ -82,10 +82,8 @@ public class MonitorWorker(
                 logger.LogTrace("No Scheduled videos for {platform}", platformService.PlatformName);
                 return;
             }
-            else
-            {
-                logger.LogDebug("Get {videoCount} Scheduled/Pending videos for {platform}", videos.Count, platformService.PlatformName);
-            }
+
+            logger.LogDebug("Get {videoCount} Scheduled/Pending videos for {platform}", videos.Count, platformService.PlatformName);
 
             foreach (var video in videos)
             {

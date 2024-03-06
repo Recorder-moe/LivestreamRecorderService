@@ -81,6 +81,9 @@ public class TwitcastingService(
                         logger.LogWarning("{videoId} has already been archived. It is possible that an internet disconnect occurred during the process. Changed its state back to Recording.", video.id);
                         video.Status = VideoStatus.WaitingToRecord;
                         break;
+                    default:
+                        logger.LogWarning("{videoId} is in {status}.", video.id, Enum.GetName(typeof(VideoStatus), video.Status));
+                        return;
                 }
             }
             else
@@ -124,7 +127,7 @@ public class TwitcastingService(
 
                     if (null != discordService)
                     {
-                        await discordService.SendStartRecordingMessage(video, channel);
+                        await discordService.SendStartRecordingMessageAsync(video, channel);
                     }
                 }
             }
@@ -290,10 +293,10 @@ public class TwitcastingService(
                     if (video.SourceStatus != VideoStatus.Reject)
                     {
                         video.SourceStatus = VideoStatus.Reject;
-                        video.Note = $"Video source is detected access required.";
+                        video.Note = "Video source is detected access required.";
                         if (null != discordService)
                         {
-                            await discordService.SendDeletedMessage(video, channel);
+                            await discordService.SendDeletedMessageAsync(video, channel);
                         }
                         logger.LogInformation("Video source is {status} because it is detected access required.", Enum.GetName(typeof(VideoStatus), video.SourceStatus));
                     }
@@ -311,7 +314,7 @@ public class TwitcastingService(
                         if (null != discordService)
                         {
                             // First detected
-                            await discordService.SendDeletedMessage(video, channel);
+                            await discordService.SendDeletedMessageAsync(video, channel);
                         }
                     }
                     video.SourceStatus = VideoStatus.Deleted;
@@ -335,7 +338,7 @@ public class TwitcastingService(
                 if (video.Status >= VideoStatus.Archived && video.Status < VideoStatus.Expired)
                 {
                     video.Status = VideoStatus.Missing;
-                    video.Note = $"Video missing because archived not found.";
+                    video.Note = "Video missing because archived not found.";
                     logger.LogInformation("Can not found archived, change video status to {status}", Enum.GetName(typeof(VideoStatus), video.Status));
                 }
             }

@@ -35,7 +35,7 @@ public class UpdateVideoStatusWorker(
         var expireDate = DateTime.Today;
         while (!stoppingToken.IsCancellationRequested)
         {
-            using var __ = LogContext.PushProperty("WorkerRunId", $"{nameof(UpdateVideoStatusWorker)}_{DateTime.Now:yyyyMMddHHmmssfff}");
+            using var __ = LogContext.PushProperty("WorkerRunId", $"{nameof(UpdateVideoStatusWorker)}_{DateTime.UtcNow:yyyyMMddHHmmssfff}");
 
             #region DI
             using (var scope = serviceProvider.CreateScope())
@@ -71,7 +71,7 @@ public class UpdateVideoStatusWorker(
                 }
 
                 // Expire videos once a day
-                if (DateTime.Now > expireDate)
+                if (DateTime.UtcNow > expireDate)
                 {
                     expireDate = expireDate.AddDays(1);
                     await ExpireVideosAsync(videoService, stoppingToken);
@@ -106,7 +106,7 @@ public class UpdateVideoStatusWorker(
                 await fc2Service.UpdateVideoDataAsync(video, stoppingToken);
                 break;
             default:
-                break;
+                throw new InvalidOperationException($"Unknown source: {video.Source}");
         }
     }
 

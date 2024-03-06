@@ -21,7 +21,7 @@ public class RecordWorker(
         logger.LogTrace("{Worker} starts...", nameof(RecordWorker));
         while (!stoppingToken.IsCancellationRequested)
         {
-            using var ____ = LogContext.PushProperty("WorkerRunId", $"{nameof(RecordWorker)}_{DateTime.Now:yyyyMMddHHmmssfff}");
+            using var ____ = LogContext.PushProperty("WorkerRunId", $"{nameof(RecordWorker)}_{DateTime.UtcNow:yyyyMMddHHmmssfff}");
             #region DI
             using (var scope = serviceProvider.CreateScope())
             {

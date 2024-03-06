@@ -29,6 +29,7 @@ internal static partial class YoutubeDL
         "IL2026:Members annotated with 'RequiresUnreferencedCodeAttribute' require dynamic access otherwise can break functionality when trimming application code",
         Justification = $"{nameof(SourceGenerationContext)} is set.")]
 #pragma warning disable CA1068 // CancellationToken 參數必須位於最後
+    // skipcq: CS-R1073
     public static async Task<RunResult<YtdlpVideoData>> RunVideoDataFetch_Alt(this YoutubeDLSharp.YoutubeDL ytdl, string url, CancellationToken ct = default, bool flat = true, bool fetchComments = false, OptionSet overrideOptions = null)
 #pragma warning restore CA1068 // CancellationToken 參數必須位於最後
     {
@@ -56,6 +57,7 @@ internal static partial class YoutubeDL
             optionSet = optionSet.OverrideOptions(overrideOptions);
         }
 
+        // skipcq: CS-W1028
         YtdlpVideoData videoData = null;
         YoutubeDLProcess youtubeDLProcess = new(ytdl.YoutubeDLPath);
         youtubeDLProcess.OutputReceived += (o, e) =>

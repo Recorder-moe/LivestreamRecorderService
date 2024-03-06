@@ -28,7 +28,7 @@ public abstract class PlatformService : IPlatformService
     private string _ffmpegPath = "/usr/local/bin/ffmpeg";
     private string _ytdlPath = "/venv/bin/yt-dlp";
 
-    public PlatformService(
+    protected PlatformService(
         IChannelRepository channelRepository,
         IStorageService storageService,
         IHttpClientFactory httpClientFactory,
@@ -92,7 +92,7 @@ public abstract class PlatformService : IPlatformService
             var res = await ytdl.RunVideoDataFetch_Alt(url, overrideOptions: optionSet, ct: cancellation);
             if (!res.Success)
             {
-                throw new Exception(string.Join(' ', res.ErrorOutput));
+                throw new InvalidOperationException($"Failed to fetch video data from yt-dlp for URL: {url}. Errors: {string.Join(' ', res.ErrorOutput)}");
             }
 
             YtdlpVideoData videoData = res.Data;
@@ -126,10 +126,10 @@ public abstract class PlatformService : IPlatformService
 
         try
         {
-            var res = await ytdl.RunWithOptions(new string[] { url }, optionSet, ct: cancellation);
+            var res = await ytdl.RunWithOptions([url], optionSet, ct: cancellation);
             if (!res.Success)
             {
-                throw new Exception(string.Join(' ', res.ErrorOutput));
+                throw new InvalidOperationException($"Failed to fetch video data from yt-dlp for URL: {url}. Errors: {string.Join(' ', res.ErrorOutput)}");
             }
 
             string[] videoIds = res.Data;

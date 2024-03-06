@@ -20,7 +20,7 @@ public class HeartbeatWorker(
 
         while (!stoppingToken.IsCancellationRequested)
         {
-            using var __ = LogContext.PushProperty("WorkerRunId", $"{nameof(HeartbeatWorker)}_{DateTime.Now:yyyyMMddHHmmssfff}");
+            using var __ = LogContext.PushProperty("WorkerRunId", $"{nameof(HeartbeatWorker)}_{DateTime.UtcNow:yyyyMMddHHmmssfff}");
 
             await SendHeartbeatAsync();
 

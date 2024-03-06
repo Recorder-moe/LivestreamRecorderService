@@ -1,4 +1,5 @@
-﻿using Azure;
+﻿using System.Globalization;
+using Azure;
 using Azure.ResourceManager;
 using Azure.ResourceManager.ContainerInstance;
 using Azure.ResourceManager.Resources;
@@ -129,7 +130,7 @@ public abstract class ACIServiceBase(
     }
 
     public string GetInstanceName(string videoId)
-        => (Name + NameHelper.GetInstanceName(videoId)).ToLower();
+        => (Name + NameHelper.GetInstanceName(videoId)).ToLower(new CultureInfo("en-US"));
 
     private async Task StartOldJobAsync(GenericResource job,
                                         Video video,

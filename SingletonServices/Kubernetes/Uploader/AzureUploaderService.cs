@@ -42,6 +42,7 @@ public class AzureUploaderService : KubernetesServiceBase, IAzureUploaderService
         {
             return doWithImage("ghcr.io/recorder-moe/azure-uploader:latest");
         }
+        // skipcq: CS-R1008
         catch (Exception)
         {
             // Use DockerHub as fallback
@@ -64,7 +65,7 @@ public class AzureUploaderService : KubernetesServiceBase, IAzureUploaderService
                         },
                         commandOverrideArray = new
                         {
-                            value = new string[] {
+                            value = new[] {
                                 "/bin/sh", "-c",
                                 $"/app/azure-uploader.sh {video.Filename?.Replace(".mp4", "")}"
                             }

@@ -76,17 +76,14 @@ public class VideoService(
         {
             await UpdateVideoStatusAsync(video, VideoStatus.Uploading);
 
-            string instanceName;
             switch (_serviceOptions.StorageService)
             {
                 case ServiceName.AzureBlobStorage:
-                    instanceName = azureUploaderService.GetInstanceName(video.id);
                     await azureUploaderService.InitJobAsync(url: video.id,
                                                              video: video,
                                                              cancellation: cancellation);
                     break;
                 case ServiceName.S3:
-                    instanceName = s3UploaderService.GetInstanceName(video.id);
                     await s3UploaderService.InitJobAsync(url: video.id,
                                                           video: video,
                                                           cancellation: cancellation);
@@ -98,7 +95,7 @@ public class VideoService(
         catch (Exception e)
         {
             await UpdateVideoStatusAsync(video, VideoStatus.Error);
-            await UpdateVideoNoteAsync(video, $"Exception happened when uploading files to storage. Please contact admin if you see this message.");
+            await UpdateVideoNoteAsync(video, "Exception happened when uploading files to storage. Please contact admin if you see this message.");
             logger.LogError(e, "Exception happened when uploading files to storage: {videoId}", video.id);
         }
     }

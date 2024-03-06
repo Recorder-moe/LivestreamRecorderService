@@ -173,12 +173,12 @@ public class YoutubeService(
 
                     if (channel?.SkipNotLiveStream == true)
                     {
-                        video.Note = $"Video skipped because it is not live stream.";
+                        video.Note = "Video skipped because it is not live stream.";
                         // First detected
                         if (video.Status != VideoStatus.Skipped
                             && null != discordService)
                         {
-                            await discordService.SendSkippedMessage(video, channel);
+                            await discordService.SendSkippedMessageAsync(video, channel);
                         }
                         video.Status = VideoStatus.Skipped;
                         logger.LogInformation("Change video {videoId} status to {videoStatus}", video.id, Enum.GetName(typeof(VideoStatus), video.Status));
@@ -213,6 +213,7 @@ public class YoutubeService(
 
                 logger.LogWarning("Video {videoId} is currently in post_live status. Please wait for YouTube to prepare the video for download. If the admin still wants to download it, please manually change the video status to \"WaitingToDownload\".", video.id);
                 goto case "_live";
+            // skipcq: CS-W1001
             case "was_live":
                 switch (video.Status)
                 {
@@ -220,7 +221,7 @@ public class YoutubeService(
                     // Will fall in here when adding a new channel.
                     case VideoStatus.Unknown:
                         video.Status = VideoStatus.Expired;
-                        video.Note = $"Video expired because it is an old live stream.";
+                        video.Note = "Video expired because it is an old live stream.";
                         logger.LogInformation("Change video {videoId} status to {videoStatus}", video.id, Enum.GetName(typeof(VideoStatus), video.Status));
                         video.Thumbnail = await DownloadThumbnailAsync(videoData.Thumbnail, video.id, cancellation);
                         break;
@@ -258,12 +259,12 @@ public class YoutubeService(
                 if (video.Status == VideoStatus.Unknown
                     && channel?.SkipNotLiveStream == true)
                 {
-                    video.Note = $"Video skipped because it is not live stream.";
+                    video.Note = "Video skipped because it is not live stream.";
                     // First detected
                     if (video.Status != VideoStatus.Skipped
                         && null != discordService)
                     {
-                        await discordService.SendSkippedMessage(video, channel);
+                        await discordService.SendSkippedMessageAsync(video, channel);
                     }
                     video.Status = VideoStatus.Skipped;
                     logger.LogInformation("Change video {videoId} status to {videoStatus}", video.id, Enum.GetName(typeof(VideoStatus), video.Status));
@@ -282,7 +283,7 @@ public class YoutubeService(
                             // Old unarchived video.
                             // Will fall in here when adding a new channel.
                             video.Status = VideoStatus.Expired;
-                            video.Note = $"Video expired because it is an old video.";
+                            video.Note = "Video expired because it is an old video.";
                             logger.LogInformation("Change video {videoId} status to {videoStatus}", video.id, Enum.GetName(typeof(VideoStatus), video.Status));
                             video.Thumbnail = await DownloadThumbnailAsync(videoData.Thumbnail, video.id, cancellation);
                             break;
@@ -322,7 +323,7 @@ public class YoutubeService(
                         video.SourceStatus = VideoStatus.Deleted;
                         if (null != discordService)
                         {
-                            await discordService.SendDeletedMessage(video, channel);
+                            await discordService.SendDeletedMessageAsync(video, channel);
                         }
                     }
 
@@ -355,7 +356,7 @@ public class YoutubeService(
                     video.SourceStatus = VideoStatus.Missing;
                     if (null != discordService)
                     {
-                        await discordService.SendSkippedMessage(video, channel);
+                        await discordService.SendSkippedMessageAsync(video, channel);
                     }
                 }
                 video.Status = VideoStatus.Missing;
@@ -365,7 +366,7 @@ public class YoutubeService(
             if (video.Status >= VideoStatus.Archived && video.Status < VideoStatus.Expired)
             {
                 video.Status = VideoStatus.Missing;
-                video.Note = $"Video missing because archived not found.";
+                video.Note = "Video missing because archived not found.";
                 logger.LogWarning("Can not found archived, change video status to {status}", Enum.GetName(typeof(VideoStatus), video.Status));
             }
         }
@@ -398,13 +399,13 @@ public class YoutubeService(
                     && (null == videoData.Subtitles.LiveChat
                         || videoData.Subtitles.LiveChat.Count == 0))
                 {
-                    video.Note = $"Video source is Edited because it has been restored from rejection or deletion.";
+                    video.Note = "Video source is Edited because it has been restored from rejection or deletion.";
                     if (video.SourceStatus != VideoStatus.Edited)
                     {
                         video.SourceStatus = VideoStatus.Edited;
                         if (null != discordService)
                         {
-                            await discordService.SendDeletedMessage(video, channel);
+                            await discordService.SendDeletedMessageAsync(video, channel);
                         }
                     }
                     video.SourceStatus = VideoStatus.Edited;
@@ -420,12 +421,12 @@ public class YoutubeService(
                 // Not archived
                 if (video.Status < VideoStatus.Archived)
                 {
-                    video.Note = $"Video is Skipped because it is detected access required or copyright notice.";
+                    video.Note = "Video is Skipped because it is detected access required or copyright notice.";
                     // First detected
                     if (video.Status != VideoStatus.Skipped
                         && null != discordService)
                     {
-                        await discordService.SendSkippedMessage(video, channel);
+                        await discordService.SendSkippedMessageAsync(video, channel);
                     }
                     video.Status = VideoStatus.Skipped;
                     logger.LogInformation("Video is {status} because it is detected access required or copyright notice.", Enum.GetName(typeof(VideoStatus), video.Status));
@@ -434,16 +435,18 @@ public class YoutubeService(
                 else if (video.SourceStatus != VideoStatus.Reject)
                 {
                     video.SourceStatus = VideoStatus.Reject;
-                    video.Note = $"Video source is detected access required or copyright notice.";
+                    video.Note = "Video source is detected access required or copyright notice.";
                     if (null != discordService)
                     {
-                        await discordService.SendDeletedMessage(video, channel);
+                        await discordService.SendDeletedMessageAsync(video, channel);
                     }
                 }
 
                 video.SourceStatus = VideoStatus.Reject;
                 logger.LogInformation("Video source is {status} because it is detected access required or copyright notice.", Enum.GetName(typeof(VideoStatus), video.SourceStatus));
-
+                break;
+            default:
+                logger.LogWarning("Video {videoId} has a Unknown availability!", video.id);
                 break;
         }
 
@@ -451,14 +454,14 @@ public class YoutubeService(
         {
             await ytarchiveService.InitJobAsync(url: video.id,
                                                  video: video,
-                                                 useCookiesFile: channel?.UseCookiesFile ?? false,
+                                                 useCookiesFile: channel?.UseCookiesFile == true,
                                                  cancellation: cancellation);
 
             video.Status = VideoStatus.Recording;
             logger.LogInformation("{videoId} is now lived! Start recording.", video.id);
             if (null != discordService)
             {
-                await discordService.SendStartRecordingMessage(video, channel);
+                await discordService.SendStartRecordingMessageAsync(video, channel);
             }
         }
 

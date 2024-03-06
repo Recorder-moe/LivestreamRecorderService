@@ -36,10 +36,9 @@ public class KubernetesService : IJobService
         KubernetesNamespace = options.Value.Namespace ?? KubernetesNamespace;
         EnsureNamespaceExists(KubernetesNamespace);
 
-        if (_serviceOption.SharedVolumeService == ServiceName.AzureFileShare)
-        {
-            if (!CheckSecretExists()) CreateSecret();
-        }
+        if (_serviceOption.SharedVolumeService == ServiceName.AzureFileShare
+            && !CheckSecretExists())
+            CreateSecret();
 
         if (_serviceOption.SharedVolumeService == ServiceName.CustomPVC)
         {
@@ -76,7 +75,7 @@ public class KubernetesService : IJobService
         if (jobs.Count == 0)
         {
             _logger.LogError("Failed to retrieve K8s job for {videoId} while removing completed job. Please verify if any job exists.", video.id);
-            throw new Exception($"No K8s jobs found! {video.id}");
+            throw new InvalidOperationException($"No K8s jobs found! {video.id}");
         }
 
         if (jobs.Count > 1)
@@ -90,7 +89,7 @@ public class KubernetesService : IJobService
             if (await IsJobFailedAsync(video, cancellation))
             {
                 _logger.LogError("K8s job status FAILED! {videoId} {jobName}", video.id, jobName);
-                throw new Exception($"K8s job status FAILED! {jobName}");
+                throw new InvalidOperationException($"K8s job status FAILED! {jobName}");
             }
 
             var status = await _client.DeleteNamespacedJobAsync(name: jobName,
@@ -100,7 +99,7 @@ public class KubernetesService : IJobService
             if (status.Status != "Success")
             {
                 _logger.LogError("Failed to delete job {jobName} {videoId} {status}", jobName, video.id, status.Message);
-                throw new Exception($"Failed to delete job {jobName} {video.id} {status.Message}");
+                throw new InvalidOperationException($"Failed to delete job {jobName} {video.id} {status.Message}");
             }
             _logger.LogInformation("K8s job {jobName} {videoId} removed", jobName, video.id);
         }

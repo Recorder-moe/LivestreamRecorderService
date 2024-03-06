@@ -12,45 +12,44 @@ using Microsoft.Extensions.Options;
 using Serilog;
 using System.Configuration;
 
-namespace LivestreamRecorderService.DependencyInjection
+namespace LivestreamRecorderService.DependencyInjection;
+
+public static partial class Extensions
 {
-    public static partial class Extensions
+    public static IServiceCollection AddAzureContainerInstanceService(this IServiceCollection services)
     {
-        public static IServiceCollection AddAzureContainerInstanceService(this IServiceCollection services)
+        try
         {
-            try
-            {
-                var azureOptions = services.BuildServiceProvider().GetRequiredService<IOptions<AzureOption>>().Value;
-                if (null == azureOptions.ContainerInstance
-                    || string.IsNullOrEmpty(azureOptions.ContainerInstance.ClientSecret.ClientID)
-                    || string.IsNullOrEmpty(azureOptions.ContainerInstance.ClientSecret.ClientSecret))
-                    throw new ConfigurationErrorsException();
+            var azureOptions = services.BuildServiceProvider().GetRequiredService<IOptions<AzureOption>>().Value;
+            if (null == azureOptions.ContainerInstance
+                || string.IsNullOrEmpty(azureOptions.ContainerInstance.ClientSecret.ClientID)
+                || string.IsNullOrEmpty(azureOptions.ContainerInstance.ClientSecret.ClientSecret))
+                throw new ConfigurationErrorsException();
 
-                services.AddAzureClients(clientsBuilder
-                    => clientsBuilder.UseCredential((options)
-                        => new ClientSecretCredential(tenantId: azureOptions.ContainerInstance.ClientSecret.TenantID,
-                                                      clientId: azureOptions.ContainerInstance.ClientSecret.ClientID,
-                                                      clientSecret: azureOptions.ContainerInstance.ClientSecret.ClientSecret))
-                                     .AddClient<ArmClient, ArmClientOptions>((options, token) => new ArmClient(token)));
+            services.AddAzureClients(clientsBuilder
+                => clientsBuilder.UseCredential((options)
+                    => new ClientSecretCredential(tenantId: azureOptions.ContainerInstance.ClientSecret.TenantID,
+                                                  clientId: azureOptions.ContainerInstance.ClientSecret.ClientID,
+                                                  clientSecret: azureOptions.ContainerInstance.ClientSecret.ClientSecret))
+                                 .AddClient<ArmClient, ArmClientOptions>((options, token) => new ArmClient(token)));
 
-                services.AddSingleton<IJobService, ACIService>();
+            services.AddSingleton<IJobService, ACIService>();
 
-                services.AddSingleton<IYtarchiveService, YtarchiveService>();
-                services.AddSingleton<IYtdlpService, YtdlpService>();
-                services.AddSingleton<IStreamlinkService, StreamlinkService>();
-                services.AddSingleton<ITwitcastingRecorderService, TwitcastingRecorderService>();
-                services.AddSingleton<IFC2LiveDLService, FC2LiveDLService>();
+            services.AddSingleton<IYtarchiveService, YtarchiveService>();
+            services.AddSingleton<IYtdlpService, YtdlpService>();
+            services.AddSingleton<IStreamlinkService, StreamlinkService>();
+            services.AddSingleton<ITwitcastingRecorderService, TwitcastingRecorderService>();
+            services.AddSingleton<IFC2LiveDLService, FC2LiveDLService>();
 
-                services.AddSingleton<IAzureUploaderService, AzureUploaderService>();
-                services.AddSingleton<IS3UploaderService, S3UploaderService>();
+            services.AddSingleton<IAzureUploaderService, AzureUploaderService>();
+            services.AddSingleton<IS3UploaderService, S3UploaderService>();
 
-                return services;
-            }
-            catch (ConfigurationErrorsException)
-            {
-                Log.Fatal("Missing AzureContainerInstance. Please set Azure:AzureContainerInstance in appsettings.json.");
-                throw new ConfigurationErrorsException("Missing AzureContainerInstance. Please set Azure:AzureContainerInstance in appsettings.json.");
-            }
+            return services;
+        }
+        catch (ConfigurationErrorsException)
+        {
+            Log.Fatal("Missing AzureContainerInstance. Please set Azure:AzureContainerInstance in appsettings.json.");
+            throw new ConfigurationErrorsException("Missing AzureContainerInstance. Please set Azure:AzureContainerInstance in appsettings.json.");
         }
     }
 }

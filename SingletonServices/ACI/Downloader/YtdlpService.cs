@@ -30,6 +30,7 @@ public class YtdlpService(
         {
             return doWithImage("ghcr.io/recorder-moe/yt-dlp:latest");
         }
+        // skipcq: CS-R1008
         catch (Exception)
         {
             // Use DockerHub as fallback

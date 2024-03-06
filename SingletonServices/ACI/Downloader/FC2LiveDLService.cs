@@ -42,6 +42,7 @@ public class FC2LiveDLService(
         {
             return doWithImage("ghcr.io/recorder-moe/fc2-live-dl:latest");
         }
+        // skipcq: CS-R1008
         catch (Exception)
         {
             // Use DockerHub as fallback

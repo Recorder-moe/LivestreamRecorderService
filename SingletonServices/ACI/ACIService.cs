@@ -53,7 +53,8 @@ public class ACIService(
                 logger.LogError("Failed to get ACI instance for {videoId} when removing completed jobs. Please check if the ACI exists.", video.id);
                 return;
             }
-            else if (video.Source is "Twitcasting" or "Twitch" or "FC2"
+
+            if (video.Source is "Twitcasting" or "Twitch" or "FC2"
                      && !resource.Data.Name.StartsWith(IAzureUploaderService.name)
                      && !resource.Data.Name.StartsWith(IS3UploaderService.name))
             {
@@ -66,14 +67,14 @@ public class ACIService(
         if (await IsJobFailedAsync(video, cancellation))
         {
             logger.LogError("ACI status FAILED! {videoId} {jobName}", video.id, jobName);
-            throw new Exception($"ACI status FAILED! {jobName}");
+            throw new InvalidOperationException($"ACI status FAILED! {jobName}");
         }
 
         var status = (await resource.DeleteAsync(Azure.WaitUntil.Completed, cancellation)).GetRawResponse();
         if (status.IsError)
         {
             logger.LogError("Failed to delete job {jobName} {videoId} {status}", jobName, video.id, status.ReasonPhrase);
-            throw new Exception($"Failed to delete job {jobName} {video.id} {status.ReasonPhrase}");
+            throw new InvalidOperationException($"Failed to delete job {jobName} {video.id} {status.ReasonPhrase}");
         }
         logger.LogInformation("Delete ACI {jobName} for video {videoId}", jobName, video.id);
     }

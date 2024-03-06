@@ -41,6 +41,7 @@ public class TwitcastingRecorderService(
         {
             return doWithImage("ghcr.io/recorder-moe/twitcasting-recorder:latest");
         }
+        // skipcq: CS-R1008
         catch (Exception)
         {
             // Use DockerHub as fallback
@@ -64,7 +65,7 @@ public class TwitcastingRecorderService(
                         },
                         commandOverrideArray = new
                         {
-                            value = new string[] {
+                            value = new[] {
                                 "dumb-init", "--",
                                 "/bin/sh", "-c",
                                 $"/bin/sh /app/record_twitcast.sh {NameHelper.ChangeId.ChannelId.PlatformType(video.ChannelId, Name)} once -o {Path.GetFileNameWithoutExtension(filename)} && mv /download/*.mp4 /sharedvolume/"

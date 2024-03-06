@@ -21,7 +21,7 @@ public class UpdateChannelInfoWorker(
 
         while (!stoppingToken.IsCancellationRequested)
         {
-            using var __ = LogContext.PushProperty("WorkerRunId", $"{nameof(UpdateChannelInfoWorker)}_{DateTime.Now:yyyyMMddHHmmssfff}");
+            using var __ = LogContext.PushProperty("WorkerRunId", $"{nameof(UpdateChannelInfoWorker)}_{DateTime.UtcNow:yyyyMMddHHmmssfff}");
 
             #region DI
             using var scope = serviceProvider.CreateScope();

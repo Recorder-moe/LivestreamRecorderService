@@ -8,6 +8,7 @@ using LivestreamRecorderService.Models;
 using LivestreamRecorderService.Models.Options;
 using Microsoft.Extensions.Options;
 using System.Configuration;
+using System.Globalization;
 
 namespace LivestreamRecorderService.SingletonServices.Kubernetes;
 
@@ -137,7 +138,7 @@ public abstract class KubernetesServiceBase(
         };
 
     public string GetInstanceName(string videoId)
-        => (Name + NameHelper.GetInstanceName(videoId)).ToLower();
+        => (Name + NameHelper.GetInstanceName(videoId)).ToLower(new CultureInfo("en-US"));
 
     // Must be override
     protected abstract Task<V1Job> CreateNewJobAsync(string id,

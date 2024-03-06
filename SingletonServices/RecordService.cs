@@ -32,7 +32,7 @@ public class RecordService(
              // Only check videos that started recording/download more than 3 minutes ago
              // to avoid checking videos that are not finished deployment yet.
              .Where(p => null != p.Timestamps.ActualStartTime
-                         && DateTime.Now.Subtract(p.Timestamps.ActualStartTime.Value).TotalMinutes >= 3)
+                         && DateTime.UtcNow.Subtract(p.Timestamps.ActualStartTime.Value).TotalMinutes >= 3)
              .ToList();
 
         if (videos.Count > 0)
@@ -52,7 +52,7 @@ public class RecordService(
                         break;
                     default:
                         await videoService.UpdateVideoStatusAsync(video, VideoStatus.Error);
-                        await videoService.UpdateVideoNoteAsync(video, $"This recording FAILED! Please contact admin if you see this message.");
+                        await videoService.UpdateVideoNoteAsync(video, "This recording FAILED! Please contact admin if you see this message.");
                         logger.LogWarning("{videoId} is failed.", video.id);
                         break;
                 }
@@ -82,7 +82,7 @@ public class RecordService(
         foreach (var video in videos)
         {
             using var _ = LogContext.PushProperty("videoId", video.id);
-            var channel = await channelService.GetByChannelIdAndSource(video.ChannelId, video.Source);
+            var channel = await channelService.GetByChannelIdAndSourceAsync(video.ChannelId, video.Source);
             logger.LogInformation("Start to create recording job: {videoId}", video.id);
             try
             {
@@ -154,7 +154,7 @@ public class RecordService(
         foreach (var video in videos)
         {
             using var _ = LogContext.PushProperty("videoId", video.id);
-            var channel = await channelService.GetByChannelIdAndSource(video.ChannelId, video.Source);
+            var channel = await channelService.GetByChannelIdAndSourceAsync(video.ChannelId, video.Source);
             logger.LogInformation("Start to create downloading job: {videoId}", video.id);
             try
             {
@@ -286,7 +286,7 @@ public class RecordService(
         catch (Exception e)
         {
             await videoService.UpdateVideoStatusAsync(video, VideoStatus.Error);
-            await videoService.UpdateVideoNoteAsync(video, $"This recording is FAILED! Please contact admin if you see this message.");
+            await videoService.UpdateVideoNoteAsync(video, "This recording is FAILED! Please contact admin if you see this message.");
             logger.LogError(e, "Recording FAILED: {videoId}", video.id);
             return;
         }
@@ -296,7 +296,7 @@ public class RecordService(
     {
         using var _ = LogContext.PushProperty("videoId", video.id);
 
-        await discordService.SendArchivedMessage(video, await channelService.GetByChannelIdAndSource(video.ChannelId, video.Source));
+        await discordService.SendArchivedMessageAsync(video, await channelService.GetByChannelIdAndSourceAsync(video.ChannelId, video.Source));
         logger.LogInformation("Video {videoId} is successfully uploaded to Storage.", video.id);
         await videoService.UpdateVideoStatusAsync(video, VideoStatus.Archived);
 
@@ -307,7 +307,7 @@ public class RecordService(
         catch (Exception e)
         {
             await videoService.UpdateVideoStatusAsync(video, VideoStatus.Error);
-            await videoService.UpdateVideoNoteAsync(video, $"This recording is FAILED! Please contact admin if you see this message.");
+            await videoService.UpdateVideoNoteAsync(video, "This recording is FAILED! Please contact admin if you see this message.");
             logger.LogError(e, "Uploading FAILED: {videoId}", video.id);
             return;
         }

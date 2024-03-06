@@ -67,7 +67,8 @@ public class FC2Service(
             logger.LogTrace("{channelId} is down.", channel.id);
             return;
         }
-        else if (!string.IsNullOrEmpty(videoId))
+
+        if (!string.IsNullOrEmpty(videoId))
         {
             Video? video = await videoRepository.GetVideoByIdAndChannelIdAsync(videoId, channel.id);
             if (null != video)
@@ -89,6 +90,9 @@ public class FC2Service(
                     case VideoStatus.PermanentArchived:
                         logger.LogWarning("{videoId} has already been archived. It is possible that an internet disconnect occurred during the process. Changed its state back to Recording.", video.id);
                         video.Status = VideoStatus.WaitingToRecord;
+                        break;
+                    default:
+                        // All cases should be handled
                         break;
                 }
             }
@@ -147,7 +151,7 @@ public class FC2Service(
                         }));
                     if (null != discordService)
                     {
-                        await discordService.SendStartRecordingMessage(video, channel);
+                        await discordService.SendStartRecordingMessageAsync(video, channel);
                     }
                 }
             }
@@ -244,7 +248,7 @@ public class FC2Service(
                 if (video.Status >= VideoStatus.Archived && video.Status < VideoStatus.Expired)
                 {
                     video.Status = VideoStatus.Missing;
-                    video.Note = $"Video missing because archived not found.";
+                    video.Note = "Video missing because archived not found.";
                     logger.LogInformation("Can not found archived, change video status to {status}", Enum.GetName(typeof(VideoStatus), video.Status));
                 }
             }
