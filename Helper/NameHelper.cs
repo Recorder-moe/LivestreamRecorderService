@@ -12,7 +12,7 @@ public static class NameHelper
               .Split(".", StringSplitOptions.RemoveEmptyEntries).First()
               .Replace("_", "")
               .Replace(":", "")
-           .ToLower(new CultureInfo("en-US"));
+           .ToLower(CultureInfo.InvariantCulture);
 
     public static string GetFileName(Video video, string Platform)
         => Platform switch

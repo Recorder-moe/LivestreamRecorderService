@@ -130,7 +130,7 @@ public abstract class ACIServiceBase(
     }
 
     public string GetInstanceName(string videoId)
-        => (Name + NameHelper.GetInstanceName(videoId)).ToLower(new CultureInfo("en-US"));
+        => (Name + NameHelper.GetInstanceName(videoId)).ToLower(CultureInfo.InvariantCulture);
 
     private async Task StartOldJobAsync(GenericResource job,
                                         Video video,

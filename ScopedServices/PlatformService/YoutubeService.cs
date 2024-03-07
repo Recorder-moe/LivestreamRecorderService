@@ -3,6 +3,7 @@ using LivestreamRecorder.DB.CosmosDB;
 #elif COUCHDB
 using LivestreamRecorder.DB.CouchDB;
 #endif
+using System.Globalization;
 using LivestreamRecorder.DB.Enums;
 using LivestreamRecorder.DB.Interfaces;
 using LivestreamRecorderService.Interfaces;
@@ -306,7 +307,7 @@ public class YoutubeService(
                 video.Timestamps.ActualStartTime ??=
                     videoData.ReleaseTimestamp.HasValue
                         ? DateTimeOffset.FromUnixTimeSeconds(videoData.ReleaseTimestamp.Value).UtcDateTime
-                        : DateTime.ParseExact(videoData.UploadDate, "yyyyMMdd", System.Globalization.CultureInfo.InvariantCulture);
+                        : DateTime.ParseExact(videoData.UploadDate, "yyyyMMdd", CultureInfo.InvariantCulture);
                 video.Thumbnail = await DownloadThumbnailAsync(videoData.Thumbnail, video.id, cancellation);
                 break;
             default:

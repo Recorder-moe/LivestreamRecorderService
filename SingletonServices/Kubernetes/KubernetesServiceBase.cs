@@ -138,7 +138,7 @@ public abstract class KubernetesServiceBase(
         };
 
     public string GetInstanceName(string videoId)
-        => (Name + NameHelper.GetInstanceName(videoId)).ToLower(new CultureInfo("en-US"));
+        => (Name + NameHelper.GetInstanceName(videoId)).ToLower(CultureInfo.InvariantCulture);
 
     // Must be override
     protected abstract Task<V1Job> CreateNewJobAsync(string id,
