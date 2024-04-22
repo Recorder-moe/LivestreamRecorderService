@@ -30,7 +30,7 @@
     <None Remove="LivestreamRecorder.DB\**" />
   </ItemGroup>
   <ItemGroup>
-    <PackageReference Include="Azure.Identity" Version="1.10.4" />
+    <PackageReference Include="Azure.Identity" Version="1.11.2" />
     <PackageReference Include="Azure.ResourceManager" Version="1.9.0" />
     <PackageReference Include="Azure.ResourceManager.ContainerInstance" Version="1.2.0" />
     <PackageReference Include="Azure.ResourceManager.Resources" Version="1.7.0" />
@@ -39,7 +39,7 @@
     <PackageReference Include="CouchDB.NET.DependencyInjection" Version="3.4.0" />
     <PackageReference Include="Discord.Net.Webhook" Version="3.13.0" />
     <PackageReference Include="HtmlAgilityPack" Version="1.11.57" />
-    <PackageReference Include="KubernetesClient" Version="13.0.1" />
+    <PackageReference Include="KubernetesClient" Version="13.0.26" />
     <PackageReference Include="Microsoft.Extensions.Azure" Version="1.7.1" />
     <PackageReference Include="Microsoft.VisualStudio.Azure.Containers.Tools.Targets" Version="1.19.6" />
     <PackageReference Include="MimeMapping" Version="2.0.0" />
