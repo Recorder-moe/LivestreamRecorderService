@@ -3,22 +3,46 @@ using LivestreamRecorder.DB.Models;
 using LivestreamRecorderService.Helper;
 using LivestreamRecorderService.Interfaces.Job;
 using LivestreamRecorderService.Interfaces.Job.Downloader;
+using LivestreamRecorderService.Models.OptionDiscords;
 using LivestreamRecorderService.ScopedServices;
 using LivestreamRecorderService.Workers;
+using Microsoft.Extensions.Options;
 using Serilog.Context;
 
 namespace LivestreamRecorderService.SingletonServices;
 
-public class RecordService(
-    ILogger<RecordWorker> logger,
-    IJobService jobService,
-    IYtarchiveService ytarchiveService,
-    IYtdlpService ytdlpService,
-    ITwitcastingRecorderService twitcastingRecorderService,
-    IStreamlinkService streamlinkService,
-    IFC2LiveDLService fC2LiveDLService,
-    DiscordService discordService)
+public class RecordService
 {
+    private readonly ILogger<RecordWorker> logger;
+    private readonly IJobService jobService;
+    private readonly IYtarchiveService ytarchiveService;
+    private readonly IYtdlpService ytdlpService;
+    private readonly ITwitcastingRecorderService twitcastingRecorderService;
+    private readonly IStreamlinkService streamlinkService;
+    private readonly IFC2LiveDLService fC2LiveDLService;
+    private readonly DiscordService? discordService;
+
+    public RecordService(ILogger<RecordWorker> logger,
+                         IJobService jobService,
+                         IYtarchiveService ytarchiveService,
+                         IYtdlpService ytdlpService,
+                         ITwitcastingRecorderService twitcastingRecorderService,
+                         IStreamlinkService streamlinkService,
+                         IFC2LiveDLService fC2LiveDLService,
+                         IOptions<DiscordOption> discordOptions,
+                         IServiceProvider serviceProvider)
+    {
+        this.logger = logger;
+        this.jobService = jobService;
+        this.ytarchiveService = ytarchiveService;
+        this.ytdlpService = ytdlpService;
+        this.twitcastingRecorderService = twitcastingRecorderService;
+        this.streamlinkService = streamlinkService;
+        this.fC2LiveDLService = fC2LiveDLService;
+        if (discordOptions.Value.Enabled)
+            discordService = serviceProvider.GetRequiredService<DiscordService>();
+    }
+
     /// <summary>
     /// Handled failed jobs.
     /// </summary>
@@ -36,7 +60,9 @@ public class RecordService(
              .ToList();
 
         if (videos.Count > 0)
-            logger.LogInformation("Get {count} videos recording/downloading: {videoIds}", videos.Count, string.Join(", ", videos.Select(p => p.id).ToList()));
+            logger.LogInformation("Get {count} videos recording/downloading: {videoIds}",
+                                  videos.Count,
+                                  string.Join(", ", videos.Select(p => p.id).ToList()));
         else
             logger.LogTrace("No videos recording/downloading");
 
@@ -93,24 +119,28 @@ public class RecordService(
                                                             video: video,
                                                             useCookiesFile: channel?.UseCookiesFile == true,
                                                             cancellation: stoppingToken);
+
                         break;
                     case "Twitcasting":
                         await twitcastingRecorderService.InitJobAsync(url: video.id,
                                                                       video: video,
                                                                       useCookiesFile: false,
                                                                       cancellation: stoppingToken);
+
                         break;
                     case "Twitch":
                         await streamlinkService.InitJobAsync(url: video.id,
                                                              video: video,
                                                              useCookiesFile: false,
                                                              cancellation: stoppingToken);
+
                         break;
                     case "FC2":
                         await fC2LiveDLService.InitJobAsync(url: video.id,
                                                             video: video,
                                                             useCookiesFile: channel?.UseCookiesFile == true,
                                                             cancellation: stoppingToken);
+
                         break;
 
                     default:
@@ -161,40 +191,45 @@ public class RecordService(
                 switch (video.Source)
                 {
                     case "Youtube":
-                        {
-                            string id = NameHelper.ChangeId.VideoId.PlatformType(video.id, "Youtube");
-                            await ytdlpService.InitJobAsync(url: $"https://youtu.be/{id}",
-                                                            video: video,
-                                                            useCookiesFile: channel?.UseCookiesFile == true,
-                                                            cancellation: stoppingToken);
-                        }
+                    {
+                        string id = NameHelper.ChangeId.VideoId.PlatformType(video.id, "Youtube");
+                        await ytdlpService.InitJobAsync(url: $"https://youtu.be/{id}",
+                                                        video: video,
+                                                        useCookiesFile: channel?.UseCookiesFile == true,
+                                                        cancellation: stoppingToken);
+                    }
+
                         break;
                     case "Twitcasting":
-                        {
-                            string channelId = NameHelper.ChangeId.ChannelId.PlatformType(video.ChannelId, "Twitcasting");
-                            string videoId = NameHelper.ChangeId.VideoId.PlatformType(video.id, "Twitcasting");
-                            await ytdlpService.InitJobAsync(url: $"https://twitcasting.tv/{channelId}/movie/{videoId}",
-                                                            video: video, useCookiesFile: false,
-                                                            cancellation: stoppingToken);
-                        }
+                    {
+                        string channelId = NameHelper.ChangeId.ChannelId.PlatformType(video.ChannelId, "Twitcasting");
+                        string videoId = NameHelper.ChangeId.VideoId.PlatformType(video.id, "Twitcasting");
+                        await ytdlpService.InitJobAsync(url: $"https://twitcasting.tv/{channelId}/movie/{videoId}",
+                                                        video: video,
+                                                        useCookiesFile: false,
+                                                        cancellation: stoppingToken);
+                    }
+
                         break;
                     case "Twitch":
-                        {
-                            var id = NameHelper.ChangeId.VideoId.PlatformType(video.id, "Twitch");
-                            await ytdlpService.InitJobAsync(url: $"https://www.twitch.tv/videos/{id}",
-                                                            video: video,
-                                                            useCookiesFile: false,
-                                                            cancellation: stoppingToken);
-                        }
+                    {
+                        var id = NameHelper.ChangeId.VideoId.PlatformType(video.id, "Twitch");
+                        await ytdlpService.InitJobAsync(url: $"https://www.twitch.tv/videos/{id}",
+                                                        video: video,
+                                                        useCookiesFile: false,
+                                                        cancellation: stoppingToken);
+                    }
+
                         break;
                     case "FC2":
-                        {
-                            string id = NameHelper.ChangeId.VideoId.PlatformType(video.id, "FC2");
-                            await ytdlpService.InitJobAsync(url: $"https://video.fc2.com/content/{id}",
-                                                            video: video,
-                                                            useCookiesFile: channel?.UseCookiesFile == true,
-                                                            cancellation: stoppingToken);
-                        }
+                    {
+                        string id = NameHelper.ChangeId.VideoId.PlatformType(video.id, "FC2");
+                        await ytdlpService.InitJobAsync(url: $"https://video.fc2.com/content/{id}",
+                                                        video: video,
+                                                        useCookiesFile: channel?.UseCookiesFile == true,
+                                                        cancellation: stoppingToken);
+                    }
+
                         break;
 
                     default:
@@ -294,9 +329,11 @@ public class RecordService(
 
     public async Task ProcessUploadedVideoAsync(VideoService videoService, ChannelService channelService, Video video, CancellationToken stoppingToken = default)
     {
-        using var _ = LogContext.PushProperty("videoId", video.id);
+        using IDisposable _ = LogContext.PushProperty("videoId", video.id);
 
-        await discordService.SendArchivedMessageAsync(video, await channelService.GetByChannelIdAndSourceAsync(video.ChannelId, video.Source));
+        if (discordService != null)
+            await discordService.SendArchivedMessageAsync(video, await channelService.GetByChannelIdAndSourceAsync(video.ChannelId, video.Source));
+
         logger.LogInformation("Video {videoId} is successfully uploaded to Storage.", video.id);
         await videoService.UpdateVideoStatusAsync(video, VideoStatus.Archived);
 
