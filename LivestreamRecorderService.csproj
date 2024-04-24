@@ -99,7 +99,6 @@
     <TrimmerRootAssembly Include="Serilog.Enrichers.Environment" />
     <TrimmerRootAssembly Include="Serilog.Extensions.Hosting" />
     <TrimmerRootAssembly Include="Serilog.Extensions.Logging" />
-    <TrimmerRootAssembly Include="Serilog.Formatting.Compact" />
     <TrimmerRootAssembly Include="Serilog.Settings.Configuration" />
     <TrimmerRootAssembly Include="Serilog.Sinks.Console" />
     <TrimmerRootAssembly Include="Serilog.Sinks.File" />
