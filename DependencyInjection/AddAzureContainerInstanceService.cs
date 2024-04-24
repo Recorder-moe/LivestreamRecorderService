@@ -20,26 +20,28 @@ public static partial class Extensions
     {
         try
         {
-            var azureOptions = services.BuildServiceProvider().GetRequiredService<IOptions<AzureOption>>().Value;
+            AzureOption azureOptions = services.BuildServiceProvider().GetRequiredService<IOptions<AzureOption>>().Value;
             if (null == azureOptions.ContainerInstance
                 || string.IsNullOrEmpty(azureOptions.ContainerInstance.ClientSecret.ClientID)
                 || string.IsNullOrEmpty(azureOptions.ContainerInstance.ClientSecret.ClientSecret))
                 throw new ConfigurationErrorsException();
 
             services.AddAzureClients(clientsBuilder
-                => clientsBuilder.UseCredential((options)
-                    => new ClientSecretCredential(tenantId: azureOptions.ContainerInstance.ClientSecret.TenantID,
-                                                  clientId: azureOptions.ContainerInstance.ClientSecret.ClientID,
-                                                  clientSecret: azureOptions.ContainerInstance.ClientSecret.ClientSecret))
-                                 .AddClient<ArmClient, ArmClientOptions>((options, token) => new ArmClient(token)));
+                => clientsBuilder.UseCredential((_)
+                                     => new ClientSecretCredential(
+                                         tenantId: azureOptions.ContainerInstance.ClientSecret.TenantID,
+                                         clientId: azureOptions.ContainerInstance.ClientSecret.ClientID,
+                                         clientSecret: azureOptions.ContainerInstance.ClientSecret
+                                                                   .ClientSecret))
+                                 .AddClient<ArmClient, ArmClientOptions>((_, token) => new ArmClient(token)));
 
-            services.AddSingleton<IJobService, ACIService>();
+            services.AddSingleton<IJobService, AciService>();
 
             services.AddSingleton<IYtarchiveService, YtarchiveService>();
             services.AddSingleton<IYtdlpService, YtdlpService>();
             services.AddSingleton<IStreamlinkService, StreamlinkService>();
             services.AddSingleton<ITwitcastingRecorderService, TwitcastingRecorderService>();
-            services.AddSingleton<IFC2LiveDLService, FC2LiveDLService>();
+            services.AddSingleton<IFc2LiveDLService, Fc2LiveDLService>();
 
             services.AddSingleton<IAzureUploaderService, AzureUploaderService>();
             services.AddSingleton<IS3UploaderService, S3UploaderService>();

@@ -1,4 +1,5 @@
-﻿using LivestreamRecorderService.Interfaces;
+﻿using LivestreamRecorder.DB.Models;
+using LivestreamRecorderService.Interfaces;
 using LivestreamRecorderService.ScopedServices.PlatformService;
 using Serilog.Context;
 
@@ -10,7 +11,7 @@ public class UpdateChannelInfoWorker(
 {
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
-        using var _ = LogContext.PushProperty("Worker", nameof(UpdateChannelInfoWorker));
+        using IDisposable _ = LogContext.PushProperty("Worker", nameof(UpdateChannelInfoWorker));
 
 #if RELEASE
         logger.LogInformation("{Worker} will sleep 60 seconds avoid being overloaded with {WorkerToWait}.", nameof(RecordWorker), nameof(MonitorWorker));
@@ -21,12 +22,14 @@ public class UpdateChannelInfoWorker(
 
         while (!stoppingToken.IsCancellationRequested)
         {
-            using var __ = LogContext.PushProperty("WorkerRunId", $"{nameof(UpdateChannelInfoWorker)}_{DateTime.UtcNow:yyyyMMddHHmmssfff}");
+            using IDisposable __ = LogContext.PushProperty("WorkerRunId", $"{nameof(UpdateChannelInfoWorker)}_{DateTime.UtcNow:yyyyMMddHHmmssfff}");
 
             #region DI
-            using var scope = serviceProvider.CreateScope();
+
+            using IServiceScope scope = serviceProvider.CreateScope();
             YoutubeService youtubeSerivce = scope.ServiceProvider.GetRequiredService<YoutubeService>();
-            FC2Service fC2Service = scope.ServiceProvider.GetRequiredService<FC2Service>();
+            Fc2Service fC2Service = scope.ServiceProvider.GetRequiredService<Fc2Service>();
+
             #endregion
 
             await UpdatePlatformAsync(youtubeSerivce, stoppingToken);
@@ -39,9 +42,9 @@ public class UpdateChannelInfoWorker(
 
     private async Task UpdatePlatformAsync(IPlatformService platformService, CancellationToken stoppingToken = default)
     {
-        var channels = await platformService.GetMonitoringChannels();
+        List<Channel> channels = await platformService.GetMonitoringChannels();
         logger.LogDebug("Get {channelCount} channels for {platform}", channels.Count, platformService.PlatformName);
-        foreach (var channel in channels)
+        foreach (Channel? channel in channels)
         {
             if (channel.AutoUpdateInfo != true) continue;
 

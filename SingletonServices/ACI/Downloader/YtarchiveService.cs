@@ -11,18 +11,18 @@ namespace LivestreamRecorderService.SingletonServices.ACI.Downloader;
 public class YtarchiveService(
     ILogger<YtarchiveService> logger,
     ArmClient armClient,
-    IOptions<AzureOption> options) : ACIServiceBase(logger, armClient, options), IYtarchiveService
+    IOptions<AzureOption> options) : AciServiceBase(logger, armClient, options), IYtarchiveService
 {
     private readonly AzureOption _azureOption = options.Value;
 
-    public override string Name => IYtarchiveService.name;
+    public override string Name => IYtarchiveService.Name;
 
     protected override Task<ArmOperation<ArmDeploymentResource>> CreateNewJobAsync(
         string url,
         string instanceName,
         Video video,
-        bool useCookiesFile,
-        CancellationToken cancellation)
+        bool useCookiesFile = false,
+        CancellationToken cancellation = default)
     {
         if (!url.StartsWith("http")) url = $"https://youtu.be/{NameHelper.ChangeId.VideoId.PlatformType(url, Name)}";
 
@@ -40,7 +40,7 @@ public class YtarchiveService(
 
         Task<ArmOperation<ArmDeploymentResource>> doWithImage(string imageName)
         {
-            string filename = NameHelper.GetFileName(video, IYtarchiveService.name);
+            string filename = NameHelper.GetFileName(video, IYtarchiveService.Name);
             video.Filename = filename;
             string[] command = useCookiesFile
                 ?
@@ -49,42 +49,43 @@ public class YtarchiveService(
                     "-c",
                     $"/bin/ytarchive --add-metadata --merge --retry-frags 30 --thumbnail -o '{filename.Replace(".mp4", "")}' -c /sharedvolume/cookies/{video.ChannelId}.txt '{url}' best && mv *.mp4 /sharedvolume/"
                 ]
-                : [
+                :
+                [
                     "sh",
                     "-c",
                     $"/bin/ytarchive --add-metadata --merge --retry-frags 30 --thumbnail -o '{filename.Replace(".mp4", "")}' '{url}' best && mv *.mp4 /sharedvolume/"
                 ];
 
             return CreateResourceAsync(
-                    parameters: new
+                parameters: new
+                {
+                    dockerImageName = new
                     {
-                        dockerImageName = new
-                        {
-                            value = imageName
-                        },
-                        containerName = new
-                        {
-                            value = instanceName
-                        },
-                        commandOverrideArray = new
-                        {
-                            value = command
-                        },
-                        storageAccountName = new
-                        {
-                            value = _azureOption.FileShare!.StorageAccountName
-                        },
-                        storageAccountKey = new
-                        {
-                            value = _azureOption.FileShare!.StorageAccountKey
-                        },
-                        fileshareVolumeName = new
-                        {
-                            value = _azureOption.FileShare!.ShareName
-                        }
+                        value = imageName
                     },
-                    deploymentName: instanceName,
-                    cancellation: cancellation);
+                    containerName = new
+                    {
+                        value = instanceName
+                    },
+                    commandOverrideArray = new
+                    {
+                        value = command
+                    },
+                    storageAccountName = new
+                    {
+                        value = _azureOption.FileShare!.StorageAccountName
+                    },
+                    storageAccountKey = new
+                    {
+                        value = _azureOption.FileShare!.StorageAccountKey
+                    },
+                    fileshareVolumeName = new
+                    {
+                        value = _azureOption.FileShare!.ShareName
+                    }
+                },
+                deploymentName: instanceName,
+                cancellation: cancellation);
         }
     }
 }

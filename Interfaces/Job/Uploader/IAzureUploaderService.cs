@@ -2,5 +2,5 @@
 
 public interface IAzureUploaderService : IJobServiceBase
 {
-    public const string name = "azureuploader";
+    public new const string Name = "azureuploader";
 }

@@ -2,5 +2,5 @@
 
 public interface IYtarchiveService : IJobServiceBase
 {
-    public const string name = "ytarchive";
+    public new const string Name = "ytarchive";
 }

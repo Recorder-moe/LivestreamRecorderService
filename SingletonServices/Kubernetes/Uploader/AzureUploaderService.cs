@@ -13,30 +13,29 @@ public class AzureUploaderService : KubernetesServiceBase, IAzureUploaderService
 {
     private readonly ILogger<YtdlpService> _logger;
 
-    public override string Name => IAzureUploaderService.name;
+    public override string Name => IAzureUploaderService.Name;
     private readonly AzureOption _azureOption;
 
     public AzureUploaderService(
         ILogger<YtdlpService> logger,
         k8s.Kubernetes kubernetes,
-        IOptions<KubernetesOption> options,
         IOptions<ServiceOption> serviceOptions,
-        IOptions<AzureOption> azureOptions) : base(logger, kubernetes, options, serviceOptions, azureOptions)
+        IOptions<AzureOption> azureOptions) : base(logger, kubernetes, serviceOptions, azureOptions)
     {
         _logger = logger;
         _azureOption = azureOptions.Value;
         if (null == _azureOption.BlobStorage
-           || string.IsNullOrEmpty(_azureOption.BlobStorage.BlobContainerName_Private))
+            || string.IsNullOrEmpty(_azureOption.BlobStorage.BlobContainerName_Private))
         {
             throw new ConfigurationErrorsException("Azure Blob Storage is not configured.");
         }
     }
 
     protected override Task<V1Job> CreateNewJobAsync(string _,
-                                                     string instanceName,
-                                                     Video video,
-                                                     bool useCookiesFile = false,
-                                                     CancellationToken cancellation = default)
+        string instanceName,
+        Video video,
+        bool useCookiesFile = false,
+        CancellationToken cancellation = default)
     {
         try
         {
@@ -53,33 +52,34 @@ public class AzureUploaderService : KubernetesServiceBase, IAzureUploaderService
         Task<V1Job> doWithImage(string imageName)
         {
             return CreateInstanceAsync(
-                    parameters: new
+                parameters: new
+                {
+                    dockerImageName = new
                     {
-                        dockerImageName = new
+                        value = imageName
+                    },
+                    containerName = new
+                    {
+                        value = instanceName
+                    },
+                    commandOverrideArray = new
+                    {
+                        value = new[]
                         {
-                            value = imageName
-                        },
-                        containerName = new
-                        {
-                            value = instanceName
-                        },
-                        commandOverrideArray = new
-                        {
-                            value = new[] {
-                                "/bin/sh", "-c",
-                                $"/app/azure-uploader.sh {video.Filename?.Replace(".mp4", "")}"
-                            }
+                            "/bin/sh", "-c",
+                            $"/app/azure-uploader.sh {video.Filename?.Replace(".mp4", "")}"
                         }
-                    },
-                    deploymentName: instanceName,
-                    environment: new List<EnvironmentVariable>
-                    {
-                        new("STORAGE_ACCOUNT_NAME", _azureOption.BlobStorage!.StorageAccountName, null),
-                        new("STORAGE_ACCOUNT_KEY", null, _azureOption.BlobStorage.StorageAccountKey),
-                        new("CONTAINER_NAME", _azureOption.BlobStorage.BlobContainerName_Private, null),
-                        new("DESTINATION_DIRECTORY", null, "/videos")
-                    },
-                    cancellation: cancellation);
+                    }
+                },
+                deploymentName: instanceName,
+                environment: new List<EnvironmentVariable>
+                {
+                    new("STORAGE_ACCOUNT_NAME", _azureOption.BlobStorage!.StorageAccountName, null),
+                    new("STORAGE_ACCOUNT_KEY", null, _azureOption.BlobStorage.StorageAccountKey),
+                    new("CONTAINER_NAME", _azureOption.BlobStorage.BlobContainerName_Private, null),
+                    new("DESTINATION_DIRECTORY", null, "/videos")
+                },
+                cancellation: cancellation);
         }
     }
 }

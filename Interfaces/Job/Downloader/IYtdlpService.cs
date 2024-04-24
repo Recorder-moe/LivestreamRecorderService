@@ -2,5 +2,5 @@
 
 public interface IYtdlpService : IJobServiceBase
 {
-    public const string name = "ytdlp";
+    public new const string Name = "ytdlp";
 }

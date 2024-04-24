@@ -15,7 +15,7 @@ public static partial class Extensions
         try
         {
             IConfigurationSection config = configuration.GetSection(TwitchOption.ConfigurationSectionName);
-            var twitchOptions = config.Get<TwitchOption>();
+            TwitchOption? twitchOptions = config.Get<TwitchOption>();
             if (null == twitchOptions) throw new ConfigurationErrorsException();
 
             services.AddOptions<TwitchOption>()
@@ -41,15 +41,18 @@ public static partial class Extensions
                         ClientId = twitchOptions.ClientId,
                         Secret = twitchOptions.ClientSecret
                     });
+
                 return api;
             });
+
             services.AddScoped<TwitchService>();
             return services;
         }
         catch (ConfigurationErrorsException)
         {
             Log.Fatal("Missing Twitch ClientId or ClientSecret. Please set Twitch:ClientId and Twitch:ClientSecret in appsettings.json.");
-            throw new ConfigurationErrorsException("Missing Twitch ClientId or ClientSecret. Please set Twitch:ClientId and Twitch:ClientSecret in appsettings.json.");
+            throw new ConfigurationErrorsException(
+                "Missing Twitch ClientId or ClientSecret. Please set Twitch:ClientId and Twitch:ClientSecret in appsettings.json.");
         }
     }
 }

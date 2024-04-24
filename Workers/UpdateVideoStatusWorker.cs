@@ -27,25 +27,27 @@ public class UpdateVideoStatusWorker(
 
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
-        using var _ = LogContext.PushProperty("Worker", nameof(UpdateVideoStatusWorker));
+        using IDisposable _ = LogContext.PushProperty("Worker", nameof(UpdateVideoStatusWorker));
         logger.LogTrace("{Worker} starts...", nameof(UpdateVideoStatusWorker));
 
-        var i = 0;
-        var videos = new List<Video>();
-        var expireDate = DateTime.Today;
+        int i = 0;
+        DateTime expireDate = DateTime.Today;
         while (!stoppingToken.IsCancellationRequested)
         {
-            using var __ = LogContext.PushProperty("WorkerRunId", $"{nameof(UpdateVideoStatusWorker)}_{DateTime.UtcNow:yyyyMMddHHmmssfff}");
+            using IDisposable __ = LogContext.PushProperty("WorkerRunId", $"{nameof(UpdateVideoStatusWorker)}_{DateTime.UtcNow:yyyyMMddHHmmssfff}");
 
             #region DI
-            using (var scope = serviceProvider.CreateScope())
+
+            using (IServiceScope scope = serviceProvider.CreateScope())
             {
                 VideoService videoService = scope.ServiceProvider.GetRequiredService<VideoService>();
                 IVideoRepository videoRepository = scope.ServiceProvider.GetRequiredService<IVideoRepository>();
                 IPlatformService youtubeService = scope.ServiceProvider.GetRequiredService<YoutubeService>();
                 IPlatformService twitcastingService = scope.ServiceProvider.GetRequiredService<TwitcastingService>();
-                IPlatformService fc2Service = scope.ServiceProvider.GetRequiredService<FC2Service>();
+                IPlatformService fc2Service = scope.ServiceProvider.GetRequiredService<Fc2Service>();
+
                 #endregion
+
                 IPlatformService? twitchService = null;
                 if (_twitchOption.Enabled)
                 {
@@ -54,14 +56,13 @@ public class UpdateVideoStatusWorker(
 
                 // Iterate over all elements, regardless of whether their content has changed.
                 i++;
-                videos =
+                List<Video> videos =
                 [
                     .. videoRepository.Where(p => p.Status >= VideoStatus.Archived
-                                                                        && p.Status < VideoStatus.Expired)
+                                                  && p.Status < VideoStatus.Expired)
                                       .AsEnumerable()
                                       // Sort locally to reduce the CPU usage of CosmosDB
-                                      .OrderByDescending(p => p.Timestamps.PublishedAt)
-,
+                                      .OrderByDescending(p => p.Timestamps.PublishedAt),
                 ];
 
                 if (videos.Count > 0)
@@ -83,11 +84,12 @@ public class UpdateVideoStatusWorker(
         }
     }
 
-    private async Task UpdateVideoAsync(int i, List<Video> videos, IPlatformService youtubeService, IPlatformService twitcastingService, IPlatformService fc2Service, IPlatformService? twitchService, CancellationToken stoppingToken)
+    private async Task UpdateVideoAsync(int i, List<Video> videos, IPlatformService youtubeService, IPlatformService twitcastingService,
+        IPlatformService fc2Service, IPlatformService? twitchService, CancellationToken stoppingToken)
     {
         logger.LogInformation("Process: {index}/{amount}", i, videos.Count);
 
-        var video = videos[i];
+        Video video = videos[i];
         logger.LogInformation("Update video data: {videoId}", video.id);
 
         switch (video.Source)
@@ -101,6 +103,7 @@ public class UpdateVideoStatusWorker(
             case "Twitch":
                 if (_twitchOption.Enabled && null != twitchService)
                     await twitchService.UpdateVideoDataAsync(video, stoppingToken);
+
                 break;
             case "FC2":
                 await fc2Service.UpdateVideoDataAsync(video, stoppingToken);
@@ -129,8 +132,9 @@ public class UpdateVideoStatusWorker(
         var videos = videoService.GetVideosByStatus(VideoStatus.Archived)
                                  .Where(p => DateTime.Today - (p.ArchivedTime ?? DateTime.Today) > TimeSpan.FromDays(retentionDays.Value))
                                  .ToList();
+
         logger.LogInformation("Get {count} videos to expire.", videos.Count);
-        foreach (var video in videos)
+        foreach (Video? video in videos)
         {
             if (video.SourceStatus == VideoStatus.Deleted
                 || video.SourceStatus == VideoStatus.Reject)
@@ -149,7 +153,8 @@ public class UpdateVideoStatusWorker(
             {
                 logger.LogError("FAILED to Delete blob {path}", video.Filename);
                 await videoService.UpdateVideoStatusAsync(video, VideoStatus.Error);
-                await videoService.UpdateVideoNoteAsync(video, $"Failed to delete blob after {retentionDays} days. Please contact admin if you see this message.");
+                await videoService.UpdateVideoNoteAsync(video,
+                    $"Failed to delete blob after {retentionDays} days. Please contact admin if you see this message.");
             }
         }
     }

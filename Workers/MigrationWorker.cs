@@ -29,9 +29,9 @@ public class MigrationWorker(
     private async Task HandleOldChannelIdAsync()
     {
         logger.LogInformation("Start to handle old channel id.");
-        using var scope = serviceProvider.CreateScope();
-        var channelRepository = scope.ServiceProvider.GetRequiredService<IChannelRepository>();
-        var videoRepository = scope.ServiceProvider.GetRequiredService<IVideoRepository>();
+        using IServiceScope scope = serviceProvider.CreateScope();
+        IChannelRepository? channelRepository = scope.ServiceProvider.GetRequiredService<IChannelRepository>();
+        IVideoRepository? videoRepository = scope.ServiceProvider.GetRequiredService<IVideoRepository>();
 #pragma warning disable CA1859 // 盡可能使用具象類型以提高效能
         IUnitOfWork unitOfWork = scope.ServiceProvider.GetRequiredService<UnitOfWork_Public>();
 #pragma warning restore CA1859 // 盡可能使用具象類型以提高效能
@@ -43,17 +43,18 @@ public class MigrationWorker(
         async Task handle(string platformName, string prefix)
         {
             var channels = (await channelRepository.GetChannelsBySourceAsync(platformName))
-                                                   .Where(p => !p.id.StartsWith(prefix))
-                                                   .ToList();
+                           .Where(p => !p.id.StartsWith(prefix))
+                           .ToList();
+
             if (channels.Count == 0)
             {
                 logger.LogInformation("No old {platform} channels needs to update.", platformName);
                 return;
             }
 
-            foreach (var channel in channels)
+            foreach (Channel? channel in channels)
             {
-                var newChannel = Mapper.Map<Channel>(channel);
+                Channel? newChannel = Mapper.Map<Channel>(channel);
 #if COUCHDB
                 newChannel.id = NameHelper.ChangeId.ChannelId.DatabaseType(channel.id, platformName);
                 newChannel.Rev = null;
@@ -68,10 +69,10 @@ public class MigrationWorker(
                     await channelRepository.AddOrUpdateAsync(newChannel);
                 }
 
-                var videos = await videoRepository.GetVideosByChannelAsync(channel.id);
-                foreach (var video in videos)
+                List<Video> videos = await videoRepository.GetVideosByChannelAsync(channel.id);
+                foreach (Video? video in videos)
                 {
-                    var newVideo = Mapper.Map<Video>(video);
+                    Video? newVideo = Mapper.Map<Video>(video);
                     newVideo.ChannelId = newChannel.id;
 
 #if COUCHDB
@@ -91,12 +92,19 @@ public class MigrationWorker(
 
                     await videoRepository.DeleteAsync(video);
                 }
+
                 newChannel.LatestVideoId = null != newChannel.LatestVideoId
                     ? NameHelper.ChangeId.VideoId.DatabaseType(newChannel.LatestVideoId, platformName)
                     : null;
-                logger.LogInformation("Update {videoCount} videos channel id from {oldChannelId} to {newChannelId}.", videos.Count, channel.id, newChannel.id);
+
+                logger.LogInformation("Update {videoCount} videos channel id from {oldChannelId} to {newChannelId}.",
+                    videos.Count,
+                    channel.id,
+                    newChannel.id);
+
                 await channelRepository.DeleteAsync(channel);
             }
+
             unitOfWork.Commit();
         }
     }
@@ -108,9 +116,9 @@ public class MigrationWorker(
     private async Task HandleOldVideoIdAsync()
     {
         logger.LogInformation("Start to handle old video id.");
-        using var scope = serviceProvider.CreateScope();
-        var channelRepository = scope.ServiceProvider.GetRequiredService<IChannelRepository>();
-        var videoRepository = scope.ServiceProvider.GetRequiredService<IVideoRepository>();
+        using IServiceScope scope = serviceProvider.CreateScope();
+        IChannelRepository? channelRepository = scope.ServiceProvider.GetRequiredService<IChannelRepository>();
+        IVideoRepository? videoRepository = scope.ServiceProvider.GetRequiredService<IVideoRepository>();
 #pragma warning disable CA1859 // 盡可能使用具象類型以提高效能
         IUnitOfWork unitOfWork = scope.ServiceProvider.GetRequiredService<UnitOfWork_Public>();
 #pragma warning restore CA1859 // 盡可能使用具象類型以提高效能
@@ -121,14 +129,15 @@ public class MigrationWorker(
 
         async Task handle(string platformName, string prefix)
         {
-            var channels = await channelRepository.GetChannelsBySourceAsync(platformName);
+            List<Channel> channels = await channelRepository.GetChannelsBySourceAsync(platformName);
             var videos = new List<Video>();
-            foreach (var channel in channels)
+            foreach (Channel? channel in channels)
             {
-                videos = [
+                videos =
+                [
                     .. videos,
                     .. (await videoRepository.GetVideosByChannelAsync(channel.id))
-                                             .Where(p => !p.id.StartsWith(prefix))
+                    .Where(p => !p.id.StartsWith(prefix))
                 ];
             }
 
@@ -138,9 +147,9 @@ public class MigrationWorker(
                 return;
             }
 
-            foreach (var video in videos)
+            foreach (Video? video in videos)
             {
-                var newVideo = Mapper.Map<Video>(video);
+                Video? newVideo = Mapper.Map<Video>(video);
 #if COUCHDB
                 newVideo.id = NameHelper.ChangeId.VideoId.DatabaseType(video.id, platformName);
                 newVideo.Rev = null;
@@ -157,6 +166,7 @@ public class MigrationWorker(
 
                 await videoRepository.DeleteAsync(video);
             }
+
             unitOfWork.Commit();
             logger.LogInformation("Update {videoCount} videos id for {platform}.", videos.Count, platformName);
         }

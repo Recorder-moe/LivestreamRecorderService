@@ -1,7 +1,7 @@
-﻿using LivestreamRecorderService.Models.OptionDiscords;
-using LivestreamRecorderService.SingletonServices;
+﻿using LivestreamRecorderService.SingletonServices;
 using Serilog;
 using System.Configuration;
+using LivestreamRecorderService.Models.Options;
 
 namespace LivestreamRecorderService.DependencyInjection;
 
@@ -12,7 +12,7 @@ public static partial class Extensions
         try
         {
             IConfigurationSection config = configuration.GetSection(DiscordOption.ConfigurationSectionName);
-            var discordOptions = config.Get<DiscordOption>();
+            DiscordOption? discordOptions = config.Get<DiscordOption>();
             if (null == discordOptions) throw new ConfigurationErrorsException();
 
             services.AddOptions<DiscordOption>()
@@ -31,15 +31,18 @@ public static partial class Extensions
                 || string.IsNullOrEmpty(discordOptions.FrontEndHost)
                 || null == discordOptions.Mention
                 || null == discordOptions.Emotes
-            ) throw new ConfigurationErrorsException();
+               ) throw new ConfigurationErrorsException();
 
             services.AddSingleton<DiscordService>();
             return services;
         }
         catch (ConfigurationErrorsException)
         {
-            Log.Fatal("Missing Discord Settings. Please set Discord:Enabled Discord:Webhook, Discord:WebhookWarning, Discord:WebhookAdmin, Discord:FrontEndHost, Discord:Mention and Discord:Emotes in appsettings.json.");
-            throw new ConfigurationErrorsException("Missing Discord Settings. Please set Discord:Enabled Discord:Webhook, Discord:WebhookWarning, Discord:WebhookAdmin, Discord:FrontEndHost, Discord:Mention and Discord:Emotes in appsettings.json.");
+            Log.Fatal(
+                "Missing Discord Settings. Please set Discord:Enabled Discord:Webhook, Discord:WebhookWarning, Discord:WebhookAdmin, Discord:FrontEndHost, Discord:Mention and Discord:Emotes in appsettings.json.");
+
+            throw new ConfigurationErrorsException(
+                "Missing Discord Settings. Please set Discord:Enabled Discord:Webhook, Discord:WebhookWarning, Discord:WebhookAdmin, Discord:FrontEndHost, Discord:Mention and Discord:Emotes in appsettings.json.");
         }
     }
 }

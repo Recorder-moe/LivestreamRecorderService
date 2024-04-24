@@ -9,39 +9,41 @@ using LivestreamRecorder.DB.Interfaces;
 using LivestreamRecorder.DB.Models;
 using LivestreamRecorderService.Interfaces;
 using LivestreamRecorderService.Interfaces.Job.Downloader;
-using LivestreamRecorderService.Models.OptionDiscords;
 using Microsoft.Extensions.Options;
 using Serilog.Context;
 using System.Net.Http.Json;
 using LivestreamRecorderService.Json;
 using LivestreamRecorderService.Helper;
+using LivestreamRecorderService.Models.Options;
 
 namespace LivestreamRecorderService.ScopedServices.PlatformService;
 
 public class TwitcastingService(
     ILogger<TwitcastingService> logger,
     IHttpClientFactory httpClientFactory,
-    UnitOfWork_Public unitOfWork_Public,
+    // ReSharper disable once SuggestBaseTypeForParameterInConstructor
+    UnitOfWork_Public unitOfWorkPublic,
     IVideoRepository videoRepository,
+    // ReSharper disable once SuggestBaseTypeForParameterInConstructor
     ITwitcastingRecorderService twitcastingRecorderService,
     IStorageService storageService,
     IChannelRepository channelRepository,
     IOptions<DiscordOption> discordOptions,
     IServiceProvider serviceProvider) : PlatformService(channelRepository,
-                                                        storageService,
-                                                        httpClientFactory,
-                                                        logger,
-                                                        discordOptions,
-                                                        serviceProvider), IPlatformService
+    storageService,
+    httpClientFactory,
+    logger,
+    discordOptions,
+    serviceProvider), IPlatformService
 {
 #pragma warning disable CA1859 // 盡可能使用具象類型以提高效能
-    private readonly IUnitOfWork _unitOfWork_Public = unitOfWork_Public;
+    private readonly IUnitOfWork _unitOfWorkPublic = unitOfWorkPublic;
 #pragma warning restore CA1859 // 盡可能使用具象類型以提高效能
 
     public override string PlatformName => "Twitcasting";
     public override int Interval => 10;
 
-    private const string _streamServerApi = "https://twitcasting.tv/streamserver.php";
+    private const string StreamServerApi = "https://twitcasting.tv/streamserver.php";
 
     public override async Task UpdateVideosDataAsync(Channel channel, CancellationToken cancellation = default)
     {
@@ -57,109 +59,125 @@ public class TwitcastingService(
             return;
         }
 
-        if (null != videoId)
+        var video = await videoRepository.GetVideoByIdAndChannelIdAsync(videoId, channel.id);
+
+        if (null != video)
         {
-            Video? video = await videoRepository.GetVideoByIdAndChannelIdAsync(videoId, channel.id);
-
-            if (null != video)
+            switch (video.Status)
             {
-                switch (video.Status)
-                {
-                    case VideoStatus.WaitingToRecord:
-                    case VideoStatus.Recording:
-                        logger.LogTrace("{channelId} is already recording.", channel.id);
-                        return;
-                    case VideoStatus.Reject:
-                    case VideoStatus.Skipped:
-                        logger.LogTrace("{videoId} is rejected for recording.", video.id);
-                        return;
-                    case VideoStatus.Uploading:
-                        logger.LogTrace("{videoId} is uploading. We cannot change the video state during uploading. The status will be corrected after it is archived.", video.id);
-                        return;
-                    case VideoStatus.Archived:
-                    case VideoStatus.PermanentArchived:
-                        logger.LogWarning("{videoId} has already been archived. It is possible that an internet disconnect occurred during the process. Changed its state back to Recording.", video.id);
-                        video.Status = VideoStatus.WaitingToRecord;
-                        break;
-                    default:
-                        logger.LogWarning("{videoId} is in {status}.", video.id, Enum.GetName(typeof(VideoStatus), video.Status));
-                        return;
-                }
+                case VideoStatus.WaitingToRecord:
+                case VideoStatus.Recording:
+                    logger.LogTrace("{channelId} is already recording.", channel.id);
+                    return;
+                case VideoStatus.Reject:
+                case VideoStatus.Skipped:
+                    logger.LogTrace("{videoId} is rejected for recording.", video.id);
+                    return;
+                case VideoStatus.Uploading:
+                    logger.LogTrace(
+                        "{videoId} is uploading. We cannot change the video state during uploading. The status will be corrected after it is archived.",
+                        video.id);
+
+                    return;
+                case VideoStatus.Archived:
+                case VideoStatus.PermanentArchived:
+                    logger.LogWarning(
+                        "{videoId} has already been archived. It is possible that an internet disconnect occurred during the process. Changed its state back to Recording.",
+                        video.id);
+
+                    video.Status = VideoStatus.WaitingToRecord;
+                    break;
+                default:
+                    logger.LogWarning("{videoId} is in {status}.", video.id, Enum.GetName(typeof(VideoStatus), video.Status));
+                    return;
             }
-            else
-            {
-                video = new Video()
-                {
-                    id = videoId,
-                    Source = PlatformName,
-                    Status = VideoStatus.Missing,
-                    SourceStatus = VideoStatus.Unknown,
-                    IsLiveStream = true,
-                    Title = null!,
-                    ChannelId = channel.id,
-                    Timestamps = new Timestamps()
-                    {
-                        PublishedAt = DateTime.UtcNow,
-                        ActualStartTime = DateTime.UtcNow
-                    },
-                };
-            }
-
-            video.Thumbnail = await DownloadThumbnailAsync($"https://twitcasting.tv/{NameHelper.ChangeId.ChannelId.PlatformType(channel.id, PlatformName)}/thumb/{NameHelper.ChangeId.VideoId.PlatformType(videoId, PlatformName)}", video.id, cancellation);
-
-            if (await GetTwitcastingIsPublicAsync(video, cancellation))
-            {
-                var (title, telop) = await GetTwitcastingStreamTitleAsync(video, cancellation);
-                video.Title ??= title ?? "";
-                video.Description ??= telop ?? "";
-                video.SourceStatus = VideoStatus.Exist;
-
-                if (isLive && (video.Status < VideoStatus.Recording
-                               || video.Status == VideoStatus.Missing))
-                {
-                    await twitcastingRecorderService.InitJobAsync(url: videoId,
-                                                                   video: video,
-                                                                   useCookiesFile: false,
-                                                                   cancellation: cancellation);
-
-                    video.Status = VideoStatus.Recording;
-                    logger.LogInformation("{channelId} is now lived! Start recording.", channel.id);
-
-                    if (null != discordService)
-                    {
-                        await discordService.SendStartRecordingMessageAsync(video, channel);
-                    }
-                }
-            }
-            else
-            {
-                video.Status = VideoStatus.Skipped;
-                video.SourceStatus = VideoStatus.Reject;
-                video.Note = "Video skipped because it is detected not public.";
-                logger.LogWarning("This video is not public! Skip {videoId}", videoId);
-            }
-
-            await videoRepository.AddOrUpdateAsync(video);
-            _unitOfWork_Public.Commit();
         }
+        else
+        {
+            video = new Video()
+            {
+                id = videoId,
+                Source = PlatformName,
+                Status = VideoStatus.Missing,
+                SourceStatus = VideoStatus.Unknown,
+                IsLiveStream = true,
+                Title = "",
+                ChannelId = channel.id,
+                Timestamps = new Timestamps()
+                {
+                    PublishedAt = DateTime.UtcNow,
+                    ActualStartTime = DateTime.UtcNow
+                },
+            };
+        }
+
+        video.Thumbnail =
+            await DownloadThumbnailAsync(
+                $"https://twitcasting.tv/{NameHelper.ChangeId.ChannelId.PlatformType(channel.id, PlatformName)}/thumb/{NameHelper.ChangeId.VideoId.PlatformType(videoId, PlatformName)}",
+                video.id,
+                cancellation);
+
+        if (await GetTwitcastingIsPublicAsync(video, cancellation))
+        {
+            (string title, string telop) = await GetTwitcastingStreamTitleAsync(video, cancellation);
+            if (string.IsNullOrEmpty(video.Title)) video.Title = title;
+            video.Description ??= telop;
+            video.SourceStatus = VideoStatus.Exist;
+
+            if (isLive && (video.Status < VideoStatus.Recording
+                           || video.Status == VideoStatus.Missing))
+            {
+                await twitcastingRecorderService.InitJobAsync(url: videoId,
+                    video: video,
+                    useCookiesFile: false,
+                    cancellation: cancellation);
+
+                video.Status = VideoStatus.Recording;
+                logger.LogInformation("{channelId} is now lived! Start recording.", channel.id);
+
+                if (null != DiscordService)
+                {
+                    await DiscordService.SendStartRecordingMessageAsync(video, channel);
+                }
+            }
+        }
+        else
+        {
+            video.Status = VideoStatus.Skipped;
+            video.SourceStatus = VideoStatus.Reject;
+            video.Note = "Video skipped because it is detected not public.";
+            logger.LogWarning("This video is not public! Skip {videoId}", videoId);
+        }
+
+        await videoRepository.AddOrUpdateAsync(video);
+        _unitOfWorkPublic.Commit();
     }
 
     private async Task<(bool Live, string? Id)> GetTwitcastingLiveStatusAsync(Channel channel, CancellationToken cancellation = default)
     {
         try
         {
-            using var client = httpClientFactory.CreateClient();
-            var response = await client.GetAsync($@"{_streamServerApi}?target={NameHelper.ChangeId.ChannelId.PlatformType(channel.id, PlatformName)}&mode=client", cancellation);
-            response.EnsureSuccessStatusCode();
-            var data = await response.Content.ReadFromJsonAsync(SourceGenerationContext.Default.TwitcastingStreamData, cancellationToken: cancellation);
+            using var client = HttpClientFactory.CreateClient();
+            var response =
+                await client.GetAsync(
+                    $@"{StreamServerApi}?target={NameHelper.ChangeId.ChannelId.PlatformType(channel.id, PlatformName)}&mode=client",
+                    cancellation);
 
-            return null == data || null == data.Movie.Id
-                    ? (false, null)
-                    : (data.Movie.Live ?? false, NameHelper.ChangeId.VideoId.DatabaseType(data.Movie.Id.Value.ToString(), PlatformName));
+            response.EnsureSuccessStatusCode();
+            var data =
+                await response.Content.ReadFromJsonAsync(SourceGenerationContext.Default.TwitcastingStreamData, cancellationToken: cancellation);
+
+            return data?.Movie.Id == null
+                ? (false, null)
+                : (data.Movie.Live ?? false, NameHelper.ChangeId.VideoId.DatabaseType(data.Movie.Id.Value.ToString(), PlatformName));
         }
         catch (HttpRequestException e)
         {
-            logger.LogError(e, "Get twitcasting live status failed with {StatusCode}. {channelId} Be careful if this happens repeatedly.", e.StatusCode, channel.id);
+            logger.LogError(e,
+                "Get twitcasting live status failed with {StatusCode}. {channelId} Be careful if this happens repeatedly.",
+                e.StatusCode,
+                channel.id);
+
             return (false, null);
         }
         catch (Exception e)
@@ -169,16 +187,19 @@ public class TwitcastingService(
         }
     }
 
-    private async Task<(string? title, string? telop)> GetTwitcastingStreamTitleAsync(Video video, CancellationToken cancellation = default)
+    private async Task<(string title, string telop)> GetTwitcastingStreamTitleAsync(Video video, CancellationToken cancellation = default)
     {
-        using var client = httpClientFactory.CreateClient();
+        using var client = HttpClientFactory.CreateClient();
 
-        var response = await client.GetAsync($@"https://twitcasting.tv/{NameHelper.ChangeId.ChannelId.PlatformType(video.ChannelId, PlatformName)}/movie/{NameHelper.ChangeId.VideoId.PlatformType(video.id, PlatformName)}", cancellation);
+        var response =
+            await client.GetAsync(
+                $@"https://twitcasting.tv/{NameHelper.ChangeId.ChannelId.PlatformType(video.ChannelId, PlatformName)}/movie/{NameHelper.ChangeId.VideoId.PlatformType(video.id, PlatformName)}",
+                cancellation);
 
         if (!response.IsSuccessStatusCode)
             return ("(Unknown)", "");
 
-        string responseBody = await response.Content.ReadAsStringAsync(cancellation);
+        var responseBody = await response.Content.ReadAsStringAsync(cancellation);
 
         var htmlDocument = new HtmlDocument();
         htmlDocument.LoadHtml(responseBody);
@@ -186,8 +207,8 @@ public class TwitcastingService(
         var ogTitleNode = htmlDocument.DocumentNode.SelectSingleNode("//head/meta[@property='og:title']");
         var descriptionNode = htmlDocument.DocumentNode.SelectSingleNode("//head/meta[@name='description']");
 
-        string title = ogTitleNode?.Attributes["content"]?.Value.Trim() ?? "(Unknown)";
-        string description = descriptionNode?.Attributes["content"]?.Value.Trim() ?? "";
+        var title = ogTitleNode?.Attributes["content"]?.Value.Trim() ?? "(Unknown)";
+        var description = descriptionNode?.Attributes["content"]?.Value.Trim() ?? "";
 
         return (title, description);
     }
@@ -195,18 +216,22 @@ public class TwitcastingService(
     /// <summary>
     /// 檢查影片是否公開(沒有密碼鎖或是瀏覧限制)
     /// </summary>
-    /// <param name="videoId"></param>
+    /// <param name="video"></param>
     /// <param name="cancellation"></param>
     /// <returns></returns>
     private async Task<bool> GetTwitcastingIsPublicAsync(Video video, CancellationToken cancellation = default)
     {
         try
         {
-            // Web page will contains this string if the video is password locked
-            var keyword = "tw-empty-state-action";
+            // Web page will contain this string if the video is password locked
+            const string keyword = "tw-empty-state-action";
 
-            using var client = httpClientFactory.CreateClient();
-            var response = await client.GetAsync($"https://twitcasting.tv/{NameHelper.ChangeId.ChannelId.PlatformType(video.ChannelId, PlatformName)}/movie/{NameHelper.ChangeId.VideoId.PlatformType(video.id, PlatformName)}", cancellation);
+            using var client = HttpClientFactory.CreateClient();
+            var response =
+                await client.GetAsync(
+                    $"https://twitcasting.tv/{NameHelper.ChangeId.ChannelId.PlatformType(video.ChannelId, PlatformName)}/movie/{NameHelper.ChangeId.VideoId.PlatformType(video.id, PlatformName)}",
+                    cancellation);
+
             response.EnsureSuccessStatusCode();
 
             var data = await response.Content.ReadAsStringAsync(cancellation);
@@ -214,7 +239,11 @@ public class TwitcastingService(
         }
         catch (HttpRequestException e)
         {
-            logger.LogError(e, "Get twitcasting IsPublic failed with {StatusCode}. {channelId} Be careful if this happens repeatedly.", e.StatusCode, video.ChannelId);
+            logger.LogError(e,
+                "Get twitcasting IsPublic failed with {StatusCode}. {channelId} Be careful if this happens repeatedly.",
+                e.StatusCode,
+                video.ChannelId);
+
             throw;
         }
         catch (Exception e)
@@ -237,8 +266,12 @@ public class TwitcastingService(
             // Web page will contains this string if the video is not published
             var keyword = "tw-player-empty-message";
 
-            using var client = httpClientFactory.CreateClient();
-            var response = await client.GetAsync($"https://twitcasting.tv/{NameHelper.ChangeId.ChannelId.PlatformType(video.ChannelId, PlatformName)}/movie/{NameHelper.ChangeId.VideoId.PlatformType(video.id, PlatformName)}", cancellation);
+            using var client = HttpClientFactory.CreateClient();
+            var response =
+                await client.GetAsync(
+                    $"https://twitcasting.tv/{NameHelper.ChangeId.ChannelId.PlatformType(video.ChannelId, PlatformName)}/movie/{NameHelper.ChangeId.VideoId.PlatformType(video.id, PlatformName)}",
+                    cancellation);
+
             response.EnsureSuccessStatusCode();
 
             var data = await response.Content.ReadAsStringAsync(cancellation);
@@ -246,7 +279,11 @@ public class TwitcastingService(
         }
         catch (HttpRequestException e)
         {
-            logger.LogError(e, "Get twitcasting IsPublish failed with {StatusCode}. {channelId} Be careful if this happens repeatedly.", e.StatusCode, video.ChannelId);
+            logger.LogError(e,
+                "Get twitcasting IsPublish failed with {StatusCode}. {channelId} Be careful if this happens repeatedly.",
+                e.StatusCode,
+                video.ChannelId);
+
             throw;
         }
         catch (Exception e)
@@ -259,15 +296,16 @@ public class TwitcastingService(
     public override async Task UpdateVideoDataAsync(Video video, CancellationToken cancellation = default)
     {
         await videoRepository.ReloadEntityFromDBAsync(video);
-        var channel = await channelRepository.GetChannelByIdAndSourceAsync(video.ChannelId, video.Source);
-        if (null == video.Timestamps.ActualStartTime)
-        {
-            video.Timestamps.ActualStartTime = video.Timestamps.PublishedAt;
-        }
+        var channel = await ChannelRepository.GetChannelByIdAndSourceAsync(video.ChannelId, video.Source);
+        video.Timestamps.ActualStartTime ??= video.Timestamps.PublishedAt;
 
         if (string.IsNullOrEmpty(video.Thumbnail))
         {
-            video.Thumbnail = await DownloadThumbnailAsync($"https://twitcasting.tv/{NameHelper.ChangeId.ChannelId.PlatformType(video.ChannelId, PlatformName)}/thumb/{NameHelper.ChangeId.VideoId.PlatformType(video.id, PlatformName)}", video.id, cancellation);
+            video.Thumbnail =
+                await DownloadThumbnailAsync(
+                    $"https://twitcasting.tv/{NameHelper.ChangeId.ChannelId.PlatformType(video.ChannelId, PlatformName)}/thumb/{NameHelper.ChangeId.VideoId.PlatformType(video.id, PlatformName)}",
+                    video.id,
+                    cancellation);
         }
 
         try
@@ -277,8 +315,8 @@ public class TwitcastingService(
                 if (await GetTwitcastingIsPublicAsync(video, cancellation))
                 {
                     var (title, telop) = await GetTwitcastingStreamTitleAsync(video, cancellation);
-                    video.Title = title ?? video.Title;
-                    video.Description = telop ?? video.Description;
+                    if (string.IsNullOrEmpty(video.Title)) video.Title = title;
+                    video.Description = telop;
                     video.SourceStatus = VideoStatus.Exist;
 
                     if (video.Status <= VideoStatus.Pending)
@@ -294,12 +332,15 @@ public class TwitcastingService(
                     {
                         video.SourceStatus = VideoStatus.Reject;
                         video.Note = "Video source is detected access required.";
-                        if (null != discordService)
+                        if (null != DiscordService)
                         {
-                            await discordService.SendDeletedMessageAsync(video, channel);
+                            await DiscordService.SendDeletedMessageAsync(video, channel);
                         }
-                        logger.LogInformation("Video source is {status} because it is detected access required.", Enum.GetName(typeof(VideoStatus), video.SourceStatus));
+
+                        logger.LogInformation("Video source is {status} because it is detected access required.",
+                            Enum.GetName(typeof(VideoStatus), video.SourceStatus));
                     }
+
                     video.SourceStatus = VideoStatus.Reject;
                 }
             }
@@ -311,12 +352,13 @@ public class TwitcastingService(
                         && video.Status < VideoStatus.Expired)
                     {
                         video.SourceStatus = VideoStatus.Deleted;
-                        if (null != discordService)
+                        if (null != DiscordService)
                         {
                             // First detected
-                            await discordService.SendDeletedMessageAsync(video, channel);
+                            await DiscordService.SendDeletedMessageAsync(video, channel);
                         }
                     }
+
                     video.SourceStatus = VideoStatus.Deleted;
                     video.Note = "Video is not published.";
                     logger.LogInformation("Twitcasting video {videoId} is not published.", video.id);
@@ -328,12 +370,15 @@ public class TwitcastingService(
         }
         catch (HttpRequestException e)
         {
-            logger.LogError(e, "Failed to get twitcasting video {videoId} webpage. {channelId} Be careful if this happens repeatedly.", video.id, video.ChannelId);
+            logger.LogError(e,
+                "Failed to get twitcasting video {videoId} webpage. {channelId} Be careful if this happens repeatedly.",
+                video.id,
+                video.ChannelId);
         }
 
         if (!string.IsNullOrEmpty(video.Filename))
         {
-            if (!await storageService.IsVideoFileExistsAsync(video.Filename, cancellation))
+            if (!await StorageService.IsVideoFileExistsAsync(video.Filename, cancellation))
             {
                 if (video.Status >= VideoStatus.Archived && video.Status < VideoStatus.Expired)
                 {
@@ -346,12 +391,13 @@ public class TwitcastingService(
             {
                 video.Status = VideoStatus.Archived;
                 video.Note = null;
-                logger.LogInformation("Correct video status to {status} because archived is exists.", Enum.GetName(typeof(VideoStatus), video.Status));
+                logger.LogInformation("Correct video status to {status} because archived is exists.",
+                    Enum.GetName(typeof(VideoStatus), video.Status));
             }
         }
 
         await videoRepository.AddOrUpdateAsync(video);
-        _unitOfWork_Public.Commit();
+        _unitOfWorkPublic.Commit();
     }
 
     public override Task UpdateChannelDataAsync(Channel channel, CancellationToken stoppingToken)

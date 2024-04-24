@@ -2,6 +2,7 @@
 using LivestreamRecorderService.Models.Options;
 using Microsoft.Extensions.Options;
 using Minio;
+using Minio.DataModel;
 using Minio.DataModel.Args;
 using Minio.Exceptions;
 
@@ -18,9 +19,11 @@ public class S3Service(
     {
         try
         {
-            var stat = await minioClient.StatObjectAsync(new StatObjectArgs()
-                                         .WithBucket(_options.BucketName_Private)
-                                         .WithObject($"videos/{filename}"), cancellation);
+            ObjectStat? stat = await minioClient.StatObjectAsync(new StatObjectArgs()
+                                                                 .WithBucket(_options.BucketName_Private)
+                                                                 .WithObject($"videos/{filename}"),
+                cancellation);
+
             return !stat.DeleteMarker;
         }
         catch (MinioException e)
@@ -33,6 +36,7 @@ public class S3Service(
             {
                 logger.LogError(e, "Failed to check video file: {filename}", filename);
             }
+
             return false;
         }
     }
@@ -42,8 +46,10 @@ public class S3Service(
         try
         {
             await minioClient.RemoveObjectAsync(new RemoveObjectArgs()
-                              .WithBucket(_options.BucketName_Private)
-                              .WithObject($"videos/{filename}"), cancellation);
+                                                .WithBucket(_options.BucketName_Private)
+                                                .WithObject($"videos/{filename}"),
+                cancellation);
+
             return true;
         }
         catch (MinioException e)
@@ -56,6 +62,7 @@ public class S3Service(
             {
                 logger.LogError(e, "Failed to delete video file: {filename}", filename);
             }
+
             return false;
         }
     }
@@ -64,11 +71,12 @@ public class S3Service(
     {
         try
         {
-            var response = await minioClient.PutObjectAsync(new PutObjectArgs()
+            await minioClient.PutObjectAsync(new PutObjectArgs()
                                              .WithBucket(_options.BucketName_Public)
                                              .WithObject(pathInStorage)
                                              .WithFileName(tempPath)
-                                             .WithContentType(contentType), cancellation);
+                                             .WithContentType(contentType),
+                cancellation);
         }
         catch (MinioException e)
         {

@@ -1,4 +1,6 @@
-﻿namespace LivestreamRecorderService.Enums;
+﻿// ReSharper disable InconsistentNaming
+
+namespace LivestreamRecorderService.Enums;
 
 public enum ServiceName
 {

@@ -8,26 +8,26 @@ using Microsoft.Extensions.Options;
 
 namespace LivestreamRecorderService.SingletonServices.ACI.Downloader;
 
-public class FC2LiveDLService(
-    ILogger<FC2LiveDLService> logger,
+public class Fc2LiveDLService(
+    ILogger<Fc2LiveDLService> logger,
     ArmClient armClient,
-    IOptions<AzureOption> options) : ACIServiceBase(logger, armClient, options), IFC2LiveDLService
+    IOptions<AzureOption> options) : AciServiceBase(logger, armClient, options), IFc2LiveDLService
 {
     private readonly AzureOption _azureOption = options.Value;
 
-    public override string Name => IFC2LiveDLService.name;
+    public override string Name => IFc2LiveDLService.Name;
 
     public override Task InitJobAsync(string videoId,
-                                      Video video,
-                                      bool useCookiesFile = false,
-                                      CancellationToken cancellation = default)
+        Video video,
+        bool useCookiesFile = false,
+        CancellationToken cancellation = default)
     {
-        string filename = NameHelper.GetFileName(video, IFC2LiveDLService.name);
+        string filename = NameHelper.GetFileName(video, IFc2LiveDLService.Name);
         video.Filename = filename;
         return InitJobWithChannelNameAsync(videoId: videoId,
-                                           video: video,
-                                           useCookiesFile: useCookiesFile,
-                                           cancellation: cancellation);
+            video: video,
+            useCookiesFile: useCookiesFile,
+            cancellation: cancellation);
     }
 
     protected override Task<ArmOperation<ArmDeploymentResource>> CreateNewJobAsync(
@@ -37,7 +37,7 @@ public class FC2LiveDLService(
         bool useCookiesFile = false,
         CancellationToken cancellation = default)
     {
-        string filename = NameHelper.GetFileName(video, IFC2LiveDLService.name);
+        string filename = NameHelper.GetFileName(video, IFc2LiveDLService.Name);
         try
         {
             return doWithImage("ghcr.io/recorder-moe/fc2-live-dl:latest");
@@ -61,7 +61,8 @@ public class FC2LiveDLService(
                     "-c",
                     $"fc2-live-dl --latency high --threads 1 -o '{Path.ChangeExtension(filename, ".%(ext)s")}' --log-level trace --cookies /sharedvolume/cookies/{video.ChannelId}.txt 'https://live.fc2.com/{NameHelper.ChangeId.ChannelId.PlatformType(video.ChannelId, Name)}' && mv '/recordings/{filename}' /sharedvolume/"
                 ]
-                : [
+                :
+                [
                     "dumb-init",
                     "--",
                     "sh",
@@ -70,39 +71,39 @@ public class FC2LiveDLService(
                 ];
 
             return CreateResourceAsync(
-                    parameters: new
+                parameters: new
+                {
+                    dockerImageName = new
                     {
-                        dockerImageName = new
-                        {
-                            value = imageName
-                        },
-                        containerName = new
-                        {
-                            value = instanceName
-                        },
-                        commandOverrideArray = new
-                        {
-                            value = command
-                        },
-                        storageAccountName = new
-                        {
-                            value = _azureOption.FileShare!.StorageAccountName
-                        },
-                        storageAccountKey = new
-                        {
-                            value = _azureOption.FileShare!.StorageAccountKey
-                        },
-                        fileshareVolumeName = new
-                        {
-                            value = _azureOption.FileShare.ShareName
-                        },
-                        mountPath = new
-                        {
-                            value = "/sharedvolume"
-                        },
+                        value = imageName
                     },
-                    deploymentName: instanceName,
-                    cancellation: cancellation);
+                    containerName = new
+                    {
+                        value = instanceName
+                    },
+                    commandOverrideArray = new
+                    {
+                        value = command
+                    },
+                    storageAccountName = new
+                    {
+                        value = _azureOption.FileShare!.StorageAccountName
+                    },
+                    storageAccountKey = new
+                    {
+                        value = _azureOption.FileShare!.StorageAccountKey
+                    },
+                    fileshareVolumeName = new
+                    {
+                        value = _azureOption.FileShare.ShareName
+                    },
+                    mountPath = new
+                    {
+                        value = "/sharedvolume"
+                    },
+                },
+                deploymentName: instanceName,
+                cancellation: cancellation);
         }
     }
 }

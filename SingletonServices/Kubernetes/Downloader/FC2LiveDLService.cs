@@ -7,20 +7,19 @@ using Microsoft.Extensions.Options;
 
 namespace LivestreamRecorderService.SingletonServices.Kubernetes.Downloader;
 
-public class FC2LiveDLService(
-    ILogger<FC2LiveDLService> logger,
+public class Fc2LiveDLService(
+    ILogger<Fc2LiveDLService> logger,
     k8s.Kubernetes kubernetes,
-    IOptions<KubernetesOption> options,
     IOptions<ServiceOption> serviceOptions,
-    IOptions<AzureOption> azureOptions) : KubernetesServiceBase(logger, kubernetes, options, serviceOptions, azureOptions), IFC2LiveDLService
+    IOptions<AzureOption> azureOptions) : KubernetesServiceBase(logger, kubernetes, serviceOptions, azureOptions), IFc2LiveDLService
 {
-    public override string Name => IFC2LiveDLService.name;
+    public override string Name => IFc2LiveDLService.Name;
 
     protected override Task<V1Job> CreateNewJobAsync(string _,
-                                                     string instanceName,
-                                                     Video video,
-                                                     bool useCookiesFile = false,
-                                                     CancellationToken cancellation = default)
+        string instanceName,
+        Video video,
+        bool useCookiesFile = false,
+        CancellationToken cancellation = default)
     {
         try
         {
@@ -36,7 +35,7 @@ public class FC2LiveDLService(
 
         Task<V1Job> doWithImage(string imageName)
         {
-            string filename = NameHelper.GetFileName(video, IFC2LiveDLService.name);
+            string filename = NameHelper.GetFileName(video, IFc2LiveDLService.Name);
             video.Filename = filename;
             string[] command = useCookiesFile
                 ?
@@ -47,7 +46,8 @@ public class FC2LiveDLService(
                     "-c",
                     $"fc2-live-dl --latency high --threads 1 -o '{Path.ChangeExtension(filename, ".%(ext)s")}' --log-level trace --cookies /sharedvolume/cookies/{video.ChannelId}.txt 'https://live.fc2.com/{NameHelper.ChangeId.ChannelId.PlatformType(video.ChannelId, Name)}' && mv '/recordings/{filename}' /sharedvolume/"
                 ]
-                : [
+                :
+                [
                     "dumb-init",
                     "--",
                     "sh",
@@ -56,23 +56,23 @@ public class FC2LiveDLService(
                 ];
 
             return CreateInstanceAsync(
-                    parameters: new
+                parameters: new
+                {
+                    dockerImageName = new
                     {
-                        dockerImageName = new
-                        {
-                            value = imageName
-                        },
-                        containerName = new
-                        {
-                            value = instanceName
-                        },
-                        commandOverrideArray = new
-                        {
-                            value = command
-                        },
+                        value = imageName
                     },
-                    deploymentName: instanceName,
-                    cancellation: cancellation);
+                    containerName = new
+                    {
+                        value = instanceName
+                    },
+                    commandOverrideArray = new
+                    {
+                        value = command
+                    },
+                },
+                deploymentName: instanceName,
+                cancellation: cancellation);
         }
     }
 }

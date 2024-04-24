@@ -2,5 +2,5 @@
 
 public interface IStreamlinkService : IJobServiceBase
 {
-    public const string name = "streamlink";
+    public new const string Name = "streamlink";
 }

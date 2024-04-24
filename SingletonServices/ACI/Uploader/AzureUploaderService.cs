@@ -12,9 +12,9 @@ namespace LivestreamRecorderService.SingletonServices.ACI.Uploader;
 public class AzureUploaderService(
     ILogger<YtdlpService> logger,
     ArmClient armClient,
-    IOptions<AzureOption> options) : ACIServiceBase(logger, armClient, options), IAzureUploaderService
+    IOptions<AzureOption> options) : AciServiceBase(logger, armClient, options), IAzureUploaderService
 {
-    public override string Name => IAzureUploaderService.name;
+    public override string Name => IAzureUploaderService.Name;
     private readonly AzureOption _azureOption = options.Value;
 
     protected override Task<ArmOperation<ArmDeploymentResource>> CreateNewJobAsync(
@@ -39,49 +39,50 @@ public class AzureUploaderService(
         Task<ArmOperation<ArmDeploymentResource>> doWithImage(string imageName)
         {
             return CreateResourceAsync(
-                    parameters: new
+                parameters: new
+                {
+                    dockerImageName = new
                     {
-                        dockerImageName = new
+                        value = imageName
+                    },
+                    containerName = new
+                    {
+                        value = instanceName
+                    },
+                    commandOverrideArray = new
+                    {
+                        value = new[]
                         {
-                            value = imageName
-                        },
-                        containerName = new
-                        {
-                            value = instanceName
-                        },
-                        commandOverrideArray = new
-                        {
-                            value = new[] {
-                                "/bin/sh", "-c",
-                                $"/app/azure-uploader.sh {video.Filename?.Replace(".mp4", "")}"
-                            }
-                        },
-                        storageAccountName = new
-                        {
-                            value = _azureOption.FileShare!.StorageAccountName
-                        },
-                        storageAccountKey = new
-                        {
-                            value = _azureOption.FileShare!.StorageAccountKey
-                        },
-                        fileshareVolumeName = new
-                        {
-                            value = _azureOption.FileShare.ShareName
-                        },
-                        environmentVariables = new
-                        {
-                            value = new List<EnvironmentVariable>
-                            {
-                                new("STORAGE_ACCOUNT_NAME", _azureOption.BlobStorage!.StorageAccountName, null),
-                                new("STORAGE_ACCOUNT_KEY", null, _azureOption.BlobStorage.StorageAccountKey),
-                                new("CONTAINER_NAME", _azureOption.BlobStorage.BlobContainerName_Private, null),
-                                new("DESTINATION_DIRECTORY", null, "/videos")
-                            }
+                            "/bin/sh", "-c",
+                            $"/app/azure-uploader.sh {video.Filename?.Replace(".mp4", "")}"
                         }
                     },
-                    deploymentName: instanceName,
-                    templateName: "ACI_env.json",
-                    cancellation: cancellation);
+                    storageAccountName = new
+                    {
+                        value = _azureOption.FileShare!.StorageAccountName
+                    },
+                    storageAccountKey = new
+                    {
+                        value = _azureOption.FileShare!.StorageAccountKey
+                    },
+                    fileshareVolumeName = new
+                    {
+                        value = _azureOption.FileShare.ShareName
+                    },
+                    environmentVariables = new
+                    {
+                        value = new List<EnvironmentVariable>
+                        {
+                            new("STORAGE_ACCOUNT_NAME", _azureOption.BlobStorage!.StorageAccountName, null),
+                            new("STORAGE_ACCOUNT_KEY", null, _azureOption.BlobStorage.StorageAccountKey),
+                            new("CONTAINER_NAME", _azureOption.BlobStorage.BlobContainerName_Private, null),
+                            new("DESTINATION_DIRECTORY", null, "/videos")
+                        }
+                    }
+                },
+                deploymentName: instanceName,
+                templateName: "ACI_env.json",
+                cancellation: cancellation);
         }
     }
 }

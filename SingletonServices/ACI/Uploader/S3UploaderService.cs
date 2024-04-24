@@ -13,12 +13,12 @@ public class S3UploaderService(
     ILogger<YtdlpService> logger,
     ArmClient armClient,
     IOptions<S3Option> options,
-    IOptions<AzureOption> azureOptions) : ACIServiceBase(logger, armClient, azureOptions), IS3UploaderService
+    IOptions<AzureOption> azureOptions) : AciServiceBase(logger, armClient, azureOptions), IS3UploaderService
 {
     private readonly AzureOption _azureOptions = azureOptions.Value;
     private readonly S3Option _s3Option = options.Value;
 
-    public override string Name => IS3UploaderService.name;
+    public override string Name => IS3UploaderService.Name;
 
     protected override Task<ArmOperation<ArmDeploymentResource>> CreateNewJobAsync(
         string _,
@@ -42,50 +42,51 @@ public class S3UploaderService(
         Task<ArmOperation<ArmDeploymentResource>> doWithImage(string imageName)
         {
             return CreateResourceAsync(
-                    parameters: new
+                parameters: new
+                {
+                    dockerImageName = new
                     {
-                        dockerImageName = new
+                        value = imageName
+                    },
+                    containerName = new
+                    {
+                        value = instanceName
+                    },
+                    commandOverrideArray = new
+                    {
+                        value = new[]
                         {
-                            value = imageName
-                        },
-                        containerName = new
-                        {
-                            value = instanceName
-                        },
-                        commandOverrideArray = new
-                        {
-                            value = new[] {
-                                "/bin/sh", "-c",
-                                $"/app/s3-uploader.sh {video.Filename?.Replace(".mp4", "")}"
-                            }
-                        },
-                        storageAccountName = new
-                        {
-                            value = _azureOptions.FileShare!.StorageAccountName
-                        },
-                        storageAccountKey = new
-                        {
-                            value = _azureOptions.FileShare!.StorageAccountKey
-                        },
-                        fileshareVolumeName = new
-                        {
-                            value = _azureOptions.FileShare.ShareName
-                        },
-                        environmentVariables = new
-                        {
-                            value = new List<EnvironmentVariable>
-                            {
-                                new("S3_ENDPOINT", $"http{(_s3Option.Secure? "s": "")}://{_s3Option.Endpoint}", null),
-                                new("S3_ACCESS_KEY", null, _s3Option.AccessKey),
-                                new("S3_SECRET_KEY", null, _s3Option.SecretKey),
-                                new("DESTINATION_BUCKET", _s3Option.BucketName_Private, null),
-                                new("DESTINATION_DIRECTORY", "videos", null)
-                            }
+                            "/bin/sh", "-c",
+                            $"/app/s3-uploader.sh {video.Filename?.Replace(".mp4", "")}"
                         }
                     },
-                    deploymentName: instanceName,
-                    templateName: "ACI_env.json",
-                    cancellation: cancellation);
+                    storageAccountName = new
+                    {
+                        value = _azureOptions.FileShare!.StorageAccountName
+                    },
+                    storageAccountKey = new
+                    {
+                        value = _azureOptions.FileShare!.StorageAccountKey
+                    },
+                    fileshareVolumeName = new
+                    {
+                        value = _azureOptions.FileShare.ShareName
+                    },
+                    environmentVariables = new
+                    {
+                        value = new List<EnvironmentVariable>
+                        {
+                            new("S3_ENDPOINT", $"http{(_s3Option.Secure ? "s" : "")}://{_s3Option.Endpoint}", null),
+                            new("S3_ACCESS_KEY", null, _s3Option.AccessKey),
+                            new("S3_SECRET_KEY", null, _s3Option.SecretKey),
+                            new("DESTINATION_BUCKET", _s3Option.BucketName_Private, null),
+                            new("DESTINATION_DIRECTORY", "videos", null)
+                        }
+                    }
+                },
+                deploymentName: instanceName,
+                templateName: "ACI_env.json",
+                cancellation: cancellation);
         }
     }
 }

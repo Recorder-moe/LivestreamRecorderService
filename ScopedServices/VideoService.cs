@@ -15,20 +15,23 @@ namespace LivestreamRecorderService.ScopedServices;
 
 public class VideoService(
     ILogger<VideoService> logger,
-    UnitOfWork_Public unitOfWork_Public,
+    // ReSharper disable once SuggestBaseTypeForParameterInConstructor
+    UnitOfWork_Public unitOfWorkPublic,
     IVideoRepository videoRepository,
     IOptions<ServiceOption> serviceOptions,
+    // ReSharper disable once SuggestBaseTypeForParameterInConstructor
     IAzureUploaderService azureUploaderService,
+    // ReSharper disable once SuggestBaseTypeForParameterInConstructor
     IS3UploaderService s3UploaderService)
 {
 #pragma warning disable CA1859 // 盡可能使用具象類型以提高效能
-    private readonly IUnitOfWork _unitOfWork_Public = unitOfWork_Public;
+    private readonly IUnitOfWork _unitOfWorkPublic = unitOfWorkPublic;
 #pragma warning restore CA1859 // 盡可能使用具象類型以提高效能
     private readonly ServiceOption _serviceOptions = serviceOptions.Value;
 
     public List<Video> GetVideosByStatus(VideoStatus status)
         => videoRepository.Where(p => p.Status == status)
-                           .ToList();
+                          .ToList();
 
     public IQueryable<Video> GetVideosBySource(string source)
         => videoRepository.Where(p => p.Source == source);
@@ -36,9 +39,9 @@ public class VideoService(
     public async Task UpdateVideoFilenameAsync(Video video, string? filename)
     {
         await videoRepository.ReloadEntityFromDBAsync(video);
-        video!.Filename = filename;
+        video.Filename = filename;
         await videoRepository.AddOrUpdateAsync(video);
-        _unitOfWork_Public.Commit();
+        _unitOfWorkPublic.Commit();
         logger.LogDebug("Update Video {videoId} filename to {filename}", video.id, filename);
     }
 
@@ -47,16 +50,16 @@ public class VideoService(
         await videoRepository.ReloadEntityFromDBAsync(video);
         video.Status = status;
         await videoRepository.AddOrUpdateAsync(video);
-        _unitOfWork_Public.Commit();
+        _unitOfWorkPublic.Commit();
         logger.LogDebug("Update Video {videoId} Status to {videostatus}", video.id, status);
     }
 
-    public async Task UpdateVideoNoteAsync(Video video, string? Note)
+    public async Task UpdateVideoNoteAsync(Video video, string? note)
     {
         await videoRepository.ReloadEntityFromDBAsync(video);
-        video.Note = Note;
+        video.Note = note;
         await videoRepository.AddOrUpdateAsync(video);
-        _unitOfWork_Public.Commit();
+        _unitOfWorkPublic.Commit();
         logger.LogDebug("Update Video {videoId} note", video.id);
     }
 
@@ -67,7 +70,7 @@ public class VideoService(
         video.ArchivedTime = DateTime.UtcNow;
 
         await videoRepository.AddOrUpdateAsync(video);
-        _unitOfWork_Public.Commit();
+        _unitOfWorkPublic.Commit();
     }
 
     public async Task TransferVideoFromSharedVolumeToStorageAsync(Video video, CancellationToken cancellation = default)
@@ -80,13 +83,15 @@ public class VideoService(
             {
                 case ServiceName.AzureBlobStorage:
                     await azureUploaderService.InitJobAsync(url: video.id,
-                                                             video: video,
-                                                             cancellation: cancellation);
+                        video: video,
+                        cancellation: cancellation);
+
                     break;
                 case ServiceName.S3:
                     await s3UploaderService.InitJobAsync(url: video.id,
-                                                          video: video,
-                                                          cancellation: cancellation);
+                        video: video,
+                        cancellation: cancellation);
+
                     break;
                 default:
                     throw new NotSupportedException($"StorageService {_serviceOptions.StorageService} is not supported.");
@@ -103,7 +108,7 @@ public class VideoService(
     public async Task DeleteVideoAsync(Video video)
     {
         await videoRepository.DeleteAsync(video);
-        _unitOfWork_Public.Commit();
+        _unitOfWorkPublic.Commit();
         logger.LogDebug("Delete Video {videoId}", video.id);
     }
 }

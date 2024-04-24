@@ -10,17 +10,16 @@ namespace LivestreamRecorderService.SingletonServices.Kubernetes.Downloader;
 public class StreamlinkService(
     ILogger<StreamlinkService> logger,
     k8s.Kubernetes kubernetes,
-    IOptions<KubernetesOption> options,
     IOptions<ServiceOption> serviceOptions,
-    IOptions<AzureOption> azureOptions) : KubernetesServiceBase(logger, kubernetes, options, serviceOptions, azureOptions), IStreamlinkService
+    IOptions<AzureOption> azureOptions) : KubernetesServiceBase(logger, kubernetes, serviceOptions, azureOptions), IStreamlinkService
 {
-    public override string Name => IStreamlinkService.name;
+    public override string Name => IStreamlinkService.Name;
 
     protected override Task<V1Job> CreateNewJobAsync(string _,
-                                                     string instanceName,
-                                                     Video video,
-                                                     bool useCookiesFile = false,
-                                                     CancellationToken cancellation = default)
+        string instanceName,
+        Video video,
+        bool useCookiesFile = false,
+        CancellationToken cancellation = default)
     {
         try
         {
@@ -36,29 +35,30 @@ public class StreamlinkService(
 
         Task<V1Job> doWithImage(string imageName)
         {
-            string filename = NameHelper.GetFileName(video, IStreamlinkService.name);
+            string filename = NameHelper.GetFileName(video, IStreamlinkService.Name);
             video.Filename = filename;
             return CreateInstanceAsync(
-                    parameters: new
+                parameters: new
+                {
+                    dockerImageName = new
                     {
-                        dockerImageName = new
-                        {
-                            value = imageName
-                        },
-                        containerName = new
-                        {
-                            value = instanceName
-                        },
-                        commandOverrideArray = new
-                        {
-                            value = new[] {
-                                "/bin/sh", "-c",
-                                $"streamlink --twitch-disable-ads -o '/download/{filename}' -f 'twitch.tv/{NameHelper.ChangeId.ChannelId.PlatformType(video.ChannelId, Name)}' best && cd /download && for file in *.mp4; do ffmpeg -i \"$file\" -map 0:v:0 -map 0:a:0 -c copy -movflags +faststart 'temp.mp4' && mv 'temp.mp4' \"/sharedvolume/$file\"; done"
-                            }
-                        },
+                        value = imageName
                     },
-                    deploymentName: instanceName,
-                    cancellation: cancellation);
+                    containerName = new
+                    {
+                        value = instanceName
+                    },
+                    commandOverrideArray = new
+                    {
+                        value = new[]
+                        {
+                            "/bin/sh", "-c",
+                            $"streamlink --twitch-disable-ads -o '/download/{filename}' -f 'twitch.tv/{NameHelper.ChangeId.ChannelId.PlatformType(video.ChannelId, Name)}' best && cd /download && for file in *.mp4; do ffmpeg -i \"$file\" -map 0:v:0 -map 0:a:0 -c copy -movflags +faststart 'temp.mp4' && mv 'temp.mp4' \"/sharedvolume/$file\"; done"
+                        }
+                    },
+                },
+                deploymentName: instanceName,
+                cancellation: cancellation);
         }
     }
 }

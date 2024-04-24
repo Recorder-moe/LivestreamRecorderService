@@ -11,23 +11,23 @@ namespace LivestreamRecorderService.SingletonServices.ACI.Downloader;
 public class TwitcastingRecorderService(
     ILogger<TwitcastingRecorderService> logger,
     ArmClient armClient,
-    IOptions<AzureOption> options) : ACIServiceBase(logger, armClient, options), ITwitcastingRecorderService
+    IOptions<AzureOption> options) : AciServiceBase(logger, armClient, options), ITwitcastingRecorderService
 {
     private readonly AzureOption _azureOption = options.Value;
 
-    public override string Name => ITwitcastingRecorderService.name;
+    public override string Name => ITwitcastingRecorderService.Name;
 
     public override Task InitJobAsync(string videoId,
-                                      Video video,
-                                      bool useCookiesFile = false,
-                                      CancellationToken cancellation = default)
+        Video video,
+        bool useCookiesFile = false,
+        CancellationToken cancellation = default)
     {
-        string filename = NameHelper.GetFileName(video, ITwitcastingRecorderService.name);
+        string filename = NameHelper.GetFileName(video, ITwitcastingRecorderService.Name);
         video.Filename = filename;
         return InitJobWithChannelNameAsync(videoId: videoId,
-                                           video: video,
-                                           useCookiesFile: useCookiesFile,
-                                           cancellation: cancellation);
+            video: video,
+            useCookiesFile: useCookiesFile,
+            cancellation: cancellation);
     }
 
     protected override Task<ArmOperation<ArmDeploymentResource>> CreateNewJobAsync(
@@ -51,41 +51,42 @@ public class TwitcastingRecorderService(
 
         Task<ArmOperation<ArmDeploymentResource>> doWithImage(string imageName)
         {
-            string filename = NameHelper.GetFileName(video, ITwitcastingRecorderService.name);
+            string filename = NameHelper.GetFileName(video, ITwitcastingRecorderService.Name);
             return CreateResourceAsync(
-                    parameters: new
+                parameters: new
+                {
+                    dockerImageName = new
                     {
-                        dockerImageName = new
+                        value = imageName
+                    },
+                    containerName = new
+                    {
+                        value = instanceName
+                    },
+                    commandOverrideArray = new
+                    {
+                        value = new[]
                         {
-                            value = imageName
-                        },
-                        containerName = new
-                        {
-                            value = instanceName
-                        },
-                        commandOverrideArray = new
-                        {
-                            value = new[] {
-                                "dumb-init", "--",
-                                "/bin/sh", "-c",
-                                $"/bin/sh /app/record_twitcast.sh {NameHelper.ChangeId.ChannelId.PlatformType(video.ChannelId, Name)} once -o {Path.GetFileNameWithoutExtension(filename)} && mv /download/*.mp4 /sharedvolume/"
-                            }
-                        },
-                        storageAccountName = new
-                        {
-                            value = _azureOption.FileShare!.StorageAccountName
-                        },
-                        storageAccountKey = new
-                        {
-                            value = _azureOption.FileShare!.StorageAccountKey
-                        },
-                        fileshareVolumeName = new
-                        {
-                            value = _azureOption.FileShare!.ShareName
+                            "dumb-init", "--",
+                            "/bin/sh", "-c",
+                            $"/bin/sh /app/record_twitcast.sh {NameHelper.ChangeId.ChannelId.PlatformType(video.ChannelId, Name)} once -o {Path.GetFileNameWithoutExtension(filename)} && mv /download/*.mp4 /sharedvolume/"
                         }
                     },
-                    deploymentName: instanceName,
-                    cancellation: cancellation);
+                    storageAccountName = new
+                    {
+                        value = _azureOption.FileShare!.StorageAccountName
+                    },
+                    storageAccountKey = new
+                    {
+                        value = _azureOption.FileShare!.StorageAccountKey
+                    },
+                    fileshareVolumeName = new
+                    {
+                        value = _azureOption.FileShare!.ShareName
+                    }
+                },
+                deploymentName: instanceName,
+                cancellation: cancellation);
         }
     }
 }

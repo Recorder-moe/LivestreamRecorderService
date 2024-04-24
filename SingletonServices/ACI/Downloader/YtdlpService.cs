@@ -11,11 +11,11 @@ namespace LivestreamRecorderService.SingletonServices.ACI.Downloader;
 public class YtdlpService(
     ILogger<YtdlpService> logger,
     ArmClient armClient,
-    IOptions<AzureOption> options) : ACIServiceBase(logger, armClient, options), IYtdlpService
+    IOptions<AzureOption> options) : AciServiceBase(logger, armClient, options), IYtdlpService
 {
     private readonly AzureOption _azureOption = options.Value;
 
-    public override string Name => IYtdlpService.name;
+    public override string Name => IYtdlpService.Name;
 
     protected override Task<ArmOperation<ArmDeploymentResource>> CreateNewJobAsync(
         string url,
@@ -68,35 +68,35 @@ public class YtdlpService(
             }
 
             return CreateResourceAsync(
-                    parameters: new
+                parameters: new
+                {
+                    dockerImageName = new
                     {
-                        dockerImageName = new
-                        {
-                            value = imageName
-                        },
-                        containerName = new
-                        {
-                            value = instanceName
-                        },
-                        commandOverrideArray = new
-                        {
-                            value = command
-                        },
-                        storageAccountName = new
-                        {
-                            value = _azureOption.FileShare!.StorageAccountName
-                        },
-                        storageAccountKey = new
-                        {
-                            value = _azureOption.FileShare!.StorageAccountKey
-                        },
-                        fileshareVolumeName = new
-                        {
-                            value = _azureOption.FileShare!.ShareName
-                        },
+                        value = imageName
                     },
-                    deploymentName: instanceName,
-                    cancellation: cancellation);
+                    containerName = new
+                    {
+                        value = instanceName
+                    },
+                    commandOverrideArray = new
+                    {
+                        value = command
+                    },
+                    storageAccountName = new
+                    {
+                        value = _azureOption.FileShare!.StorageAccountName
+                    },
+                    storageAccountKey = new
+                    {
+                        value = _azureOption.FileShare!.StorageAccountKey
+                    },
+                    fileshareVolumeName = new
+                    {
+                        value = _azureOption.FileShare!.ShareName
+                    },
+                },
+                deploymentName: instanceName,
+                cancellation: cancellation);
         }
     }
 }

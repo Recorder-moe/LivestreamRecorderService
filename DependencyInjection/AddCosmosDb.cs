@@ -13,7 +13,7 @@ namespace LivestreamRecorderService.DependencyInjection;
 
 public static partial class Extensions
 {
-    public static IServiceCollection AddCosmosDB(this IServiceCollection services, IConfiguration configuration)
+    public static IServiceCollection AddCosmosDb(this IServiceCollection services, IConfiguration configuration)
     {
 #if !COSMOSDB
         Log.Fatal("This is a CouchDB build. Please use the CosmosDB build for Azure CosmosDB support.");
@@ -36,9 +36,10 @@ public static partial class Extensions
                     .EnableSensitiveDataLogging()
 #endif
                     .UseCosmos(connectionString: azureOptions.CosmosDB.Public.ConnectionStrings,
-                               databaseName: azureOptions.CosmosDB.Public.DatabaseName,
-                               cosmosOptionsAction: option => option.GatewayModeMaxConnectionLimit(380));
+                        databaseName: azureOptions.CosmosDB.Public.DatabaseName,
+                        cosmosOptionsAction: option => option.GatewayModeMaxConnectionLimit(380));
             });
+
             services.AddDbContext<PrivateContext>((options) =>
             {
                 options
@@ -46,8 +47,8 @@ public static partial class Extensions
                     .EnableSensitiveDataLogging()
 #endif
                     .UseCosmos(connectionString: azureOptions.CosmosDB.Private.ConnectionStrings,
-                               databaseName: azureOptions.CosmosDB.Private.DatabaseName,
-                               cosmosOptionsAction: option => option.GatewayModeMaxConnectionLimit(380));
+                        databaseName: azureOptions.CosmosDB.Private.DatabaseName,
+                        cosmosOptionsAction: option => option.GatewayModeMaxConnectionLimit(380));
             });
 
             services.AddScoped<UnitOfWork_Public>();

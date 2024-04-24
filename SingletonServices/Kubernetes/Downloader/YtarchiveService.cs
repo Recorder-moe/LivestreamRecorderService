@@ -10,17 +10,16 @@ namespace LivestreamRecorderService.SingletonServices.Kubernetes.Downloader;
 public class YtarchiveService(
     ILogger<YtarchiveService> logger,
     k8s.Kubernetes kubernetes,
-    IOptions<KubernetesOption> options,
     IOptions<ServiceOption> serviceOptions,
-    IOptions<AzureOption> azureOptions) : KubernetesServiceBase(logger, kubernetes, options, serviceOptions, azureOptions), IYtarchiveService
+    IOptions<AzureOption> azureOptions) : KubernetesServiceBase(logger, kubernetes, serviceOptions, azureOptions), IYtarchiveService
 {
-    public override string Name => IYtarchiveService.name;
+    public override string Name => IYtarchiveService.Name;
 
     protected override Task<V1Job> CreateNewJobAsync(string url,
-                                                     string instanceName,
-                                                     Video video,
-                                                     bool useCookiesFile,
-                                                     CancellationToken cancellation)
+        string instanceName,
+        Video video,
+        bool useCookiesFile = false,
+        CancellationToken cancellation = default)
     {
         if (!url.StartsWith("http")) url = $"https://youtu.be/{NameHelper.ChangeId.VideoId.PlatformType(url, Name)}";
 
@@ -38,7 +37,7 @@ public class YtarchiveService(
 
         Task<V1Job> doWithImage(string imageName)
         {
-            string filename = NameHelper.GetFileName(video, IYtarchiveService.name);
+            string filename = NameHelper.GetFileName(video, IYtarchiveService.Name);
             video.Filename = filename;
             string[] command = useCookiesFile
                 ?
@@ -47,30 +46,31 @@ public class YtarchiveService(
                     "-c",
                     $"/bin/ytarchive --add-metadata --merge --retry-frags 30 --thumbnail -o '{filename.Replace(".mp4", "")}' -c /sharedvolume/cookies/{video.ChannelId}.txt '{url}' best && mv *.mp4 /sharedvolume/"
                 ]
-                : [
+                :
+                [
                     "sh",
                     "-c",
                     $"/bin/ytarchive --add-metadata --merge --retry-frags 30 --thumbnail -o '{filename.Replace(".mp4", "")}' '{url}' best && mv *.mp4 /sharedvolume/"
                 ];
 
             return CreateInstanceAsync(
-                    parameters: new
+                parameters: new
+                {
+                    dockerImageName = new
                     {
-                        dockerImageName = new
-                        {
-                            value = imageName
-                        },
-                        containerName = new
-                        {
-                            value = instanceName
-                        },
-                        commandOverrideArray = new
-                        {
-                            value = command
-                        },
+                        value = imageName
                     },
-                    deploymentName: instanceName,
-                    cancellation: cancellation);
+                    containerName = new
+                    {
+                        value = instanceName
+                    },
+                    commandOverrideArray = new
+                    {
+                        value = command
+                    },
+                },
+                deploymentName: instanceName,
+                cancellation: cancellation);
         }
     }
 }

@@ -2,5 +2,5 @@
 
 public interface ITwitcastingRecorderService : IJobServiceBase
 {
-    public const string name = "twitcastingrecorder";
+    public new const string Name = "twitcastingrecorder";
 }

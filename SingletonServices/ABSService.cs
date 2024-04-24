@@ -6,12 +6,15 @@ using Microsoft.Extensions.Options;
 
 namespace LivestreamRecorderService.SingletonServices;
 
-public class ABSService(
+public class AbsService(
     BlobServiceClient blobServiceClient,
     IOptions<AzureOption> options) : IStorageService
 {
-    private readonly BlobContainerClient _blobContainerClient = blobServiceClient.GetBlobContainerClient(options.Value.BlobStorage!.BlobContainerName_Private);
-    private readonly BlobContainerClient _blobContainerClient_public = blobServiceClient.GetBlobContainerClient(options.Value.BlobStorage!.BlobContainerName_Public);
+    private readonly BlobContainerClient _blobContainerClient =
+        blobServiceClient.GetBlobContainerClient(options.Value.BlobStorage!.BlobContainerName_Private);
+
+    private readonly BlobContainerClient _blobContainerClientPublic =
+        blobServiceClient.GetBlobContainerClient(options.Value.BlobStorage!.BlobContainerName_Public);
 
     public async Task<bool> IsVideoFileExistsAsync(string filename, CancellationToken cancellation = default)
         => (await _blobContainerClient.GetBlobClient($"videos/{filename}")
@@ -20,12 +23,12 @@ public class ABSService(
     public async Task<bool> DeleteVideoBlobAsync(string filename, CancellationToken cancellation = default)
         => (await _blobContainerClient.GetBlobClient($"videos/{filename}")
                                       .DeleteIfExistsAsync(snapshotsOption: DeleteSnapshotsOption.IncludeSnapshots,
-                                                           cancellationToken: cancellation)).Value;
+                                          cancellationToken: cancellation)).Value;
 
     public Task UploadPublicFileAsync(string? contentType, string pathInStorage, string tempPath, CancellationToken cancellation = default)
-        => _blobContainerClient_public.GetBlobClient(pathInStorage)
-                                             .UploadAsync(path: tempPath,
-                                                          httpHeaders: new BlobHttpHeaders { ContentType = contentType },
-                                                          accessTier: AccessTier.Hot,
-                                                          cancellationToken: cancellation);
+        => _blobContainerClientPublic.GetBlobClient(pathInStorage)
+                                     .UploadAsync(path: tempPath,
+                                         httpHeaders: new BlobHttpHeaders { ContentType = contentType },
+                                         accessTier: AccessTier.Hot,
+                                         cancellationToken: cancellation);
 }

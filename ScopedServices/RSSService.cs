@@ -9,16 +9,17 @@ using LivestreamRecorder.DB.Models;
 
 namespace LivestreamRecorderService.ScopedServices;
 
-public class RSSService(
-    ILogger<RSSService> logger,
-    UnitOfWork_Public unitOfWork_Public,
+public class RssService(
+    ILogger<RssService> logger,
+    // ReSharper disable once SuggestBaseTypeForParameterInConstructor
+    UnitOfWork_Public unitOfWorkPublic,
     IChannelRepository channelRepository)
 {
 #pragma warning disable CA1859 // 盡可能使用具象類型以提高效能
-    private readonly IUnitOfWork _unitOfWork_Public = unitOfWork_Public;
+    private readonly IUnitOfWork _unitOfWorkPublic = unitOfWorkPublic;
 #pragma warning restore CA1859 // 盡可能使用具象類型以提高效能
 
-    public async Task<Feed?> ReadRSSAsync(string url, CancellationToken cancellation = default)
+    public async Task<Feed?> ReadRssAsync(string url, CancellationToken cancellation = default)
     {
         logger.LogTrace("Start to get RSS feed: {url}", url);
         Feed? feed = null;
@@ -30,6 +31,7 @@ public class RSSService(
         {
             logger.LogWarning(e, "Failed to get feed: {feed}", url);
         }
+
         return feed;
     }
 
@@ -40,7 +42,7 @@ public class RSSService(
             logger.LogInformation("Update channel name from {oldName} to {newName}", channel.ChannelName, feed.Title);
             channel.ChannelName = feed.Title;
             channelRepository.AddOrUpdateAsync(channel);
-            _unitOfWork_Public.Commit();
+            _unitOfWorkPublic.Commit();
         }
     }
 }

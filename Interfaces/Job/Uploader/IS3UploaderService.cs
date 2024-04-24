@@ -2,5 +2,5 @@
 
 public interface IS3UploaderService : IJobServiceBase
 {
-    public const string name = "s3uploader";
+    public new const string Name = "s3uploader";
 }

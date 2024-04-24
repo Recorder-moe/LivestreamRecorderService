@@ -13,14 +13,14 @@ public class HeartbeatWorker(
 
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
-        using var _ = LogContext.PushProperty("Worker", nameof(HeartbeatWorker));
+        using IDisposable _ = LogContext.PushProperty("Worker", nameof(HeartbeatWorker));
         if (!_option.Enabled) return;
 
         logger.LogTrace("{Worker} starts...", nameof(HeartbeatWorker));
 
         while (!stoppingToken.IsCancellationRequested)
         {
-            using var __ = LogContext.PushProperty("WorkerRunId", $"{nameof(HeartbeatWorker)}_{DateTime.UtcNow:yyyyMMddHHmmssfff}");
+            using IDisposable __ = LogContext.PushProperty("WorkerRunId", $"{nameof(HeartbeatWorker)}_{DateTime.UtcNow:yyyyMMddHHmmssfff}");
 
             await SendHeartbeatAsync();
 
@@ -33,10 +33,10 @@ public class HeartbeatWorker(
     {
         if (!_option.Enabled) return;
 
-        using var client = httpFactory.CreateClient();
+        using HttpClient client = httpFactory.CreateClient();
         try
         {
-            var response = await client.GetAsync(_option.Endpoint);
+            HttpResponseMessage response = await client.GetAsync(_option.Endpoint);
             response.EnsureSuccessStatusCode();
             logger.LogTrace("Heartbeat sent successfully.");
         }
@@ -45,5 +45,4 @@ public class HeartbeatWorker(
             logger.LogError(e, "Heartbeat sent failed.");
         }
     }
-
 }

@@ -14,7 +14,7 @@ public static partial class Extensions
     {
         try
         {
-            var azureOptions = services.BuildServiceProvider().GetRequiredService<IOptions<AzureOption>>().Value;
+            AzureOption azureOptions = services.BuildServiceProvider().GetRequiredService<IOptions<AzureOption>>().Value;
             if (null == azureOptions.BlobStorage
                 || string.IsNullOrEmpty(azureOptions.BlobStorage.StorageAccountName)
                 || string.IsNullOrEmpty(azureOptions.BlobStorage.StorageAccountKey)
@@ -25,7 +25,7 @@ public static partial class Extensions
             services.AddAzureClients(clientsBuilder
                 => clientsBuilder.AddBlobServiceClient(azureOptions.BlobStorage.ConnectionString));
 
-            services.AddSingleton<IStorageService, ABSService>();
+            services.AddSingleton<IStorageService, AbsService>();
 
             return services;
         }

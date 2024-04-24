@@ -15,47 +15,49 @@ namespace LivestreamRecorderService.SingletonServices.Kubernetes;
 public abstract class KubernetesServiceBase(
     ILogger<KubernetesServiceBase> logger,
     k8s.Kubernetes kubernetes,
-    IOptions<KubernetesOption> options,
     IOptions<ServiceOption> serviceOptions,
     IOptions<AzureOption> azureOptions) : IJobServiceBase
 {
-    private readonly KubernetesOption _option = options.Value;
     private readonly ServiceOption _serviceOption = serviceOptions.Value;
     private readonly AzureOption _azureOption = azureOptions.Value;
 
     public abstract string Name { get; }
-    protected static string KubernetesNamespace => KubernetesService.KubernetesNamespace;
+    private static string KubernetesNamespace => KubernetesService.KubernetesNamespace;
 
     public virtual async Task InitJobAsync(string videoId, Video video, bool useCookiesFile = false, CancellationToken cancellation = default)
     {
-        var jobName = GetInstanceName(video.id);
+        string jobName = GetInstanceName(video.id);
 
-        var job = await GetJobByKeywordAsync(jobName, cancellation);
+        V1Job? job = await GetJobByKeywordAsync(jobName, cancellation);
         if (null != job && job.Status.Active != 0)
         {
-            logger.LogWarning("An already active job found for {videoId} {name}!! A new job will now be created with different name. Please pay attention if this happens repeatedly.", videoId, jobName);
+            logger.LogWarning(
+                "An already active job found for {videoId} {name}!! A new job will now be created with different name. Please pay attention if this happens repeatedly.",
+                videoId,
+                jobName);
+
             jobName += DateTimeOffset.UtcNow.ToUnixTimeMilliseconds();
         }
 
         logger.LogInformation("Start new K8s job for {videoId} {name}.", videoId, jobName);
         await CreateNewJobAsync(id: videoId,
-                                instanceName: jobName,
-                                video: video,
-                                useCookiesFile: useCookiesFile,
-                                cancellation: cancellation);
+            instanceName: jobName,
+            video: video,
+            useCookiesFile: useCookiesFile,
+            cancellation: cancellation);
     }
 
-    protected async Task<V1Job?> GetJobByKeywordAsync(string keyword, CancellationToken cancellation)
+    private async Task<V1Job?> GetJobByKeywordAsync(string keyword, CancellationToken cancellation)
     {
-        var jobs = await kubernetes.ListNamespacedJobAsync(KubernetesNamespace, cancellationToken: cancellation);
+        V1JobList? jobs = await kubernetes.ListNamespacedJobAsync(KubernetesNamespace, cancellationToken: cancellation);
         return jobs.Items.FirstOrDefault(p => p.Name().Contains(keyword));
     }
 
     protected Task<V1Job> CreateInstanceAsync(dynamic parameters,
-                                              string deploymentName,
-                                              IList<EnvironmentVariable>? environment = null,
-                                              string mountPath = "/sharedvolume",
-                                              CancellationToken cancellation = default)
+        string deploymentName,
+        IList<EnvironmentVariable>? environment = null,
+        string mountPath = "/sharedvolume",
+        CancellationToken cancellation = default)
     {
         V1Job job = new()
         {
@@ -73,7 +75,8 @@ public abstract class KubernetesServiceBase(
                         RestartPolicy = "Never",
                         Containers = new List<V1Container>
                         {
-                            new() {
+                            new()
+                            {
                                 Name = parameters.containerName.value,
                                 Image = parameters.dockerImageName.value,
                                 Command = parameters.commandOverrideArray.value,
@@ -108,8 +111,8 @@ public abstract class KubernetesServiceBase(
         }
 
         return kubernetes.CreateNamespacedJobAsync(body: job,
-                                                namespaceParameter: KubernetesNamespace,
-                                                cancellationToken: cancellation);
+            namespaceParameter: KubernetesNamespace,
+            cancellationToken: cancellation);
     }
 
     private V1Volume GetSharedVolumeDefinition()
@@ -120,7 +123,7 @@ public abstract class KubernetesServiceBase(
                 Name = "sharedvolume",
                 AzureFile = new()
                 {
-                    SecretName = KubernetesService._azureFileShareSecretName,
+                    SecretName = KubernetesService.AzureFileShareSecretName,
                     ShareName = _azureOption.FileShare!.ShareName,
                     ReadOnlyProperty = false,
                 }
@@ -130,11 +133,12 @@ public abstract class KubernetesServiceBase(
                 Name = "sharedvolume",
                 PersistentVolumeClaim = new()
                 {
-                    ClaimName = KubernetesService._persistentVolumeClaimName,
+                    ClaimName = KubernetesService.PersistentVolumeClaimName,
                     ReadOnlyProperty = false
                 }
             },
-            _ => throw new ConfigurationErrorsException($"ShareVolume Service {Enum.GetName(typeof(ServiceName), _serviceOption.SharedVolumeService)} not supported for Kubernetes.")
+            _ => throw new ConfigurationErrorsException(
+                $"ShareVolume Service {Enum.GetName(typeof(ServiceName), _serviceOption.SharedVolumeService)} not supported for Kubernetes.")
         };
 
     public string GetInstanceName(string videoId)
@@ -142,8 +146,8 @@ public abstract class KubernetesServiceBase(
 
     // Must be override
     protected abstract Task<V1Job> CreateNewJobAsync(string id,
-                                                     string instanceName,
-                                                     Video video,
-                                                     bool useCookiesFile = false,
-                                                     CancellationToken cancellation = default);
+        string instanceName,
+        Video video,
+        bool useCookiesFile = false,
+        CancellationToken cancellation = default);
 }

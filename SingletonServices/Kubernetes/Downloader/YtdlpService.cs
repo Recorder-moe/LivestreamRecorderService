@@ -10,17 +10,16 @@ namespace LivestreamRecorderService.SingletonServices.Kubernetes.Downloader;
 public class YtdlpService(
     ILogger<YtdlpService> logger,
     k8s.Kubernetes kubernetes,
-    IOptions<KubernetesOption> options,
     IOptions<ServiceOption> serviceOptions,
-    IOptions<AzureOption> azureOptions) : KubernetesServiceBase(logger, kubernetes, options, serviceOptions, azureOptions), IYtdlpService
+    IOptions<AzureOption> azureOptions) : KubernetesServiceBase(logger, kubernetes, serviceOptions, azureOptions), IYtdlpService
 {
-    public override string Name => IYtdlpService.name;
+    public override string Name => IYtdlpService.Name;
 
     protected override Task<V1Job> CreateNewJobAsync(string url,
-                                                     string instanceName,
-                                                     Video video,
-                                                     bool useCookiesFile = false,
-                                                     CancellationToken cancellation = default)
+        string instanceName,
+        Video video,
+        bool useCookiesFile = false,
+        CancellationToken cancellation = default)
     {
         if (!url.StartsWith("http")) url = $"https://youtu.be/{NameHelper.ChangeId.VideoId.PlatformType(url, Name)}";
 
@@ -38,7 +37,7 @@ public class YtdlpService(
 
         Task<V1Job> doWithImage(string imageName)
         {
-            string filename = NameHelper.GetFileName(video, IYtdlpService.name);
+            string filename = NameHelper.GetFileName(video, IYtdlpService.Name);
             video.Filename = filename;
             string[] command = useCookiesFile
                 ?
@@ -66,23 +65,23 @@ public class YtdlpService(
             }
 
             return CreateInstanceAsync(
-                    parameters: new
+                parameters: new
+                {
+                    dockerImageName = new
                     {
-                        dockerImageName = new
-                        {
-                            value = imageName
-                        },
-                        containerName = new
-                        {
-                            value = instanceName
-                        },
-                        commandOverrideArray = new
-                        {
-                            value = command
-                        }
+                        value = imageName
                     },
-                    deploymentName: instanceName,
-                    cancellation: cancellation);
+                    containerName = new
+                    {
+                        value = instanceName
+                    },
+                    commandOverrideArray = new
+                    {
+                        value = command
+                    }
+                },
+                deploymentName: instanceName,
+                cancellation: cancellation);
         }
     }
 }

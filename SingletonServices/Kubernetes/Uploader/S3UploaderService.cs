@@ -11,19 +11,18 @@ namespace LivestreamRecorderService.SingletonServices.Kubernetes.Uploader;
 public class S3UploaderService(
     ILogger<YtdlpService> logger,
     k8s.Kubernetes kubernetes,
-    IOptions<KubernetesOption> options,
     IOptions<ServiceOption> serviceOptions,
     IOptions<S3Option> s3Options,
-    IOptions<AzureOption> azureOptions) : KubernetesServiceBase(logger, kubernetes, options, serviceOptions, azureOptions), IS3UploaderService
+    IOptions<AzureOption> azureOptions) : KubernetesServiceBase(logger, kubernetes, serviceOptions, azureOptions), IS3UploaderService
 {
-    public override string Name => IS3UploaderService.name;
+    public override string Name => IS3UploaderService.Name;
     private readonly S3Option _s3Option = s3Options.Value;
 
     protected override Task<V1Job> CreateNewJobAsync(string _,
-                                                     string instanceName,
-                                                     Video video,
-                                                     bool useCookiesFile = false,
-                                                     CancellationToken cancellation = default)
+        string instanceName,
+        Video video,
+        bool useCookiesFile = false,
+        CancellationToken cancellation = default)
     {
         try
         {
@@ -40,34 +39,35 @@ public class S3UploaderService(
         Task<V1Job> doWithImage(string imageName)
         {
             return CreateInstanceAsync(
-                    parameters: new
+                parameters: new
+                {
+                    dockerImageName = new
                     {
-                        dockerImageName = new
+                        value = imageName
+                    },
+                    containerName = new
+                    {
+                        value = instanceName
+                    },
+                    commandOverrideArray = new
+                    {
+                        value = new[]
                         {
-                            value = imageName
-                        },
-                        containerName = new
-                        {
-                            value = instanceName
-                        },
-                        commandOverrideArray = new
-                        {
-                            value = new[] {
-                                "/bin/sh", "-c",
-                                $"/app/s3-uploader.sh {video.Filename?.Replace(".mp4", "")}"
-                            }
+                            "/bin/sh", "-c",
+                            $"/app/s3-uploader.sh {video.Filename?.Replace(".mp4", "")}"
                         }
-                    },
-                    deploymentName: instanceName,
-                    environment: new List<EnvironmentVariable>
-                    {
-                        new("S3_ENDPOINT", $"http{(_s3Option.Secure? "s": "")}://{_s3Option.Endpoint}", null),
-                        new("S3_ACCESS_KEY", null, _s3Option.AccessKey),
-                        new("S3_SECRET_KEY", null, _s3Option.SecretKey),
-                        new("DESTINATION_BUCKET", _s3Option.BucketName_Private, null),
-                        new("DESTINATION_DIRECTORY", "videos", null)
-                    },
-                    cancellation: cancellation);
+                    }
+                },
+                deploymentName: instanceName,
+                environment: new List<EnvironmentVariable>
+                {
+                    new("S3_ENDPOINT", $"http{(_s3Option.Secure ? "s" : "")}://{_s3Option.Endpoint}", null),
+                    new("S3_ACCESS_KEY", null, _s3Option.AccessKey),
+                    new("S3_SECRET_KEY", null, _s3Option.SecretKey),
+                    new("DESTINATION_BUCKET", _s3Option.BucketName_Private, null),
+                    new("DESTINATION_DIRECTORY", "videos", null)
+                },
+                cancellation: cancellation);
         }
     }
 }

@@ -15,6 +15,7 @@ public interface IPlatformService
     /// <param name="elapsedTime"></param>
     /// <returns>Should trigger</returns>
     public bool StepInterval(int elapsedTime);
+
     Task<YtdlpVideoData?> GetVideoInfoByYtdlpAsync(string url, CancellationToken cancellation = default);
     Task UpdateChannelDataAsync(Channel channel, CancellationToken stoppingToken);
     Task<List<Channel>> GetMonitoringChannels();

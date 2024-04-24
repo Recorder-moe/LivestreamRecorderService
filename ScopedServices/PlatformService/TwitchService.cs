@@ -9,32 +9,35 @@ using LivestreamRecorder.DB.Models;
 using LivestreamRecorderService.Helper;
 using LivestreamRecorderService.Interfaces;
 using LivestreamRecorderService.Interfaces.Job.Downloader;
-using LivestreamRecorderService.Models.OptionDiscords;
+using LivestreamRecorderService.Models.Options;
 using Microsoft.Extensions.Options;
 using Serilog.Context;
+using TwitchLib.Api.Helix.Models.Streams.GetStreams;
 using TwitchLib.Api.Interfaces;
 
 namespace LivestreamRecorderService.ScopedServices.PlatformService;
 
 public class TwitchService(
     ILogger<TwitchService> logger,
-    UnitOfWork_Public unitOfWork_Public,
+    // ReSharper disable once SuggestBaseTypeForParameterInConstructor
+    UnitOfWork_Public unitOfWorkPublic,
     IVideoRepository videoRepository,
     IChannelRepository channelRepository,
+    // ReSharper disable once SuggestBaseTypeForParameterInConstructor
     IStreamlinkService streamlinkService,
-    ITwitchAPI twitchAPI,
+    ITwitchAPI twitchApi,
     IStorageService storageService,
     IHttpClientFactory httpClientFactory,
     IOptions<DiscordOption> discordOptions,
     IServiceProvider serviceProvider) : PlatformService(channelRepository,
-                                                        storageService,
-                                                        httpClientFactory,
-                                                        logger,
-                                                        discordOptions,
-                                                        serviceProvider), IPlatformService
+    storageService,
+    httpClientFactory,
+    logger,
+    discordOptions,
+    serviceProvider), IPlatformService
 {
 #pragma warning disable CA1859 // 盡可能使用具象類型以提高效能
-    private readonly IUnitOfWork _unitOfWork_Public = unitOfWork_Public;
+    private readonly IUnitOfWork _unitOfWorkPublic = unitOfWorkPublic;
 #pragma warning restore CA1859 // 盡可能使用具象類型以提高效能
 
     public override string PlatformName => "Twitch";
@@ -43,18 +46,19 @@ public class TwitchService(
 
     public override async Task UpdateVideosDataAsync(Channel channel, CancellationToken cancellation = default)
     {
-        using var ____ = LogContext.PushProperty("Platform", PlatformName);
-        using var __ = LogContext.PushProperty("channelId", channel.id);
+        using IDisposable ____ = LogContext.PushProperty("Platform", PlatformName);
+        using IDisposable __ = LogContext.PushProperty("channelId", channel.id);
 
         logger.LogTrace("Start to get Twitch stream: {channelId}", channel.id);
-        var streams = await twitchAPI.Helix.Streams.GetStreamsAsync(
+        GetStreamsResponse? streams = await twitchApi.Helix.Streams.GetStreamsAsync(
             userLogins: [NameHelper.ChangeId.ChannelId.PlatformType(channel.id, PlatformName)]);
+
         if (null != streams
             && streams.Streams.Length > 0
             && streams.Streams.First() is TwitchLib.Api.Helix.Models.Streams.GetStreams.Stream stream)
         {
             string videoId = NameHelper.ChangeId.VideoId.DatabaseType(stream.Id.TrimStart('v'), PlatformName);
-            using var ___ = LogContext.PushProperty("videoId", videoId);
+            using IDisposable ___ = LogContext.PushProperty("videoId", videoId);
 
             Video? video = await videoRepository.GetVideoByIdAndChannelIdAsync(videoId, channel.id);
 
@@ -71,6 +75,7 @@ public class TwitchService(
                             logger.LogTrace("{channelId} is already recording.", channel.id);
                             return;
                         }
+
                         break;
                     case VideoStatus.Reject:
                     case VideoStatus.Skipped:
@@ -112,20 +117,20 @@ public class TwitchService(
                 || video.Status == VideoStatus.Missing)
             {
                 await streamlinkService.InitJobAsync(url: video.id,
-                                                     video: video,
-                                                     useCookiesFile: false,
-                                                     cancellation: cancellation);
+                    video: video,
+                    useCookiesFile: false,
+                    cancellation: cancellation);
 
                 video.Status = VideoStatus.Recording;
                 logger.LogInformation("{channelId} is now lived! Start recording.", channel.id);
-                if (null != discordService)
+                if (null != DiscordService)
                 {
-                    await discordService.SendStartRecordingMessageAsync(video, channel);
+                    await DiscordService.SendStartRecordingMessageAsync(video, channel);
                 }
             }
 
             await videoRepository.AddOrUpdateAsync(video);
-            _unitOfWork_Public.Commit();
+            _unitOfWorkPublic.Commit();
         }
         else
         {
@@ -148,7 +153,7 @@ public class TwitchService(
 
         if (!string.IsNullOrEmpty(video.Filename))
         {
-            if (!await storageService.IsVideoFileExistsAsync(video.Filename, cancellation))
+            if (!await StorageService.IsVideoFileExistsAsync(video.Filename, cancellation))
             {
                 if (video.Status >= VideoStatus.Archived && video.Status < VideoStatus.Expired)
                 {
@@ -161,12 +166,13 @@ public class TwitchService(
             {
                 video.Status = VideoStatus.Archived;
                 video.Note = null;
-                logger.LogInformation("Correct video status to {status} because archived is exists.", Enum.GetName(typeof(VideoStatus), video.Status));
+                logger.LogInformation("Correct video status to {status} because archived is exists.",
+                    Enum.GetName(typeof(VideoStatus), video.Status));
             }
         }
 
         await videoRepository.AddOrUpdateAsync(video);
-        _unitOfWork_Public.Commit();
+        _unitOfWorkPublic.Commit();
     }
 
     public override Task UpdateChannelDataAsync(Channel channel, CancellationToken stoppingToken)

@@ -10,4 +10,4 @@ namespace LivestreamRecorderService.Json;
 [JsonSerializable(typeof(FC2MemberData))]
 [JsonSerializable(typeof(TwitcastingStreamData))]
 [JsonSourceGenerationOptions(WriteIndented = true, AllowTrailingCommas = true, ReadCommentHandling = JsonCommentHandling.Skip)]
-internal partial class SourceGenerationContext : JsonSerializerContext { }
+internal partial class SourceGenerationContext : JsonSerializerContext;

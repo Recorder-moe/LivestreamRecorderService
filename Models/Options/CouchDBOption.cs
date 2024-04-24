@@ -2,19 +2,13 @@
 
 namespace LivestreamRecorderService.Models.Options;
 
-public sealed class CouchDBOption
+public sealed class CouchDbOption
 {
-#pragma warning disable IDE1006 // 命名樣式
     public const string ConfigurationSectionName = "CouchDB";
-#pragma warning restore IDE1006 // 命名樣式
 
-    [Required]
-    public string Endpoint { get; set; } = "";
+    [Required] public string Endpoint { get; set; } = "";
 
-    [Required]
-    public string Username { get; set; } = "";
+    [Required] public string Username { get; set; } = "";
 
-    [Required]
-    public string Password { get; set; } = "";
+    [Required] public string Password { get; set; } = "";
 }
-

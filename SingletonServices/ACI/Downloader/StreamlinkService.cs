@@ -11,23 +11,23 @@ namespace LivestreamRecorderService.SingletonServices.ACI.Downloader;
 public class StreamlinkService(
     ILogger<StreamlinkService> logger,
     ArmClient armClient,
-    IOptions<AzureOption> options) : ACIServiceBase(logger, armClient, options), IStreamlinkService
+    IOptions<AzureOption> options) : AciServiceBase(logger, armClient, options), IStreamlinkService
 {
     private readonly AzureOption _azureOption = options.Value;
 
-    public override string Name => IStreamlinkService.name;
+    public override string Name => IStreamlinkService.Name;
 
     public override Task InitJobAsync(string videoId,
-                                      Video video,
-                                      bool useCookiesFile = false,
-                                      CancellationToken cancellation = default)
+        Video video,
+        bool useCookiesFile = false,
+        CancellationToken cancellation = default)
     {
-        string filename = NameHelper.GetFileName(video, IStreamlinkService.name);
+        string filename = NameHelper.GetFileName(video, IStreamlinkService.Name);
         video.Filename = filename;
         return InitJobWithChannelNameAsync(videoId: videoId,
-                                           video: video,
-                                           useCookiesFile: useCookiesFile,
-                                           cancellation: cancellation);
+            video: video,
+            useCookiesFile: useCookiesFile,
+            cancellation: cancellation);
     }
 
     protected override Task<ArmOperation<ArmDeploymentResource>> CreateNewJobAsync(
@@ -37,7 +37,7 @@ public class StreamlinkService(
         bool useCookiesFile = false,
         CancellationToken cancellation = default)
     {
-        string filename = NameHelper.GetFileName(video, IStreamlinkService.name);
+        string filename = NameHelper.GetFileName(video, IStreamlinkService.Name);
         try
         {
             return doWithImage("ghcr.io/recorder-moe/streamlink:latest");
@@ -53,38 +53,39 @@ public class StreamlinkService(
         Task<ArmOperation<ArmDeploymentResource>> doWithImage(string imageName)
         {
             return CreateResourceAsync(
-                    parameters: new
+                parameters: new
+                {
+                    dockerImageName = new
                     {
-                        dockerImageName = new
+                        value = imageName
+                    },
+                    containerName = new
+                    {
+                        value = instanceName
+                    },
+                    commandOverrideArray = new
+                    {
+                        value = new[]
                         {
-                            value = imageName
-                        },
-                        containerName = new
-                        {
-                            value = instanceName
-                        },
-                        commandOverrideArray = new
-                        {
-                            value = new[] {
-                                "/bin/sh", "-c",
-                                $"streamlink --twitch-disable-ads -o '/download/{filename}' -f 'twitch.tv/{NameHelper.ChangeId.ChannelId.PlatformType(video.ChannelId, Name)}' best && cd /download && for file in *.mp4; do ffmpeg -i \"$file\" -map 0:v:0 -map 0:a:0 -c copy -movflags +faststart 'temp.mp4' && mv 'temp.mp4' \"/sharedvolume/$file\"; done"
-                            }
-                        },
-                        storageAccountName = new
-                        {
-                            value = _azureOption.FileShare!.StorageAccountName
-                        },
-                        storageAccountKey = new
-                        {
-                            value = _azureOption.FileShare!.StorageAccountKey
-                        },
-                        fileshareVolumeName = new
-                        {
-                            value = _azureOption.FileShare!.ShareName
+                            "/bin/sh", "-c",
+                            $"streamlink --twitch-disable-ads -o '/download/{filename}' -f 'twitch.tv/{NameHelper.ChangeId.ChannelId.PlatformType(video.ChannelId, Name)}' best && cd /download && for file in *.mp4; do ffmpeg -i \"$file\" -map 0:v:0 -map 0:a:0 -c copy -movflags +faststart 'temp.mp4' && mv 'temp.mp4' \"/sharedvolume/$file\"; done"
                         }
                     },
-                    deploymentName: instanceName,
-                    cancellation: cancellation);
+                    storageAccountName = new
+                    {
+                        value = _azureOption.FileShare!.StorageAccountName
+                    },
+                    storageAccountKey = new
+                    {
+                        value = _azureOption.FileShare!.StorageAccountKey
+                    },
+                    fileshareVolumeName = new
+                    {
+                        value = _azureOption.FileShare!.ShareName
+                    }
+                },
+                deploymentName: instanceName,
+                cancellation: cancellation);
         }
     }
 }

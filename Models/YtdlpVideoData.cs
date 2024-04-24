@@ -383,7 +383,7 @@ public class YtdlpVideoData
 public class Subtitles
 {
     [JsonPropertyName("live_chat")]
-    public List<LiveChat>? LiveChat { get; set; }
+    public List<LiveChat> LiveChat { get; set; }
 }
 
 public class Thumbnail

@@ -10,17 +10,16 @@ namespace LivestreamRecorderService.SingletonServices.Kubernetes.Downloader;
 public class TwitcastingRecorderService(
     ILogger<TwitcastingRecorderService> logger,
     k8s.Kubernetes kubernetes,
-    IOptions<KubernetesOption> options,
     IOptions<ServiceOption> serviceOptions,
-    IOptions<AzureOption> azureOptions) : KubernetesServiceBase(logger, kubernetes, options, serviceOptions, azureOptions), ITwitcastingRecorderService
+    IOptions<AzureOption> azureOptions) : KubernetesServiceBase(logger, kubernetes, serviceOptions, azureOptions), ITwitcastingRecorderService
 {
-    public override string Name => ITwitcastingRecorderService.name;
+    public override string Name => ITwitcastingRecorderService.Name;
 
     protected override Task<V1Job> CreateNewJobAsync(string _,
-                                                     string instanceName,
-                                                     Video video,
-                                                     bool useCookiesFile = false,
-                                                     CancellationToken cancellation = default)
+        string instanceName,
+        Video video,
+        bool useCookiesFile = false,
+        CancellationToken cancellation = default)
     {
         try
         {
@@ -36,30 +35,31 @@ public class TwitcastingRecorderService(
 
         Task<V1Job> doWithImage(string imageName)
         {
-            string filename = NameHelper.GetFileName(video, ITwitcastingRecorderService.name);
+            string filename = NameHelper.GetFileName(video, ITwitcastingRecorderService.Name);
             video.Filename = filename;
             return CreateInstanceAsync(
-                    parameters: new
+                parameters: new
+                {
+                    dockerImageName = new
                     {
-                        dockerImageName = new
-                        {
-                            value = imageName
-                        },
-                        containerName = new
-                        {
-                            value = instanceName
-                        },
-                        commandOverrideArray = new
-                        {
-                            value = new[] {
-                                "dumb-init", "--",
-                                "/bin/sh", "-c",
-                                $"/bin/sh /app/record_twitcast.sh {NameHelper.ChangeId.ChannelId.PlatformType(video.ChannelId, Name)} once -o {Path.GetFileNameWithoutExtension(filename)} && mv /download/*.mp4 /sharedvolume/"
-                            }
-                        },
+                        value = imageName
                     },
-                    deploymentName: instanceName,
-                    cancellation: cancellation);
+                    containerName = new
+                    {
+                        value = instanceName
+                    },
+                    commandOverrideArray = new
+                    {
+                        value = new[]
+                        {
+                            "dumb-init", "--",
+                            "/bin/sh", "-c",
+                            $"/bin/sh /app/record_twitcast.sh {NameHelper.ChangeId.ChannelId.PlatformType(video.ChannelId, Name)} once -o {Path.GetFileNameWithoutExtension(filename)} && mv /download/*.mp4 /sharedvolume/"
+                        }
+                    },
+                },
+                deploymentName: instanceName,
+                cancellation: cancellation);
         }
     }
 }

@@ -1,4 +1,5 @@
-﻿using LivestreamRecorderService.ScopedServices;
+﻿using LivestreamRecorder.DB.Models;
+using LivestreamRecorderService.ScopedServices;
 using LivestreamRecorderService.SingletonServices;
 using Serilog.Context;
 
@@ -11,7 +12,7 @@ public class RecordWorker(
 {
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
-        using var __ = LogContext.PushProperty("Worker", nameof(RecordWorker));
+        using IDisposable __ = LogContext.PushProperty("Worker", nameof(RecordWorker));
 
 #if RELEASE
         logger.LogInformation("{Worker} will sleep 30 seconds to wait for {WorkerToWait} to start.", nameof(RecordWorker), nameof(MonitorWorker));
@@ -21,12 +22,15 @@ public class RecordWorker(
         logger.LogTrace("{Worker} starts...", nameof(RecordWorker));
         while (!stoppingToken.IsCancellationRequested)
         {
-            using var ____ = LogContext.PushProperty("WorkerRunId", $"{nameof(RecordWorker)}_{DateTime.UtcNow:yyyyMMddHHmmssfff}");
+            using IDisposable ____ = LogContext.PushProperty("WorkerRunId", $"{nameof(RecordWorker)}_{DateTime.UtcNow:yyyyMMddHHmmssfff}");
+
             #region DI
-            using (var scope = serviceProvider.CreateScope())
+
+            using (IServiceScope scope = serviceProvider.CreateScope())
             {
-                var videoService = scope.ServiceProvider.GetRequiredService<VideoService>();
-                var channelService = scope.ServiceProvider.GetRequiredService<ChannelService>();
+                VideoService videoService = scope.ServiceProvider.GetRequiredService<VideoService>();
+                ChannelService channelService = scope.ServiceProvider.GetRequiredService<ChannelService>();
+
                 #endregion
 
                 await recordService.HandledFailedJobsAsync(videoService, stoppingToken);
@@ -34,8 +38,8 @@ public class RecordWorker(
                 await recordService.CreateStartRecordJobAsync(videoService, channelService, stoppingToken);
                 await recordService.CreateStartDownloadJobAsync(videoService, channelService, stoppingToken);
 
-                var uploaded = await recordService.MonitorUploadedVideosAsync(videoService, stoppingToken);
-                foreach (var video in uploaded)
+                List<Video> uploaded = await recordService.MonitorUploadedVideosAsync(videoService, stoppingToken);
+                foreach (Video? video in uploaded)
                 {
                     await recordService.ProcessUploadedVideoAsync(videoService, channelService, video, stoppingToken);
 
@@ -43,8 +47,8 @@ public class RecordWorker(
                     await Task.Delay(TimeSpan.FromSeconds(10), stoppingToken);
                 }
 
-                var finished = await recordService.MonitorRecordingDownloadingVideosAsync(videoService, stoppingToken);
-                foreach (var video in finished)
+                List<Video> finished = await recordService.MonitorRecordingDownloadingVideosAsync(videoService, stoppingToken);
+                foreach (Video? video in finished)
                 {
                     await recordService.PcocessFinishedVideoAsync(videoService, channelService, video, stoppingToken);
 

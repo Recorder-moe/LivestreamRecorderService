@@ -11,32 +11,34 @@ using LivestreamRecorderService.Interfaces;
 using LivestreamRecorderService.Interfaces.Job.Downloader;
 using LivestreamRecorderService.Json;
 using LivestreamRecorderService.Models;
-using LivestreamRecorderService.Models.OptionDiscords;
 using Microsoft.Extensions.Options;
 using Serilog.Context;
 using System.Diagnostics.CodeAnalysis;
 using System.Text.Json;
+using LivestreamRecorderService.Models.Options;
 
 namespace LivestreamRecorderService.ScopedServices.PlatformService;
 
-public class FC2Service(
-    ILogger<FC2Service> logger,
-    UnitOfWork_Public unitOfWork_Public,
-    IFC2LiveDLService fC2LiveDLService,
+public class Fc2Service(
+    ILogger<Fc2Service> logger,
+    // ReSharper disable once SuggestBaseTypeForParameterInConstructor
+    UnitOfWork_Public unitOfWorkPublic,
+    // ReSharper disable once SuggestBaseTypeForParameterInConstructor
+    IFc2LiveDLService fC2LiveDLService,
     IStorageService storageService,
     IHttpClientFactory httpClientFactory,
     IOptions<DiscordOption> discordOptions,
     IChannelRepository channelRepository,
     IVideoRepository videoRepository,
     IServiceProvider serviceProvider) : PlatformService(channelRepository,
-                                                        storageService,
-                                                        httpClientFactory,
-                                                        logger,
-                                                        discordOptions,
-                                                        serviceProvider), IPlatformService
+    storageService,
+    httpClientFactory,
+    logger,
+    discordOptions,
+    serviceProvider), IPlatformService
 {
 #pragma warning disable CA1859 // 盡可能使用具象類型以提高效能
-    private readonly IUnitOfWork _unitOfWork_Public = unitOfWork_Public;
+    private readonly IUnitOfWork _unitOfWorkPublic = unitOfWorkPublic;
 #pragma warning restore CA1859 // 盡可能使用具象類型以提高效能
     private readonly IChannelRepository _channelRepository = channelRepository;
     private readonly IStorageService _storageService = storageService;
@@ -46,7 +48,7 @@ public class FC2Service(
 
     public override int Interval => 10;
 
-    private const string _memberApi = "https://live.fc2.com/api/memberApi.php";
+    private const string MemberApi = "https://live.fc2.com/api/memberApi.php";
 
     [UnconditionalSuppressMessage(
         "Trimming",
@@ -59,7 +61,7 @@ public class FC2Service(
 
         logger.LogTrace("Start to get FC2 stream: {channelId}", channel.id);
 
-        var (isLive, videoId) = await GetFC2LiveStatusAsync(channel, cancellation);
+        var (isLive, videoId) = await GetFc2LiveStatusAsync(channel, cancellation);
         using var ___ = LogContext.PushProperty("videoId", videoId);
 
         if (!isLive || string.IsNullOrEmpty(videoId))
@@ -70,7 +72,7 @@ public class FC2Service(
 
         if (!string.IsNullOrEmpty(videoId))
         {
-            Video? video = await videoRepository.GetVideoByIdAndChannelIdAsync(videoId, channel.id);
+            var video = await videoRepository.GetVideoByIdAndChannelIdAsync(videoId, channel.id);
             if (null != video)
             {
                 switch (video.Status)
@@ -84,13 +86,31 @@ public class FC2Service(
                         logger.LogTrace("{videoId} is rejected for recording.", video.id);
                         return;
                     case VideoStatus.Uploading:
-                        logger.LogTrace("{videoId} is uploading. We cannot change the video state during uploading. The status will be corrected after it is archived.", video.id);
+                        logger.LogTrace(
+                            "{videoId} is uploading. We cannot change the video state during uploading. The status will be corrected after it is archived.",
+                            video.id);
+
                         return;
                     case VideoStatus.Archived:
                     case VideoStatus.PermanentArchived:
-                        logger.LogWarning("{videoId} has already been archived. It is possible that an internet disconnect occurred during the process. Changed its state back to Recording.", video.id);
+                        logger.LogWarning(
+                            "{videoId} has already been archived. It is possible that an internet disconnect occurred during the process. Changed its state back to Recording.",
+                            video.id);
+
                         video.Status = VideoStatus.WaitingToRecord;
                         break;
+
+                    case VideoStatus.Unknown:
+                    case VideoStatus.Scheduled:
+                    case VideoStatus.Pending:
+                    case VideoStatus.WaitingToDownload:
+                    case VideoStatus.Downloading:
+                    case VideoStatus.Expired:
+                    case VideoStatus.Missing:
+                    case VideoStatus.Error:
+                    case VideoStatus.Exist:
+                    case VideoStatus.Edited:
+                    case VideoStatus.Deleted:
                     default:
                         // All cases should be handled
                         break;
@@ -113,12 +133,14 @@ public class FC2Service(
                         ActualStartTime = DateTime.UtcNow
                     },
                 };
+
                 logger.LogTrace("New video found: {videoId}", video.id);
             }
-            await videoRepository.AddOrUpdateAsync(video);
-            _unitOfWork_Public.Commit();
 
-            var info = await GetFC2InfoDataAsync(channel.id, cancellation);
+            await videoRepository.AddOrUpdateAsync(video);
+            _unitOfWorkPublic.Commit();
+
+            var info = await GetFc2InfoDataAsync(channel.id, cancellation);
             if (null == info) return;
 
             video.Thumbnail = await DownloadThumbnailAsync(info.Data.ChannelData.Image, video.id, cancellation);
@@ -136,22 +158,27 @@ public class FC2Service(
                 if (video.Status < VideoStatus.Recording
                     || video.Status == VideoStatus.Missing)
                 {
-                    await fC2LiveDLService.InitJobAsync(url: $"https://live.fc2.com/{NameHelper.ChangeId.ChannelId.PlatformType(channel.id, PlatformName)}/",
-                                                        video: video,
-                                                        useCookiesFile: channel.UseCookiesFile == true,
-                                                        cancellation: cancellation);
+                    await fC2LiveDLService.InitJobAsync(
+                        url: $"https://live.fc2.com/{NameHelper.ChangeId.ChannelId.PlatformType(channel.id, PlatformName)}/",
+                        video: video,
+                        useCookiesFile: channel.UseCookiesFile == true,
+                        cancellation: cancellation);
 
                     video.Status = VideoStatus.Recording;
                     logger.LogInformation("{channelId} is now lived! Start recording.", channel.id);
-                    logger.LogDebug("fc2Info: {info}", JsonSerializer.Serialize(
-                        info,
-                        options: new()
-                        {
-                            TypeInfoResolver = SourceGenerationContext.Default
-                        }));
-                    if (null != discordService)
+                    logger.LogDebug("fc2Info: {info}",
+                        JsonSerializer.Serialize(
+                            info,
+#pragma warning disable CA1869
+                            options: new JsonSerializerOptions
+#pragma warning restore CA1869
+                            {
+                                TypeInfoResolver = SourceGenerationContext.Default
+                            }));
+
+                    if (null != DiscordService)
                     {
-                        await discordService.SendStartRecordingMessageAsync(video, channel);
+                        await DiscordService.SendStartRecordingMessageAsync(video, channel);
                     }
                 }
             }
@@ -164,32 +191,32 @@ public class FC2Service(
             }
 
             await videoRepository.AddOrUpdateAsync(video);
-            _unitOfWork_Public.Commit();
+            _unitOfWorkPublic.Commit();
         }
     }
 
-    private async Task<(bool Live, string? Id)> GetFC2LiveStatusAsync(Channel channel, CancellationToken cancellation = default)
+    private async Task<(bool Live, string? Id)> GetFc2LiveStatusAsync(Channel channel, CancellationToken cancellation = default)
     {
-        var info = await GetFC2InfoDataAsync(channel.id, cancellation);
+        var info = await GetFc2InfoDataAsync(channel.id, cancellation);
 
         var start = info?.Data.ChannelData.Start?.ToString();
 
         return null == info || string.IsNullOrEmpty(start) || start == "0"
-                ? (false, null)
-                : (info.Data.ChannelData.IsPublish == 1, NameHelper.ChangeId.VideoId.DatabaseType(start, PlatformName));
+            ? (false, null)
+            : (info.Data.ChannelData.IsPublish == 1, NameHelper.ChangeId.VideoId.DatabaseType(start, PlatformName));
     }
 
     [UnconditionalSuppressMessage(
         "Trimming",
         "IL2026:Members annotated with 'RequiresUnreferencedCodeAttribute' require dynamic access otherwise can break functionality when trimming application code",
         Justification = $"{nameof(SourceGenerationContext)} is set.")]
-    private async Task<FC2MemberData?> GetFC2InfoDataAsync(string channelId, CancellationToken cancellation = default)
+    private async Task<FC2MemberData?> GetFc2InfoDataAsync(string channelId, CancellationToken cancellation = default)
     {
         try
         {
             using var client = _httpFactory.CreateClient();
             var response = await client.PostAsync(
-                requestUri: $@"{_memberApi}",
+                requestUri: $@"{MemberApi}",
                 content: new FormUrlEncodedContent(
                     new Dictionary<string, string>()
                     {
@@ -199,9 +226,10 @@ public class FC2Service(
                         { "streamid", NameHelper.ChangeId.ChannelId.PlatformType(channelId, PlatformName) }
                     }),
                 cancellationToken: cancellation);
+
             response.EnsureSuccessStatusCode();
-            string jsonString = await response.Content.ReadAsStringAsync(cancellation);
-            FC2MemberData? info = JsonSerializer.Deserialize<FC2MemberData>(
+            var jsonString = await response.Content.ReadAsStringAsync(cancellation);
+            var info = JsonSerializer.Deserialize<FC2MemberData>(
                 jsonString,
                 options: new()
                 {
@@ -235,7 +263,11 @@ public class FC2Service(
             video.Status = VideoStatus.WaitingToDownload;
             if (NameHelper.ChangeId.VideoId.PlatformType(video.id, PlatformName).StartsWith("20"))
             {
-                YtdlpVideoData? videoData = await GetVideoInfoByYtdlpAsync($"https://video.fc2.com/content/{NameHelper.ChangeId.VideoId.PlatformType(video.id, PlatformName)}", cancellation);
+                var videoData =
+                    await GetVideoInfoByYtdlpAsync(
+                        $"https://video.fc2.com/content/{NameHelper.ChangeId.VideoId.PlatformType(video.id, PlatformName)}",
+                        cancellation);
+
                 if (null != videoData)
                     video.Thumbnail = await DownloadThumbnailAsync(videoData.Thumbnail, video.id, cancellation);
             }
@@ -256,18 +288,19 @@ public class FC2Service(
             {
                 video.Status = VideoStatus.Archived;
                 video.Note = null;
-                logger.LogInformation("Correct video status to {status} because archived is exists.", Enum.GetName(typeof(VideoStatus), video.Status));
+                logger.LogInformation("Correct video status to {status} because archived is exists.",
+                    Enum.GetName(typeof(VideoStatus), video.Status));
             }
         }
 
         await videoRepository.AddOrUpdateAsync(video);
-        _unitOfWork_Public.Commit();
+        _unitOfWorkPublic.Commit();
     }
 
     public override async Task UpdateChannelDataAsync(Channel channel, CancellationToken stoppingToken)
     {
         var avatarBlobUrl = channel.Avatar;
-        var info = await GetFC2InfoDataAsync(channel.id, stoppingToken);
+        var info = await GetFc2InfoDataAsync(channel.id, stoppingToken);
         if (null == info)
         {
             logger.LogWarning("Failed to get channel info for {channelId}", channel.id);
@@ -284,6 +317,6 @@ public class FC2Service(
         channel.ChannelName = info.Data.ProfileData.Name;
         channel.Avatar = avatarBlobUrl?.Replace("avatar/", "");
         await _channelRepository.AddOrUpdateAsync(channel);
-        _unitOfWork_Public.Commit();
+        _unitOfWorkPublic.Commit();
     }
 }
