@@ -190,6 +190,7 @@ public partial class DiscordService
 
 #pragma warning disable CS0162 // 偵測到執行不到的程式碼
         // ReSharper disable HeuristicUnreachableCode
+        // skipcq: CS-W1016
         componentBuilder.WithButton(label: "Recorder.moe",
             style: ButtonStyle.Link,
             url: $"https://{_discordOption.FrontEndHost}/channels/{video.ChannelId}/videos/{video.id}",

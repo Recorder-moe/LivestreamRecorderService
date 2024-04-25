@@ -46,12 +46,16 @@ public class KubernetesService : IJobService
 
                 if (!CheckPersistentVolumeClaimExists())
                 {
-                    _logger.LogCritical("PresistentVolumeClaim {name} does not exist!", PersistentVolumeClaimName);
-                    throw new ConfigurationErrorsException($"PresistentVolumeClaim {PersistentVolumeClaimName} does not exist!");
+                    _logger.LogCritical("PersistentVolumeClaim {name} does not exist!", PersistentVolumeClaimName);
+                    throw new ConfigurationErrorsException($"PersistentVolumeClaim {PersistentVolumeClaimName} does not exist!");
                 }
 
                 break;
             }
+            case ServiceName.DockerVolume:
+                throw new NotImplementedException("Docker volume is not implemented yet.");
+            default:
+                throw new InvalidOperationException($"The SharedVolumeService {serviceOption.SharedVolumeService} is not defined.");
         }
     }
 

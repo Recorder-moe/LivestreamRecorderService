@@ -78,7 +78,7 @@ public abstract class PlatformService : IPlatformService
     {
         if (!File.Exists(_ytdlPath) || !File.Exists(_ffmpegPath))
         {
-            (var ytdlPath, var fFmpegPath) = YoutubeDL.WhereIs();
+            var (ytdlPath, fFmpegPath) = YoutubeDL.WhereIs();
             _ytdlPath = ytdlPath ?? throw new ConfigurationErrorsException("Yt-dlp is missing.");
             _ffmpegPath = fFmpegPath ?? throw new ConfigurationErrorsException("FFmpeg is missing.");
         }

@@ -259,6 +259,11 @@ public class YoutubeService(
 
                         video.Thumbnail = await DownloadThumbnailAsync(videoData.Thumbnail, video.id, cancellation);
                         break;
+
+                    // ReSharper disable once RedundantEmptySwitchSection
+                    default:
+                        // Don't modify status.
+                        break;
                 }
 
                 goto case "_live";
