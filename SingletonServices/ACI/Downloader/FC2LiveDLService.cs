@@ -55,18 +55,14 @@ public class Fc2LiveDLService(
             string[] command = useCookiesFile
                 ?
                 [
-                    "dumb-init",
-                    "--",
-                    "sh",
-                    "-c",
+                    "dumb-init", "--",
+                    "sh", "-c",
                     $"fc2-live-dl --latency high --threads 1 -o '{Path.ChangeExtension(filename, ".%(ext)s")}' --log-level trace --cookies /sharedvolume/cookies/{video.ChannelId}.txt 'https://live.fc2.com/{NameHelper.ChangeId.ChannelId.PlatformType(video.ChannelId, Name)}' && mv '/recordings/{filename}' /sharedvolume/"
                 ]
                 :
                 [
-                    "dumb-init",
-                    "--",
-                    "sh",
-                    "-c",
+                    "dumb-init", "--",
+                    "sh", "-c",
                     $"fc2-live-dl --latency high --threads 1 -o '{Path.ChangeExtension(filename, ".%(ext)s")}' --log-level trace 'https://live.fc2.com/{NameHelper.ChangeId.ChannelId.PlatformType(video.ChannelId, Name)}' && mv '/recordings/{filename}' /sharedvolume/"
                 ];
 

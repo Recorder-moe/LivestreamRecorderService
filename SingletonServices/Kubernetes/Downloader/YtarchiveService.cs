@@ -42,15 +42,15 @@ public class YtarchiveService(
             string[] command = useCookiesFile
                 ?
                 [
-                    "sh",
-                    "-c",
-                    $"/bin/ytarchive --add-metadata --merge --retry-frags 30 --thumbnail -o '{filename.Replace(".mp4", "")}' -c /sharedvolume/cookies/{video.ChannelId}.txt '{url}' best && mv *.mp4 /sharedvolume/"
+                    "dumb-init", "--",
+                    "sh", "-c",
+                    $"ytarchive --add-metadata --merge --retry-frags 30 --thumbnail -o '{filename.Replace(".mp4", "")}' -c /sharedvolume/cookies/{video.ChannelId}.txt '{url}' best && mv *.mp4 /sharedvolume/"
                 ]
                 :
                 [
-                    "sh",
-                    "-c",
-                    $"/bin/ytarchive --add-metadata --merge --retry-frags 30 --thumbnail -o '{filename.Replace(".mp4", "")}' '{url}' best && mv *.mp4 /sharedvolume/"
+                    "dumb-init", "--",
+                    "sh", "-c",
+                    $"ytarchive --add-metadata --merge --retry-frags 30 --thumbnail -o '{filename.Replace(".mp4", "")}' '{url}' best && mv *.mp4 /sharedvolume/"
                 ];
 
             return CreateInstanceAsync(
