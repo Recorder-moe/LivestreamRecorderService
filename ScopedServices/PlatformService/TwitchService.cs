@@ -175,6 +175,51 @@ public class TwitchService(
         _unitOfWorkPublic.Commit();
     }
 
-    public override Task UpdateChannelDataAsync(Channel channel, CancellationToken stoppingToken)
-        => throw new InvalidOperationException();
+    public override async Task UpdateChannelDataAsync(Channel channel, CancellationToken stoppingToken)
+    {
+        var channelId = channel.id;
+        var usersResponse = await twitchApi.Helix.Users.GetUsersAsync(logins: [NameHelper.ChangeId.ChannelId.PlatformType(channelId, PlatformName)]);
+        if (null == usersResponse || usersResponse.Users.Length == 0)
+        {
+            logger.LogWarning("Failed to get channel info for {channelId}", channelId);
+            return;
+        }
+
+        var user = usersResponse.Users.First();
+
+        var avatarBlobUrl = await getAvatarBlobUrl() ?? channel.Avatar;
+        var bannerBlobUrl = await getBannerBlobUrl() ?? channel.Banner;
+        var channelName = getChannelName() ?? channel.ChannelName;
+
+        channel = await ChannelRepository.ReloadEntityFromDBAsync(channel) ?? channel;
+        channel.ChannelName = channelName;
+        channel.Avatar = avatarBlobUrl?.Replace("avatar/", "");
+        channel.Banner = bannerBlobUrl?.Replace("banner/", "");
+        await ChannelRepository.AddOrUpdateAsync(channel);
+        _unitOfWorkPublic.Commit();
+        return;
+
+        async Task<string?> getAvatarBlobUrl()
+        {
+            var avatarUrl = user.ProfileImageUrl.Replace("70x70", "300x300");
+            if (string.IsNullOrEmpty(avatarUrl)) return null;
+
+            avatarBlobUrl = await DownloadImageAndUploadToBlobStorageAsync(avatarUrl, $"avatar/{channelId}", stoppingToken);
+
+            return avatarBlobUrl;
+        }
+
+        async Task<string?> getBannerBlobUrl()
+        {
+            var bannerUrl = user.OfflineImageUrl;
+            if (string.IsNullOrEmpty(bannerUrl)) return null;
+
+            bannerBlobUrl = await DownloadImageAndUploadToBlobStorageAsync(bannerUrl, $"banner/{channelId}", stoppingToken);
+
+            return bannerBlobUrl;
+        }
+
+        string? getChannelName()
+            => user.DisplayName;
+    }
 }

@@ -48,8 +48,11 @@ public abstract class PlatformService : IPlatformService
             DiscordService = serviceProvider.GetRequiredService<DiscordService>();
     }
 
+    public Task<List<Channel>> GetAllChannels()
+        => ChannelRepository.GetChannelsBySourceAsync(PlatformName);
+
     public async Task<List<Channel>> GetMonitoringChannels()
-        => (await ChannelRepository.GetChannelsBySourceAsync(PlatformName))
+        => (await GetAllChannels())
            .Where(p => p.Monitoring)
            .ToList();
 
@@ -175,6 +178,11 @@ public abstract class PlatformService : IPlatformService
         if (string.IsNullOrEmpty(url))
         {
             throw new ArgumentNullException(nameof(url));
+        }
+
+        if (!url.StartsWith("http"))
+        {
+            url = "https:" + url;
         }
 
         if (string.IsNullOrEmpty(path))

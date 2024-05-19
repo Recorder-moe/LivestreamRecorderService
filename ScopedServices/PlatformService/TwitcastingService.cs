@@ -400,6 +400,73 @@ public class TwitcastingService(
         _unitOfWorkPublic.Commit();
     }
 
-    public override Task UpdateChannelDataAsync(Channel channel, CancellationToken stoppingToken)
-        => throw new InvalidOperationException();
+    public override async Task UpdateChannelDataAsync(Channel channel, CancellationToken stoppingToken)
+    {
+        var htmlDoc = new HtmlWeb().Load($"https://twitcasting.tv/{NameHelper.ChangeId.ChannelId.PlatformType(channel.id, PlatformName)}");
+        if (null == htmlDoc)
+        {
+            logger.LogWarning("Failed to get channel page for {channelId}", channel.id);
+            return;
+        }
+
+        var avatarBlobUrl = await getAvatarBlobUrl() ?? channel.Avatar;
+        var bannerBlobUrl = await getBannerBlobUrl() ?? channel.Banner;
+        var channelName = getChannelName() ?? channel.ChannelName;
+
+        channel = await ChannelRepository.ReloadEntityFromDBAsync(channel) ?? channel;
+        channel.ChannelName = channelName;
+        channel.Avatar = avatarBlobUrl?.Replace("avatar/", "");
+        channel.Banner = bannerBlobUrl?.Replace("banner/", "");
+        await ChannelRepository.AddOrUpdateAsync(channel);
+        _unitOfWorkPublic.Commit();
+        return;
+
+        async Task<string?> getAvatarBlobUrl()
+        {
+            var avatarImgNode = htmlDoc.DocumentNode.SelectSingleNode("//a[@class='tw-user-nav-icon']/img");
+            var avatarUrl = avatarImgNode?.Attributes["src"]?.Value
+                                         .Replace("_bigger", "");
+
+            if (string.IsNullOrEmpty(avatarUrl)) return null;
+
+            avatarBlobUrl = await DownloadImageAndUploadToBlobStorageAsync(avatarUrl, $"avatar/{channel.id}", stoppingToken);
+
+            return avatarBlobUrl;
+        }
+
+        async Task<string?> getBannerBlobUrl()
+        {
+            var bannerNode = htmlDoc.DocumentNode.SelectSingleNode("//div[@class='tw-user-banner-image']");
+            var bannerUrl = extractBackgroundImageUrl(bannerNode?.GetAttributeValue("style", "") ?? "");
+            if (string.IsNullOrEmpty(bannerUrl)) return null;
+
+            bannerBlobUrl = await DownloadImageAndUploadToBlobStorageAsync(bannerUrl, $"banner/{channel.id}", stoppingToken);
+
+            return bannerBlobUrl;
+        }
+
+        static string? extractBackgroundImageUrl(string style)
+        {
+            if (string.IsNullOrEmpty(style)) return null;
+
+            const string searchString = "background-image: url(";
+            var startIndex = style.IndexOf(searchString, StringComparison.Ordinal);
+            if (startIndex == -1) return null;
+
+            startIndex += searchString.Length;
+            var endIndex = style.IndexOf(')', startIndex);
+            if (endIndex == -1) return null;
+
+            var url = style[startIndex..endIndex].Trim('\'', '\"');
+            if (url.StartsWith("//"))
+            {
+                url = "https:" + url;
+            }
+
+            return url;
+        }
+
+        string? getChannelName()
+            => htmlDoc.DocumentNode.SelectSingleNode("//span[@class='tw-user-nav-name']").InnerText;
+    }
 }

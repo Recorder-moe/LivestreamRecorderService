@@ -18,6 +18,7 @@ public interface IPlatformService
 
     Task<YtdlpVideoData?> GetVideoInfoByYtdlpAsync(string url, CancellationToken cancellation = default);
     Task UpdateChannelDataAsync(Channel channel, CancellationToken stoppingToken);
+    Task<List<Channel>> GetAllChannels();
     Task<List<Channel>> GetMonitoringChannels();
 
     /// <summary>
