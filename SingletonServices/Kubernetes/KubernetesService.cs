@@ -14,49 +14,18 @@ public class KubernetesService : IJobService
 {
     private readonly ILogger<KubernetesService> _logger;
     private readonly k8s.Kubernetes _client;
-    private readonly AzureOption _azureOption;
-    internal const string AzureFileShareSecretName = "azure-fileshare-secret";
-    internal static string PersistentVolumeClaimName = "";
 
     internal static string KubernetesNamespace { get; set; } = "recordermoe";
 
     public KubernetesService(
         ILogger<KubernetesService> logger,
         k8s.Kubernetes kubernetes,
-        IOptions<AzureOption> azureOptions,
-        IOptions<ServiceOption> serviceOptions,
         IOptions<KubernetesOption> options)
     {
         _logger = logger;
         _client = kubernetes;
-        _azureOption = azureOptions.Value;
-        ServiceOption serviceOption = serviceOptions.Value;
-
         KubernetesNamespace = options.Value.Namespace ?? KubernetesNamespace;
         EnsureNamespaceExists(KubernetesNamespace);
-
-        switch (serviceOption.SharedVolumeService)
-        {
-            case ServiceName.AzureFileShare when !CheckSecretExists():
-                CreateSecret();
-                break;
-            case ServiceName.CustomPVC:
-            {
-                PersistentVolumeClaimName = options.Value.PVCName!;
-
-                if (!CheckPersistentVolumeClaimExists())
-                {
-                    _logger.LogCritical("PersistentVolumeClaim {name} does not exist!", PersistentVolumeClaimName);
-                    throw new ConfigurationErrorsException($"PersistentVolumeClaim {PersistentVolumeClaimName} does not exist!");
-                }
-
-                break;
-            }
-            case ServiceName.DockerVolume:
-                throw new NotImplementedException("Docker volume is not implemented yet.");
-            default:
-                throw new InvalidOperationException($"The SharedVolumeService {serviceOption.SharedVolumeService} is not defined.");
-        }
     }
 
     public Task<bool> IsJobSucceededAsync(Video video, CancellationToken cancellation = default)
@@ -73,8 +42,7 @@ public class KubernetesService : IJobService
     public async Task<bool> IsJobFailedAsync(string keyword, CancellationToken cancellation = default)
         => (await GetJobsByKeywordAsync(keyword, cancellation))
             .Any(job => (job.Status.Active is null or 0)
-                        && job.Status.Failed > 0
-                        && (job.Status.Succeeded is null or 0));
+                        && job.Status.Failed > 0);
 
     public async Task RemoveCompletedJobsAsync(Video video, CancellationToken cancellation = default)
     {
@@ -115,34 +83,6 @@ public class KubernetesService : IJobService
             _logger.LogInformation("K8s job {jobName} {videoId} removed", jobName, video.id);
         }
     }
-
-    private bool CheckSecretExists()
-        => _client.ListNamespacedSecret(KubernetesNamespace)
-                  .Items
-                  .Any(secret => secret.Metadata.Name == AzureFileShareSecretName);
-
-    private void CreateSecret()
-    {
-        var secret = new V1Secret
-        {
-            Metadata = new V1ObjectMeta
-            {
-                Name = AzureFileShareSecretName
-            },
-            StringData = new Dictionary<string, string>
-            {
-                ["azurestorageaccountname"] = _azureOption.FileShare!.StorageAccountName,
-                ["azurestorageaccountkey"] = _azureOption.FileShare!.StorageAccountKey
-            }
-        };
-
-        _client.CreateNamespacedSecret(secret, KubernetesNamespace);
-    }
-
-    private bool CheckPersistentVolumeClaimExists()
-        => _client.ListNamespacedPersistentVolumeClaim(KubernetesNamespace)
-                  .Items
-                  .Any(p => p.Name() == PersistentVolumeClaimName);
 
     private async Task<List<V1Job>> GetJobsByKeywordAsync(string keyword, CancellationToken cancellation)
     {

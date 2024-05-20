@@ -1,6 +1,7 @@
 ﻿using k8s.Models;
 using LivestreamRecorder.DB.Models;
 using LivestreamRecorderService.Helper;
+using LivestreamRecorderService.Interfaces;
 using LivestreamRecorderService.Interfaces.Job.Downloader;
 using LivestreamRecorderService.Models.Options;
 using Microsoft.Extensions.Options;
@@ -10,65 +11,64 @@ namespace LivestreamRecorderService.SingletonServices.Kubernetes.Downloader;
 public class Fc2LiveDLService(
     ILogger<Fc2LiveDLService> logger,
     k8s.Kubernetes kubernetes,
-    IOptions<ServiceOption> serviceOptions,
-    IOptions<AzureOption> azureOptions) : KubernetesServiceBase(logger, kubernetes, serviceOptions, azureOptions), IFc2LiveDLService
+    IUploaderService uploaderService) : KubernetesServiceBase(logger,
+                                                              kubernetes,
+                                                              uploaderService), IFc2LiveDLService
 {
     public override string Name => IFc2LiveDLService.Name;
 
     protected override Task<V1Job> CreateNewJobAsync(string _,
-        string instanceName,
-        Video video,
-        bool useCookiesFile = false,
-        CancellationToken cancellation = default)
+                                                     string instanceName,
+                                                     Video video,
+                                                     bool useCookiesFile = false,
+                                                     CancellationToken cancellation = default)
     {
+        const string mountPath = "/recordings";
+        string fileName = NameHelper.GetFileName(video, IFc2LiveDLService.Name);
+        video.Filename = fileName;
+        string[] args = useCookiesFile
+            ?
+            [
+                "--latency", "high",
+                "--threads", "1",
+                "-o", Path.ChangeExtension(fileName, ".%(ext)s"),
+                "--log-level", "trace",
+                "--cookies", $"{mountPath}/cookies/{video.ChannelId}.txt",
+                $"https://live.fc2.com/{NameHelper.ChangeId.ChannelId.PlatformType(video.ChannelId, Name)}"
+            ]
+            :
+            [
+                "--latency", "high",
+                "--threads", "1",
+                "-o", Path.ChangeExtension(fileName, ".%(ext)s"),
+                "--log-level", "trace",
+                $"https://live.fc2.com/{NameHelper.ChangeId.ChannelId.PlatformType(video.ChannelId, Name)}"
+            ];
+
         try
         {
-            return doWithImage("ghcr.io/recorder-moe/fc2-live-dl:latest");
+            return CreateInstanceAsync(deploymentName: instanceName,
+                                       containerName: instanceName,
+                                       imageName: "fc2-live-dl",
+                                       args: args,
+                                       fileName: fileName,
+                                       mountPath: mountPath,
+                                       fallback: false,
+                                       cancellation: cancellation);
         }
         // skipcq: CS-R1008
         catch (Exception)
         {
             // Use DockerHub as fallback
             logger.LogWarning("Failed once, try docker hub as fallback.");
-            return doWithImage("recordermoe/fc2-live-dl:latest");
-        }
-
-        Task<V1Job> doWithImage(string imageName)
-        {
-            string filename = NameHelper.GetFileName(video, IFc2LiveDLService.Name);
-            video.Filename = filename;
-            string[] command = useCookiesFile
-                ?
-                [
-                    "dumb-init", "--",
-                    "sh", "-c",
-                    $"fc2-live-dl --latency high --threads 1 -o '{Path.ChangeExtension(filename, ".%(ext)s")}' --log-level trace --cookies /sharedvolume/cookies/{video.ChannelId}.txt 'https://live.fc2.com/{NameHelper.ChangeId.ChannelId.PlatformType(video.ChannelId, Name)}' && mv '/recordings/{filename}' /sharedvolume/"
-                ]
-                :
-                [
-                    "dumb-init", "--",
-                    "sh", "-c",
-                    $"fc2-live-dl --latency high --threads 1 -o '{Path.ChangeExtension(filename, ".%(ext)s")}' --log-level trace 'https://live.fc2.com/{NameHelper.ChangeId.ChannelId.PlatformType(video.ChannelId, Name)}' && mv '/recordings/{filename}' /sharedvolume/"
-                ];
-
-            return CreateInstanceAsync(
-                parameters: new
-                {
-                    dockerImageName = new
-                    {
-                        value = imageName
-                    },
-                    containerName = new
-                    {
-                        value = instanceName
-                    },
-                    commandOverrideArray = new
-                    {
-                        value = command
-                    },
-                },
-                deploymentName: instanceName,
-                cancellation: cancellation);
+            return CreateInstanceAsync(deploymentName: instanceName,
+                                       containerName: instanceName,
+                                       imageName: "fc2-live-dl",
+                                       args: args,
+                                       fileName: fileName,
+                                       mountPath: mountPath,
+                                       fallback: true,
+                                       cancellation: cancellation);
         }
     }
 }
