@@ -1,0 +1,82 @@
+name: docker_publish_dev
+
+# Controls when the action will run.
+on:
+  # Triggers the workflow on push or pull request events but only for the master branch
+  push:
+    branches:
+      - 'dev'
+
+  # Allows you to run this workflow manually from the Actions tab
+  workflow_dispatch:
+
+# A workflow run is made up of one or more jobs that can run sequentially or in parallel
+jobs:
+  # This workflow contains a single job called "build"
+  build-and-push:
+    # The type of runner that the job will run on
+    runs-on: ubuntu-latest
+
+    # Steps represent a sequence of tasks that will be executed as part of the job
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v3
+        with:
+          submodules: true
+
+      - name: Docker meta
+        id: meta_ApacheCouchDB
+        uses: docker/metadata-action@v4
+        with:
+          images: ${{ secrets.DOCKERHUB_ORGANIZATION_NAME }}/${{ github.event.repository.name }},ghcr.io/${{ github.repository }}
+          flavor: |
+            latest=${{ github.ref == format('refs/heads/{0}', github.event.repository.default_branch) }}
+          tags: |
+            type=raw,value=ApacheCouchDB_dev
+
+      - name: Docker meta
+        id: meta_AzureCosmosDB
+        uses: docker/metadata-action@v4
+        with:
+          images: ${{ secrets.DOCKERHUB_ORGANIZATION_NAME }}/${{ github.event.repository.name }},ghcr.io/${{ github.repository }}
+          tags: |
+            type=raw,value=AzureCosmosDB_dev
+
+      # Create a Access Token and save it as as Actions secret
+      # https://hub.docker.com/settings/security
+      # DOCKERHUB_USERNAME
+      # DOCKERHUB_TOKEN
+      - name: Login to DockerHub
+        uses: docker/login-action@v2
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+
+      # Create a Access Token with `read:packages` and `write:packages` scopes
+      # CR_PAT
+      - name: Login to GitHub Container Registry
+        uses: docker/login-action@v2
+        with:
+          registry: ghcr.io
+          username: ${{ github.repository_owner }}
+          password: ${{ secrets.CR_PAT }}
+
+      - name: Build and push
+        uses: docker/build-push-action@v4
+        with:
+          context: .
+          push: true
+          tags: ${{ steps.meta_ApacheCouchDB.outputs.tags }}
+          labels: ${{ steps.meta_ApacheCouchDB.outputs.labels }}
+          build-args: |
+            BUILD_CONFIGURATION=ApacheCouchDB_Release
+
+      - name: Build and push
+        uses: docker/build-push-action@v4
+        with:
+          context: .
+          push: true
+          tags: ${{ steps.meta_AzureCosmosDB.outputs.tags }}
+          labels: ${{ steps.meta_AzureCosmosDB.outputs.labels }}
+          build-args: |
+            BUILD_CONFIGURATION=AzureCosmosDB_Release
