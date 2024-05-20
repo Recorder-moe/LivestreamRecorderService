@@ -38,19 +38,10 @@ public class RecordWorker(
                 await recordService.CreateStartRecordJobAsync(videoService, channelService, stoppingToken);
                 await recordService.CreateStartDownloadJobAsync(videoService, channelService, stoppingToken);
 
-                List<Video> uploaded = await recordService.MonitorUploadedVideosAsync(videoService, stoppingToken);
-                foreach (Video? video in uploaded)
-                {
-                    await recordService.ProcessUploadedVideoAsync(videoService, channelService, video, stoppingToken);
-
-                    // Avoid concurrency requests
-                    await Task.Delay(TimeSpan.FromSeconds(10), stoppingToken);
-                }
-
                 List<Video> finished = await recordService.MonitorRecordingDownloadingVideosAsync(videoService, stoppingToken);
                 foreach (Video? video in finished)
                 {
-                    await recordService.PcocessFinishedVideoAsync(videoService, channelService, video, stoppingToken);
+                    await recordService.ProcessFinishedVideoAsync(videoService, channelService, video, stoppingToken);
 
                     // Avoid concurrency requests
                     await Task.Delay(TimeSpan.FromSeconds(10), stoppingToken);

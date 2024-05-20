@@ -297,8 +297,8 @@ public class YoutubeService(
 
                     video.Status = VideoStatus.Skipped;
                     logger.LogInformation("Change video {videoId} status to {videoStatus}",
-                        video.id,
-                        Enum.GetName(typeof(VideoStatus), video.Status));
+                                          video.id,
+                                          Enum.GetName(typeof(VideoStatus), video.Status));
                 }
                 else
                 {
@@ -316,8 +316,8 @@ public class YoutubeService(
                             video.Status = VideoStatus.Expired;
                             video.Note = "Video expired because it is an old video.";
                             logger.LogInformation("Change video {videoId} status to {videoStatus}",
-                                video.id,
-                                Enum.GetName(typeof(VideoStatus), video.Status));
+                                                  video.id,
+                                                  Enum.GetName(typeof(VideoStatus), video.Status));
 
                             video.Thumbnail = await DownloadThumbnailAsync(videoData.Thumbnail, video.id, cancellation);
                             break;
@@ -328,8 +328,8 @@ public class YoutubeService(
                         case VideoStatus.Missing:
                             video.Status = VideoStatus.WaitingToDownload;
                             logger.LogInformation("Change video {videoId} status to {videoStatus}",
-                                video.id,
-                                Enum.GetName(typeof(VideoStatus), video.Status));
+                                                  video.id,
+                                                  Enum.GetName(typeof(VideoStatus), video.Status));
 
                             video.Thumbnail = await DownloadThumbnailAsync(videoData.Thumbnail, video.id, cancellation);
                             break;
@@ -338,7 +338,6 @@ public class YoutubeService(
                         case VideoStatus.WaitingToDownload:
                         case VideoStatus.Recording:
                         case VideoStatus.Downloading:
-                        case VideoStatus.Uploading:
                         case VideoStatus.Archived:
                         case VideoStatus.PermanentArchived:
                         case VideoStatus.Expired:

@@ -85,12 +85,6 @@ public class Fc2Service(
                     case VideoStatus.Skipped:
                         logger.LogTrace("{videoId} is rejected for recording.", video.id);
                         return;
-                    case VideoStatus.Uploading:
-                        logger.LogTrace(
-                            "{videoId} is uploading. We cannot change the video state during uploading. The status will be corrected after it is archived.",
-                            video.id);
-
-                        return;
                     case VideoStatus.Archived:
                     case VideoStatus.PermanentArchived:
                         logger.LogWarning(

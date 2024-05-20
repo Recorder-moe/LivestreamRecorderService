@@ -14,10 +14,6 @@ public class ServiceOption
 
     [Required]
     [JsonConverter(typeof(JsonStringEnumConverter<ServiceName>))]
-    public ServiceName SharedVolumeService { get; set; } = ServiceName.AzureFileShare;
-
-    [Required]
-    [JsonConverter(typeof(JsonStringEnumConverter<ServiceName>))]
     public ServiceName StorageService { get; set; } = ServiceName.AzureBlobStorage;
 
     [Required]

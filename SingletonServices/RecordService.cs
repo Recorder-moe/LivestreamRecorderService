@@ -32,13 +32,13 @@ public class RecordService
         IOptions<DiscordOption> discordOptions,
         IServiceProvider serviceProvider)
     {
-        this._logger = logger;
-        this._jobService = jobService;
-        this._ytarchiveService = ytarchiveService;
-        this._ytdlpService = ytdlpService;
-        this._twitcastingRecorderService = twitcastingRecorderService;
-        this._streamlinkService = streamlinkService;
-        this._fC2LiveDLService = fC2LiveDLService;
+        _logger = logger;
+        _jobService = jobService;
+        _ytarchiveService = ytarchiveService;
+        _ytdlpService = ytdlpService;
+        _twitcastingRecorderService = twitcastingRecorderService;
+        _streamlinkService = streamlinkService;
+        _fC2LiveDLService = fC2LiveDLService;
         if (discordOptions.Value.Enabled)
             _discordService = serviceProvider.GetRequiredService<DiscordService>();
     }
@@ -275,87 +275,45 @@ public class RecordService
         {
             using IDisposable _ = LogContext.PushProperty("videoId", video.id);
 
-            bool successed = await _jobService.IsJobSucceededAsync(video, cancellation);
-            if (successed)
-            {
-                _logger.LogInformation("Video recording finish {videoId}", video.id);
-                result.Add(video);
-            }
+            bool succeed = await _jobService.IsJobSucceededAsync(video, cancellation);
+            if (!succeed) continue;
+
+            _logger.LogInformation("Video recording finish {videoId}", video.id);
+            result.Add(video);
         }
 
         return result;
     }
 
-    /// <summary>
-    /// Check recordings status and return finished videos
-    /// </summary>
-    /// <param name="videoService"></param>
-    /// <param name="cancellation"></param>
-    /// <returns>Videos that finish recording.</returns>
-    public async Task<List<Video>> MonitorUploadedVideosAsync(VideoService videoService, CancellationToken cancellation = default)
-    {
-        var result = new List<Video>();
-        List<Video> videos = videoService.GetVideosByStatus(VideoStatus.Uploading);
-        foreach (Video video in videos)
-        {
-            using IDisposable _ = LogContext.PushProperty("videoId", video.id);
-
-            bool successed = await _jobService.IsJobSucceededAsync(video, cancellation);
-            if (successed)
-            {
-                _logger.LogInformation("Video uploaded finish {videoId}", video.id);
-                result.Add(video);
-            }
-        }
-
-        return result;
-    }
-
-    public async Task PcocessFinishedVideoAsync(VideoService videoService, ChannelService channelService, Video video,
-        CancellationToken stoppingToken = default)
+    public async Task ProcessFinishedVideoAsync(VideoService videoService,
+                                                ChannelService channelService,
+                                                Video video,
+                                                CancellationToken stoppingToken = default)
     {
         using IDisposable __ = LogContext.PushProperty("videoId", video.id);
 
         await channelService.UpdateChannelLatestVideoAsync(video);
 
-        await videoService.UpdateVideoArchivedTimeAsync(video);
-
-        // Fire and forget
-        _ = videoService.TransferVideoFromSharedVolumeToStorageAsync(video, stoppingToken).ConfigureAwait(false);
-
         try
         {
             await _jobService.RemoveCompletedJobsAsync(video, stoppingToken);
+
+            await videoService.UpdateVideoStatusAsync(video, VideoStatus.Archived);
+            _logger.LogInformation("Video {videoId} is successfully uploaded to Storage.", video.id);
+            await videoService.UpdateVideoArchivedTimeAsync(video);
+
+            if (_discordService != null)
+            {
+                await _discordService.SendArchivedMessageAsync(
+                    video,
+                    await channelService.GetByChannelIdAndSourceAsync(video.ChannelId, video.Source));
+            }
         }
         catch (Exception e)
         {
             await videoService.UpdateVideoStatusAsync(video, VideoStatus.Error);
             await videoService.UpdateVideoNoteAsync(video, "This recording is FAILED! Please contact admin if you see this message.");
             _logger.LogError(e, "Recording FAILED: {videoId}", video.id);
-            return;
-        }
-    }
-
-    public async Task ProcessUploadedVideoAsync(VideoService videoService, ChannelService channelService, Video video,
-        CancellationToken stoppingToken = default)
-    {
-        using IDisposable _ = LogContext.PushProperty("videoId", video.id);
-
-        if (_discordService != null)
-            await _discordService.SendArchivedMessageAsync(video, await channelService.GetByChannelIdAndSourceAsync(video.ChannelId, video.Source));
-
-        _logger.LogInformation("Video {videoId} is successfully uploaded to Storage.", video.id);
-        await videoService.UpdateVideoStatusAsync(video, VideoStatus.Archived);
-
-        try
-        {
-            await _jobService.RemoveCompletedJobsAsync(video, stoppingToken);
-        }
-        catch (Exception e)
-        {
-            await videoService.UpdateVideoStatusAsync(video, VideoStatus.Error);
-            await videoService.UpdateVideoNoteAsync(video, "This recording is FAILED! Please contact admin if you see this message.");
-            _logger.LogError(e, "Uploading FAILED: {videoId}", video.id);
             return;
         }
     }
