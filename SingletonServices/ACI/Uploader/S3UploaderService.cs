@@ -85,7 +85,6 @@ public class S3UploaderService(
                     }
                 },
                 deploymentName: instanceName,
-                templateName: "ACI_env.json",
                 cancellation: cancellation);
         }
     }

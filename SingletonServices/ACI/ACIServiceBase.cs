@@ -1,12 +1,13 @@
 ﻿using System.Globalization;
 using Azure;
 using Azure.ResourceManager;
-using Azure.ResourceManager.ContainerInstance;
 using Azure.ResourceManager.Resources;
 using Azure.ResourceManager.Resources.Models;
 using LivestreamRecorder.DB.Models;
 using LivestreamRecorderService.Helper;
+using LivestreamRecorderService.Interfaces;
 using LivestreamRecorderService.Interfaces.Job;
+using LivestreamRecorderService.Models;
 using LivestreamRecorderService.Models.Options;
 using Microsoft.Extensions.Options;
 
@@ -15,11 +16,15 @@ namespace LivestreamRecorderService.SingletonServices.ACI;
 public abstract class AciServiceBase(
     ILogger<AciServiceBase> logger,
     ArmClient armClient,
-    IOptions<AzureOption> options) : IJobServiceBase
+    IOptions<AzureOption> options,
+    IUploaderService uploaderService) : IJobServiceBase
 {
     private readonly string _resourceGroupName = options.Value.ContainerInstance!.ResourceGroupName;
 
     public abstract string Name { get; }
+
+    private const string DefaultRegistry = "ghcr.io/recorder-moe/";
+    private const string FallbackRegistry = "recordermoe/";
 
     public virtual async Task CreateJobAsync(Video video,
                                              bool useCookiesFile = false,
@@ -36,61 +41,99 @@ public abstract class AciServiceBase(
 
         logger.LogInformation("Start new ACI job for {videoId} {name}.", videoId, jobName);
         await CreateNewJobAsync(id: videoId,
-            jobName: jobName,
-            video: video,
-            useCookiesFile: useCookiesFile,
-            cancellation: cancellation);
+                                jobName: jobName,
+                                video: video,
+                                useCookiesFile: useCookiesFile,
+                                cancellation: cancellation);
     }
 
-    protected async Task InitJobWithChannelNameAsync(string videoId,
-        Video video,
-        bool useCookiesFile = false,
-        CancellationToken cancellation = default)
+    private async Task<ResourceGroupResource> GetResourceGroupAsync(CancellationToken cancellation = default)
     {
-        // ACI部署上需要時間，啟動已存在的Instance較省時
-        // 同時需注意 BUG#97 的狀況，在「已啟動」的時候部署新的Instance，在「已停止」時直接啟動舊的Instance
-        // 使用的ChannelId來做為預設InstanceName
-        string instanceNameChannelId = GetInstanceName(video.ChannelId);
-        string instanceNameVideoId = GetInstanceName(videoId);
-
-        GenericResource? job = await GetJobByKeywordAsync(instanceNameChannelId, cancellation);
-        if (null == job || !job.HasData)
-        {
-            logger.LogWarning("Does not get ACI instance for {videoId} {name}. A new instance will now be created.", videoId, instanceNameChannelId);
-            // 啟動新的Channel Instance
-            await CreateNewJobAsync(id: videoId,
-                jobName: instanceNameChannelId,
-                video: video,
-                useCookiesFile: useCookiesFile,
-                cancellation: cancellation);
-
-            return;
-        }
-
-        switch (job.Data.ProvisioningState)
-        {
-            case "Succeeded":
-            case "Failed":
-            case "Stopped":
-                // 啟動舊的Channel Instance
-                await StartOldJobAsync(job: job,
-                    video: video,
-                    useCookiesFile: useCookiesFile,
-                    cancellation: cancellation);
-
-                break;
-
-            default:
-                // 啟動新的Video Instance
-                await CreateNewJobAsync(id: string.Empty,
-                    jobName: instanceNameVideoId,
-                    video: video,
-                    useCookiesFile: useCookiesFile,
-                    cancellation: cancellation);
-
-                break;
-        }
+        SubscriptionResource? subscriptionResource = await armClient.GetDefaultSubscriptionAsync(cancellation);
+        return await subscriptionResource.GetResourceGroupAsync(_resourceGroupName, cancellation);
     }
+
+    protected async Task<ArmOperation<ArmDeploymentResource>> CreateResourceAsync(string deploymentName,
+                                                                                  string containerName,
+                                                                                  string imageName,
+                                                                                  string[] args,
+                                                                                  string fileName,
+                                                                                  IList<EnvironmentVariable>? environment = null,
+                                                                                  string mountPath = "/sharedvolume",
+                                                                                  bool fallback = false,
+                                                                                  CancellationToken cancellation = default)
+    {
+        ArmDeploymentCollection armDeploymentCollection =
+            (await GetResourceGroupAsync(cancellation))
+            .GetArmDeployments();
+
+        string templateContent = (await File.ReadAllTextAsync(Path.Combine("ARMTemplate", "ACI.json"), cancellation)).TrimEnd();
+
+        dynamic parameters = new
+        {
+            dockerImageName = new
+            {
+                value = fallback switch
+                {
+                    false => DefaultRegistry + imageName,
+                    true => FallbackRegistry + imageName
+                },
+            },
+            uploaderImageName = new
+            {
+                value = fallback switch
+                {
+                    false => DefaultRegistry + uploaderService.Image,
+                    true => FallbackRegistry + uploaderService.Image
+                },
+            },
+            containerName = new
+            {
+                value = containerName
+            },
+            commandOverrideArray = new
+            {
+                value = args
+            },
+            mountPath = new
+            {
+                value = mountPath
+            },
+            mountPathAndFileName = new
+            {
+                value = $"{mountPath}/{fileName.Replace(".mp4", "")}"
+            },
+            environmentVariables = new
+            {
+                value = environment
+            }
+        };
+
+        return await armDeploymentCollection.CreateOrUpdateAsync(
+            waitUntil: WaitUntil.Started,
+            deploymentName: deploymentName,
+            content: new ArmDeploymentContent(
+                new ArmDeploymentProperties(ArmDeploymentMode.Incremental)
+                {
+                    Template = BinaryData.FromString(templateContent),
+                    Parameters = BinaryData.FromObjectAsJson(parameters),
+                }),
+            cancellationToken: cancellation);
+    }
+
+    private async Task<GenericResource?> GetJobByKeywordAsync(string keyword,
+                                                              CancellationToken cancellation = default)
+        => (await GetResourceGroupAsync(cancellation))
+           // ReSharper disable StringLiteralTypo
+           .GetGenericResources(filter: $"substringof('{keyword}', name) and resourceType eq 'microsoft.containerinstance/containergroups'",
+                                expand: "provisioningState",
+                                top: 1,
+                                cancellationToken: cancellation)
+           // ReSharper restore StringLiteralTypo
+           .FirstOrDefault();
+
+    public string GetInstanceName(string videoId)
+        => (Name + NameHelper.GetInstanceName(videoId)).ToLower(CultureInfo.InvariantCulture);
 
     // Must be overridden.
     protected abstract Task<ArmOperation<ArmDeploymentResource>> CreateNewJobAsync(
@@ -99,81 +142,4 @@ public abstract class AciServiceBase(
         Video video,
         bool useCookiesFile = false,
         CancellationToken cancellation = default);
-
-    protected async Task<ArmOperation<ArmDeploymentResource>> CreateResourceAsync(
-        dynamic parameters,
-        string deploymentName,
-        string? templateName = null,
-        CancellationToken cancellation = default)
-    {
-        ResourceGroupResource resourceGroupResource = await GetResourceGroupAsync(cancellation);
-        ArmDeploymentCollection? armDeploymentCollection = resourceGroupResource.GetArmDeployments();
-        templateName ??= "ACI.json";
-        string templateContent = (await File.ReadAllTextAsync(Path.Combine("ARMTemplate", templateName), cancellation)).TrimEnd();
-        var deploymentContent = new ArmDeploymentContent(new ArmDeploymentProperties(ArmDeploymentMode.Incremental)
-        {
-            Template = BinaryData.FromString(templateContent),
-            Parameters = BinaryData.FromObjectAsJson(parameters),
-        });
-
-        return await armDeploymentCollection.CreateOrUpdateAsync(waitUntil: WaitUntil.Started,
-            deploymentName: $"{deploymentName}",
-            content: deploymentContent,
-            cancellationToken: cancellation);
-    }
-
-    private async Task<GenericResource?> GetJobByKeywordAsync(string keyword, CancellationToken cancellation = default)
-    {
-        ResourceGroupResource resourceGroupResource = await GetResourceGroupAsync(cancellation);
-        return resourceGroupResource.GetGenericResources(
-                                        // ReSharper disable once StringLiteralTypo
-                                        filter: $"substringof('{keyword}', name) and resourceType eq 'microsoft.containerinstance/containergroups'",
-                                        expand: "provisioningState",
-                                        top: 1,
-                                        cancellationToken: cancellation)
-                                    .FirstOrDefault();
-    }
-
-    public string GetInstanceName(string videoId)
-        => (Name + NameHelper.GetInstanceName(videoId)).ToLower(CultureInfo.InvariantCulture);
-
-    private async Task StartOldJobAsync(GenericResource job,
-        Video video,
-        int retry = 0,
-        bool useCookiesFile = false,
-        CancellationToken cancellation = default)
-    {
-        if (retry > 3)
-        {
-            logger.LogError("Retry too many times for {videoId} {ACIName}, create new resource.", video.id, job.Id);
-            await CreateNewJobAsync(id: video.id,
-                jobName: GetInstanceName(video.id),
-                video: video,
-                useCookiesFile: useCookiesFile,
-                cancellation: cancellation);
-
-            return;
-        }
-
-        try
-        {
-            logger.LogInformation("Detect ACI {ACIName} ProvisioningState as {ProvisioningState}", job.Id, job.Data.ProvisioningState);
-            await armClient.GetContainerGroupResource(job.Id).StartAsync(WaitUntil.Started, cancellation);
-        }
-        catch (RequestFailedException e)
-        {
-            logger.LogWarning(e, "Start ACI {ACIName} failed, retry {retry}", job.Id, ++retry);
-            await StartOldJobAsync(job: job,
-                video: video,
-                retry: retry,
-                useCookiesFile: useCookiesFile,
-                cancellation: cancellation);
-        }
-    }
-
-    private async Task<ResourceGroupResource> GetResourceGroupAsync(CancellationToken cancellation = default)
-    {
-        SubscriptionResource? subscriptionResource = await armClient.GetDefaultSubscriptionAsync(cancellation);
-        return await subscriptionResource.GetResourceGroupAsync(_resourceGroupName, cancellation);
-    }
 }

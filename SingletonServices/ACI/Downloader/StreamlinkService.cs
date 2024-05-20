@@ -25,9 +25,9 @@ public class StreamlinkService(
         string filename = NameHelper.GetFileName(video, IStreamlinkService.Name);
         video.Filename = filename;
         return InitJobWithChannelNameAsync(videoId: videoId,
-            video: video,
-            useCookiesFile: useCookiesFile,
-            cancellation: cancellation);
+                                           video: video,
+                                           useCookiesFile: useCookiesFile,
+                                           cancellation: cancellation);
     }
 
     protected override Task<ArmOperation<ArmDeploymentResource>> CreateNewJobAsync(

@@ -25,9 +25,9 @@ public class Fc2LiveDLService(
         string filename = NameHelper.GetFileName(video, IFc2LiveDLService.Name);
         video.Filename = filename;
         return InitJobWithChannelNameAsync(videoId: videoId,
-            video: video,
-            useCookiesFile: useCookiesFile,
-            cancellation: cancellation);
+                                           video: video,
+                                           useCookiesFile: useCookiesFile,
+                                           cancellation: cancellation);
     }
 
     protected override Task<ArmOperation<ArmDeploymentResource>> CreateNewJobAsync(

@@ -81,7 +81,6 @@ public class AzureUploaderService(
                     }
                 },
                 deploymentName: instanceName,
-                templateName: "ACI_env.json",
                 cancellation: cancellation);
         }
     }

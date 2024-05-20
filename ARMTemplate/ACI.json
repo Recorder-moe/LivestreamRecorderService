@@ -5,24 +5,25 @@
         "dockerImageName": {
             "type": "string"
         },
+        "uploaderImageName": {
+            "type": "string"
+        },
         "containerName": {
             "type": "string"
         },
         "commandOverrideArray": {
             "type": "array"
         },
-        "fileshareVolumeName": {
-            "type": "string"
-        },
-        "storageAccountName": {
-            "type": "string"
-        },
-        "storageAccountKey": {
-            "type": "securestring"
-        },
         "mountPath": {
             "type": "string",
             "defaultValue": "/sharedvolume"
+        },
+        "mountPathAndFileName": {
+            "type": "string",
+            "defaultValue": "/sharedvolume/$(newGuid())"
+        },
+        "environmentVariables": {
+            "type": "array"
         }
     },
     "resources": [
@@ -34,17 +35,11 @@
             "type": "Microsoft.ContainerInstance/containerGroups",
             "zones": [],
             "properties": {
-                "containers": [
+                "initContainers": [
                     {
                         "name": "[parameters('containerName')]",
                         "properties": {
                             "image": "[parameters('dockerImageName')]",
-                            "resources": {
-                                "requests": {
-                                    "cpu": "1",
-                                    "memoryInGB": "1"
-                                }
-                            },
                             "command": "[parameters('commandOverrideArray')]",
                             "ports": [
                                 {
@@ -58,6 +53,7 @@
                                     "mountPath": "[parameters('mountPath')]"
                                 }
                             ],
+                            "environmentVariables": "[parameters('environmentVariables')]",
                             "securityContext": {
                                 "runAsUser": 1001,
                                 "runAsGroup": 0
@@ -65,7 +61,39 @@
                         }
                     }
                 ],
-                "restartPolicy": "Never",
+                "containers": [
+                    {
+                        "name": "uploader",
+                        "properties": {
+                            "image": "[parameters('uploaderImageName')]",
+                            "resources": {
+                                "requests": {
+                                    "cpu": 1,
+                                    "memoryInGB": "1"
+                                }
+                            },
+                            "command": "[parameters('mountPathAndFileName')]",
+                            "ports": [
+                                {
+                                    "port": 80,
+                                    "protocol": "TCP"
+                                }
+                            ],
+                            "volumeMounts": [
+                                {
+                                    "name": "sharedvolume",
+                                    "mountPath": "[parameters('mountPath')]"
+                                }
+                            ],
+                            "environmentVariables": "[parameters('environmentVariables')]",
+                            "securityContext": {
+                                "runAsUser": 1001,
+                                "runAsGroup": 0
+                            }
+                        }
+                    }
+                ],
+                "restartPolicy": "OnFailure",
                 "osType": "Linux",
                 "ipAddress": {
                     "type": "Public",
@@ -79,11 +107,7 @@
                 "volumes": [
                     {
                         "name": "sharedvolume",
-                        "azureFile": {
-                            "shareName": "[parameters('fileshareVolumeName')]",
-                            "storageAccountName": "[parameters('storageAccountName')]",
-                            "storageAccountKey": "[parameters('storageAccountKey')]"
-                        }
+                        "emptyDir": {}
                     }
                 ]
             }

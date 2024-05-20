@@ -68,9 +68,6 @@
     <ProjectReference Include="LivestreamRecorder.DB\LivestreamRecorder.DB.csproj" />
   </ItemGroup>
   <ItemGroup>
-    <Content Update="ARMTemplate\ACI_env.json">
-      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
-    </Content>
     <Content Update="ARMTemplate\ACI.json">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </Content>
