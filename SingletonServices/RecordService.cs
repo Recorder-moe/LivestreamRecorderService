@@ -13,24 +13,24 @@ namespace LivestreamRecorderService.SingletonServices;
 
 public class RecordService
 {
-    private readonly ILogger<RecordWorker> _logger;
+    private readonly DiscordService? _discordService;
+    private readonly IFc2LiveDLService _fC2LiveDLService;
     private readonly IJobService _jobService;
+    private readonly ILogger<RecordWorker> _logger;
+    private readonly IStreamlinkService _streamlinkService;
+    private readonly ITwitcastingRecorderService _twitcastingRecorderService;
     private readonly IYtarchiveService _ytarchiveService;
     private readonly IYtdlpService _ytdlpService;
-    private readonly ITwitcastingRecorderService _twitcastingRecorderService;
-    private readonly IStreamlinkService _streamlinkService;
-    private readonly IFc2LiveDLService _fC2LiveDLService;
-    private readonly DiscordService? _discordService;
 
     public RecordService(ILogger<RecordWorker> logger,
-        IJobService jobService,
-        IYtarchiveService ytarchiveService,
-        IYtdlpService ytdlpService,
-        ITwitcastingRecorderService twitcastingRecorderService,
-        IStreamlinkService streamlinkService,
-        IFc2LiveDLService fC2LiveDLService,
-        IOptions<DiscordOption> discordOptions,
-        IServiceProvider serviceProvider)
+                         IJobService jobService,
+                         IYtarchiveService ytarchiveService,
+                         IYtdlpService ytdlpService,
+                         ITwitcastingRecorderService twitcastingRecorderService,
+                         IStreamlinkService streamlinkService,
+                         IFc2LiveDLService fC2LiveDLService,
+                         IOptions<DiscordOption> discordOptions,
+                         IServiceProvider serviceProvider)
     {
         _logger = logger;
         _jobService = jobService;
@@ -44,7 +44,7 @@ public class RecordService
     }
 
     /// <summary>
-    /// Handled failed jobs.
+    ///     Handled failed jobs.
     /// </summary>
     /// <param name="videoService"></param>
     /// <param name="stoppingToken"></param>
@@ -61,15 +61,13 @@ public class RecordService
 
         if (videos.Count > 0)
             _logger.LogInformation("Get {count} videos recording/downloading: {videoIds}",
-                videos.Count,
-                string.Join(", ", videos.Select(p => p.id).ToList()));
+                                   videos.Count,
+                                   string.Join(", ", videos.Select(p => p.id).ToList()));
         else
             _logger.LogTrace("No videos recording/downloading");
 
         foreach (Video video in videos)
-        {
             if (await _jobService.IsJobFailedAsync(video, stoppingToken))
-            {
                 switch (video.Source)
                 {
                     case "Youtube":
@@ -82,12 +80,10 @@ public class RecordService
                         _logger.LogWarning("{videoId} is failed.", video.id);
                         break;
                 }
-            }
-        }
     }
 
     /// <summary>
-    /// Create jobs to record videos.
+    ///     Create jobs to record videos.
     /// </summary>
     /// <param name="videoService"></param>
     /// <param name="channelService"></param>
@@ -116,28 +112,28 @@ public class RecordService
                 switch (video.Source)
                 {
                     case "Youtube":
-                        await _ytarchiveService.InitJobAsync(url: video.id,
+                        await _ytarchiveService.CreateJobAsync(
                             video: video,
                             useCookiesFile: channel?.UseCookiesFile == true,
                             cancellation: stoppingToken);
 
                         break;
                     case "Twitcasting":
-                        await _twitcastingRecorderService.InitJobAsync(url: video.id,
+                        await _twitcastingRecorderService.CreateJobAsync(
                             video: video,
                             useCookiesFile: false,
                             cancellation: stoppingToken);
 
                         break;
                     case "Twitch":
-                        await _streamlinkService.InitJobAsync(url: video.id,
+                        await _streamlinkService.CreateJobAsync(
                             video: video,
                             useCookiesFile: false,
                             cancellation: stoppingToken);
 
                         break;
                     case "FC2":
-                        await _fC2LiveDLService.InitJobAsync(url: video.id,
+                        await _fC2LiveDLService.CreateJobAsync(
                             video: video,
                             useCookiesFile: channel?.UseCookiesFile == true,
                             cancellation: stoppingToken);
@@ -162,13 +158,13 @@ public class RecordService
                 _logger.LogError(e, "Job deployment FAILED: {videoId}", video.id);
                 await videoService.UpdateVideoStatusAsync(video, VideoStatus.Error);
                 await videoService.UpdateVideoNoteAsync(video,
-                    "Exception happened when starting recording job. Please contact admin if you see this message");
+                                                        "Exception happened when starting recording job. Please contact admin if you see this message");
             }
         }
     }
 
     /// <summary>
-    /// Create jobs to download videos.
+    ///     Create jobs to download videos.
     /// </summary>
     /// <param name="videoService"></param>
     /// <param name="channelService"></param>
@@ -194,22 +190,20 @@ public class RecordService
                 switch (video.Source)
                 {
                     case "Youtube":
-                    {
-                        string id = NameHelper.ChangeId.VideoId.PlatformType(video.id, "Youtube");
-                        await _ytdlpService.InitJobAsync(url: $"https://youtu.be/{id}",
+                        await _ytdlpService.CreateJobAsync(
                             video: video,
                             useCookiesFile: channel?.UseCookiesFile == true,
                             cancellation: stoppingToken);
-                    }
 
                         break;
                     case "Twitcasting":
                     {
                         string channelId = NameHelper.ChangeId.ChannelId.PlatformType(video.ChannelId, "Twitcasting");
                         string videoId = NameHelper.ChangeId.VideoId.PlatformType(video.id, "Twitcasting");
-                        await _ytdlpService.InitJobAsync(url: $"https://twitcasting.tv/{channelId}/movie/{videoId}",
+                        await _ytdlpService.CreateJobAsync(
                             video: video,
                             useCookiesFile: false,
+                            url: $"https://twitcasting.tv/{channelId}/movie/{videoId}",
                             cancellation: stoppingToken);
                     }
 
@@ -217,9 +211,10 @@ public class RecordService
                     case "Twitch":
                     {
                         string id = NameHelper.ChangeId.VideoId.PlatformType(video.id, "Twitch");
-                        await _ytdlpService.InitJobAsync(url: $"https://www.twitch.tv/videos/{id}",
+                        await _ytdlpService.CreateJobAsync(
                             video: video,
                             useCookiesFile: false,
+                            url: $"https://www.twitch.tv/videos/{id}",
                             cancellation: stoppingToken);
                     }
 
@@ -227,9 +222,10 @@ public class RecordService
                     case "FC2":
                     {
                         string id = NameHelper.ChangeId.VideoId.PlatformType(video.id, "FC2");
-                        await _ytdlpService.InitJobAsync(url: $"https://video.fc2.com/content/{id}",
+                        await _ytdlpService.CreateJobAsync(
                             video: video,
                             useCookiesFile: channel?.UseCookiesFile == true,
+                            url: $"https://video.fc2.com/content/{id}",
                             cancellation: stoppingToken);
                     }
 
@@ -253,14 +249,14 @@ public class RecordService
                 _logger.LogError(e, "Job deployment FAILED: {videoId}", video.id);
                 await videoService.UpdateVideoStatusAsync(video, VideoStatus.Error);
                 await videoService.UpdateVideoNoteAsync(video,
-                    "Exception happened when starting downloading job. Please contact admin if you see this message");
+                                                        "Exception happened when starting downloading job. Please contact admin if you see this message");
             }
         }
     }
 
 
     /// <summary>
-    /// Check recordings and downloading status and return finished videos
+    ///     Check recordings and downloading status and return finished videos
     /// </summary>
     /// <param name="videoService"></param>
     /// <param name="cancellation"></param>
@@ -303,11 +299,9 @@ public class RecordService
             await videoService.UpdateVideoArchivedTimeAsync(video);
 
             if (_discordService != null)
-            {
                 await _discordService.SendArchivedMessageAsync(
                     video,
                     await channelService.GetByChannelIdAndSourceAsync(video.ChannelId, video.Source));
-            }
         }
         catch (Exception e)
         {

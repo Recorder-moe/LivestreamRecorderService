@@ -1,21 +1,17 @@
 ﻿using k8s;
 using k8s.Models;
 using LivestreamRecorder.DB.Models;
-using LivestreamRecorderService.Enums;
 using LivestreamRecorderService.Helper;
 using LivestreamRecorderService.Interfaces.Job;
 using LivestreamRecorderService.Models.Options;
 using Microsoft.Extensions.Options;
-using System.Configuration;
 
 namespace LivestreamRecorderService.SingletonServices.Kubernetes;
 
 public class KubernetesService : IJobService
 {
-    private readonly ILogger<KubernetesService> _logger;
     private readonly k8s.Kubernetes _client;
-
-    internal static string KubernetesNamespace { get; set; } = "recordermoe";
+    private readonly ILogger<KubernetesService> _logger;
 
     public KubernetesService(
         ILogger<KubernetesService> logger,
@@ -28,21 +24,31 @@ public class KubernetesService : IJobService
         EnsureNamespaceExists(KubernetesNamespace);
     }
 
+    internal static string KubernetesNamespace { get; set; } = "recordermoe";
+
     public Task<bool> IsJobSucceededAsync(Video video, CancellationToken cancellation = default)
-        => IsJobSucceededAsync(NameHelper.GetInstanceName(video.id), cancellation);
+    {
+        return IsJobSucceededAsync(NameHelper.GetInstanceName(video.id), cancellation);
+    }
 
     public async Task<bool> IsJobSucceededAsync(string keyword, CancellationToken cancellation = default)
-        => (await GetJobsByKeywordAsync(keyword, cancellation))
-            .Any(job => (job.Status.Active is null or 0)
+    {
+        return (await GetJobsByKeywordAsync(keyword, cancellation))
+            .Any(job => job.Status.Active is null or 0
                         && job.Status.Succeeded > 0);
+    }
 
     public Task<bool> IsJobFailedAsync(Video video, CancellationToken cancellation = default)
-        => IsJobFailedAsync(NameHelper.GetInstanceName(video.id), cancellation);
+    {
+        return IsJobFailedAsync(NameHelper.GetInstanceName(video.id), cancellation);
+    }
 
     public async Task<bool> IsJobFailedAsync(string keyword, CancellationToken cancellation = default)
-        => (await GetJobsByKeywordAsync(keyword, cancellation))
-            .Any(job => (job.Status.Active is null or 0)
+    {
+        return (await GetJobsByKeywordAsync(keyword, cancellation))
+            .Any(job => job.Status.Active is null or 0
                         && job.Status.Failed > 0);
+    }
 
     public async Task RemoveCompletedJobsAsync(Video video, CancellationToken cancellation = default)
     {
@@ -54,11 +60,9 @@ public class KubernetesService : IJobService
         }
 
         if (jobs.Count > 1)
-        {
             _logger.LogWarning(
                 "Multiple jobs were found for {videoId} while removing the COMPLETED job. This should not occur in the normal process, but we will take care of cleaning them up.",
                 video.id);
-        }
 
         foreach (V1Job? job in jobs)
         {
@@ -70,9 +74,9 @@ public class KubernetesService : IJobService
             }
 
             V1Status? status = await _client.DeleteNamespacedJobAsync(name: jobName,
-                namespaceParameter: job.Namespace(),
-                propagationPolicy: "Background",
-                cancellationToken: cancellation);
+                                                                      namespaceParameter: job.Namespace(),
+                                                                      propagationPolicy: "Background",
+                                                                      cancellationToken: cancellation);
 
             if (status.Status != "Success")
             {
@@ -96,9 +100,9 @@ public class KubernetesService : IJobService
 
         if (existingNamespace != null) return;
 
-        var newNamespace = new V1Namespace()
+        var newNamespace = new V1Namespace
         {
-            Metadata = new V1ObjectMeta()
+            Metadata = new V1ObjectMeta
             {
                 Name = namespaceName
             }

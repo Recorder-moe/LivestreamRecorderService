@@ -7,14 +7,14 @@ using System.Globalization;
 using CodeHollow.FeedReader;
 using LivestreamRecorder.DB.Enums;
 using LivestreamRecorder.DB.Interfaces;
+using LivestreamRecorder.DB.Models;
+using LivestreamRecorderService.Helper;
 using LivestreamRecorderService.Interfaces;
 using LivestreamRecorderService.Interfaces.Job.Downloader;
 using LivestreamRecorderService.Models;
+using LivestreamRecorderService.Models.Options;
 using Microsoft.Extensions.Options;
 using Serilog.Context;
-using LivestreamRecorder.DB.Models;
-using LivestreamRecorderService.Helper;
-using LivestreamRecorderService.Models.Options;
 
 namespace LivestreamRecorderService.ScopedServices.PlatformService;
 
@@ -31,11 +31,11 @@ public class YoutubeService(
     IHttpClientFactory httpClientFactory,
     IOptions<DiscordOption> discordOptions,
     IServiceProvider serviceProvider) : PlatformService(channelRepository,
-    storageService,
-    httpClientFactory,
-    logger,
-    discordOptions,
-    serviceProvider), IPlatformService
+                                                        storageService,
+                                                        httpClientFactory,
+                                                        logger,
+                                                        discordOptions,
+                                                        serviceProvider), IPlatformService
 {
 #pragma warning disable CA1859 // 盡可能使用具象類型以提高效能
     private readonly IUnitOfWork _unitOfWorkPublic = unitOfWorkPublic;
@@ -44,13 +44,6 @@ public class YoutubeService(
     public override string PlatformName => "Youtube";
 
     public override int Interval => 5 * 60;
-
-    private static string GetRssFeed(Channel channel)
-        => $"https://www.youtube.com/feeds/videos.xml?channel_id={NameHelper.ChangeId.ChannelId.PlatformType(channel.id, "Youtube")}";
-
-    private record Item(string Id,
-        string Title = "",
-        DateTime? Date = null);
 
     public override async Task UpdateVideosDataAsync(Channel channel, CancellationToken cancellation = default)
     {
@@ -82,69 +75,11 @@ public class YoutubeService(
             items = items.Distinct().ToList();
         }
 
-        foreach (Item item in items)
-        {
-            await AddOrUpdateVideoAsync(channel, item, cancellation);
-        }
-    }
-
-    private Task<string[]?> GetVideoIdsFromMemberPlaylist(string channelId, CancellationToken cancellation)
-        => GetVideoIdsByYtdlpAsync(
-            url: $"https://www.youtube.com/playlist?list=UUMO{NameHelper.ChangeId.ChannelId.PlatformType(channelId, PlatformName)[2..]}",
-            limit: 15,
-            cancellation: cancellation);
-
-    private Task<YtdlpVideoData?> GetChannelInfoByYtdlpAsync(string channelId, CancellationToken cancellation = default)
-        => GetVideoInfoByYtdlpAsync(
-            url: $"https://www.youtube.com/channel/{NameHelper.ChangeId.ChannelId.PlatformType(channelId, PlatformName)}",
-            cancellation: cancellation);
-
-    /// <summary>
-    /// Update video info from RSS feed item. (Which are in Scheduled and Unknown states.)
-    /// </summary>
-    /// <param name="channel"></param>
-    /// <param name="item"></param>
-    /// <param name="cancellation"></param>
-    /// <returns></returns>
-    private async Task AddOrUpdateVideoAsync(Channel channel, Item item, CancellationToken cancellation = default)
-    {
-        string videoId = NameHelper.ChangeId.VideoId.DatabaseType(item.Id.Split(':').Last(), PlatformName);
-        using IDisposable _ = LogContext.PushProperty("videoId", videoId);
-        Video? video = await videoRepository.GetVideoByIdAndChannelIdAsync(videoId, channel.id);
-
-        if (null != video)
-        {
-            // Don't need to track anymore.
-            if (video.Status > VideoStatus.Scheduled)
-            {
-                logger.LogTrace("Video {videoId} is skipped. It is {videoStatus}.", videoId, Enum.GetName(typeof(VideoStatus), video.Status));
-                return;
-            }
-        }
-        else
-        {
-            video = new Video()
-            {
-                id = videoId,
-                Source = PlatformName,
-                Status = VideoStatus.Unknown,
-                SourceStatus = VideoStatus.Unknown,
-                Title = item.Title,
-                ChannelId = channel.id,
-                Timestamps = new Timestamps()
-                {
-                    PublishedAt = item.Date
-                },
-            };
-
-            logger.LogInformation("Found a new Video {videoId} from {channelId}", videoId, channel.id);
-        }
-
-        await UpdateVideoDataAsync(video, cancellation);
+        foreach (Item item in items) await AddOrUpdateVideoAsync(channel, item, cancellation);
     }
 
     /// <summary>
-    /// Update video data.
+    ///     Update video data.
     /// </summary>
     /// <param name="video"></param>
     /// <param name="cancellation"></param>
@@ -168,9 +103,7 @@ public class YoutubeService(
         // Download thumbnail for new videos
         if (video.Status == VideoStatus.Unknown
             || (video.Status == VideoStatus.Pending && string.IsNullOrEmpty(video.Thumbnail)))
-        {
             video.Thumbnail = await DownloadThumbnailAsync(videoData.Thumbnail, video.id, cancellation);
-        }
 
         switch (videoData.LiveStatus)
         {
@@ -186,14 +119,12 @@ public class YoutubeService(
                         // First detected
                         if (video.Status != VideoStatus.Skipped
                             && null != DiscordService)
-                        {
                             await DiscordService.SendSkippedMessageAsync(video, channel);
-                        }
 
                         video.Status = VideoStatus.Skipped;
                         logger.LogInformation("Change video {videoId} status to {videoStatus}",
-                            video.id,
-                            Enum.GetName(typeof(VideoStatus), video.Status));
+                                              video.id,
+                                              Enum.GetName(typeof(VideoStatus), video.Status));
 
                         break;
                     }
@@ -241,8 +172,8 @@ public class YoutubeService(
                         video.Status = VideoStatus.Expired;
                         video.Note = "Video expired because it is an old live stream.";
                         logger.LogInformation("Change video {videoId} status to {videoStatus}",
-                            video.id,
-                            Enum.GetName(typeof(VideoStatus), video.Status));
+                                              video.id,
+                                              Enum.GetName(typeof(VideoStatus), video.Status));
 
                         video.Thumbnail = await DownloadThumbnailAsync(videoData.Thumbnail, video.id, cancellation);
                         break;
@@ -254,8 +185,8 @@ public class YoutubeService(
                     case VideoStatus.Missing:
                         video.Status = VideoStatus.WaitingToDownload;
                         logger.LogInformation("Change video {videoId} status to {videoStatus}",
-                            video.id,
-                            Enum.GetName(typeof(VideoStatus), video.Status));
+                                              video.id,
+                                              Enum.GetName(typeof(VideoStatus), video.Status));
 
                         video.Thumbnail = await DownloadThumbnailAsync(videoData.Thumbnail, video.id, cancellation);
                         break;
@@ -274,10 +205,8 @@ public class YoutubeService(
                     DateTimeOffset.FromUnixTimeSeconds(videoData.ReleaseTimestamp ?? 0).UtcDateTime;
 
                 if (null == video.Timestamps.ScheduledStartTime)
-                {
                     video.Timestamps.ScheduledStartTime =
                         DateTimeOffset.FromUnixTimeSeconds(videoData.ReleaseTimestamp ?? 0).UtcDateTime;
-                }
 
                 break;
             case "not_live":
@@ -291,9 +220,7 @@ public class YoutubeService(
                     // First detected
                     if (video.Status != VideoStatus.Skipped
                         && null != DiscordService)
-                    {
                         await DiscordService.SendSkippedMessageAsync(video, channel);
-                    }
 
                     video.Status = VideoStatus.Skipped;
                     logger.LogInformation("Change video {videoId} status to {videoStatus}",
@@ -306,10 +233,7 @@ public class YoutubeService(
                     {
                         case VideoStatus.Unknown:
                             // New uploaded video.
-                            if (DateTime.UtcNow - video.Timestamps.PublishedAt < TimeSpan.FromHours(1))
-                            {
-                                goto case VideoStatus.Scheduled;
-                            }
+                            if (DateTime.UtcNow - video.Timestamps.PublishedAt < TimeSpan.FromHours(1)) goto case VideoStatus.Scheduled;
 
                             // Old unarchived video.
                             // Will fall in here when adding a new channel.
@@ -372,10 +296,7 @@ public class YoutubeService(
                     {
                         // First detected
                         video.SourceStatus = VideoStatus.Deleted;
-                        if (null != DiscordService)
-                        {
-                            await DiscordService.SendDeletedMessageAsync(video, channel);
-                        }
+                        if (null != DiscordService) await DiscordService.SendDeletedMessageAsync(video, channel);
                     }
 
                     video.SourceStatus = VideoStatus.Deleted;
@@ -406,15 +327,12 @@ public class YoutubeService(
                 if (video.Status != VideoStatus.Missing)
                 {
                     video.SourceStatus = VideoStatus.Missing;
-                    if (null != DiscordService)
-                    {
-                        await DiscordService.SendSkippedMessageAsync(video, channel);
-                    }
+                    if (null != DiscordService) await DiscordService.SendSkippedMessageAsync(video, channel);
                 }
 
                 video.Status = VideoStatus.Missing;
                 logger.LogWarning("Source removed and not archived, change video status to {status}",
-                    Enum.GetName(typeof(VideoStatus), video.Status));
+                                  Enum.GetName(typeof(VideoStatus), video.Status));
             }
 
             if (video.Status >= VideoStatus.Archived && video.Status < VideoStatus.Expired)
@@ -435,14 +353,10 @@ public class YoutubeService(
         {
             // Member only
             case "subscriber_only":
-                if ((channel?.UseCookiesFile) == true)
-                {
+                if (channel?.UseCookiesFile == true)
                     goto case "public";
-                }
-                else
-                {
-                    goto case "needs_auth";
-                }
+
+                goto case "needs_auth";
             case "public":
             case "unlisted":
                 // The source status has been restored from rejection or deletion
@@ -457,15 +371,12 @@ public class YoutubeService(
                     if (video.SourceStatus != VideoStatus.Edited)
                     {
                         video.SourceStatus = VideoStatus.Edited;
-                        if (null != DiscordService)
-                        {
-                            await DiscordService.SendDeletedMessageAsync(video, channel);
-                        }
+                        if (null != DiscordService) await DiscordService.SendDeletedMessageAsync(video, channel);
                     }
 
                     video.SourceStatus = VideoStatus.Edited;
                     logger.LogInformation("Video source is {status} because it has been restored from rejection or deletion.",
-                        Enum.GetName(typeof(VideoStatus), video.SourceStatus));
+                                          Enum.GetName(typeof(VideoStatus), video.SourceStatus));
                 }
                 else if (video.SourceStatus != VideoStatus.Edited)
                 {
@@ -482,28 +393,23 @@ public class YoutubeService(
                     // First detected
                     if (video.Status != VideoStatus.Skipped
                         && null != DiscordService)
-                    {
                         await DiscordService.SendSkippedMessageAsync(video, channel);
-                    }
 
                     video.Status = VideoStatus.Skipped;
                     logger.LogInformation("Video is {status} because it is detected access required or copyright notice.",
-                        Enum.GetName(typeof(VideoStatus), video.Status));
+                                          Enum.GetName(typeof(VideoStatus), video.Status));
                 }
                 // First detected
                 else if (video.SourceStatus != VideoStatus.Reject)
                 {
                     video.SourceStatus = VideoStatus.Reject;
                     video.Note = "Video source is detected access required or copyright notice.";
-                    if (null != DiscordService)
-                    {
-                        await DiscordService.SendDeletedMessageAsync(video, channel);
-                    }
+                    if (null != DiscordService) await DiscordService.SendDeletedMessageAsync(video, channel);
                 }
 
                 video.SourceStatus = VideoStatus.Reject;
                 logger.LogInformation("Video source is {status} because it is detected access required or copyright notice.",
-                    Enum.GetName(typeof(VideoStatus), video.SourceStatus));
+                                      Enum.GetName(typeof(VideoStatus), video.SourceStatus));
 
                 break;
             default:
@@ -513,17 +419,13 @@ public class YoutubeService(
 
         if (video.Status == VideoStatus.WaitingToRecord)
         {
-            await ytarchiveService.InitJobAsync(url: video.id,
-                video: video,
-                useCookiesFile: channel?.UseCookiesFile == true,
-                cancellation: cancellation);
+            await ytarchiveService.CreateJobAsync(video: video,
+                                                  useCookiesFile: channel?.UseCookiesFile == true,
+                                                  cancellation: cancellation);
 
             video.Status = VideoStatus.Recording;
             logger.LogInformation("{videoId} is now lived! Start recording.", video.id);
-            if (null != DiscordService)
-            {
-                await DiscordService.SendStartRecordingMessageAsync(video, channel);
-            }
+            if (null != DiscordService) await DiscordService.SendStartRecordingMessageAsync(video, channel);
         }
 
         if (video.Status < 0)
@@ -547,15 +449,11 @@ public class YoutubeService(
         var thumbnails = info.Thumbnails.OrderByDescending(p => p.Preference).ToList();
         string? avatarUrl = thumbnails.FirstOrDefault()?.Url;
         if (!string.IsNullOrEmpty(avatarUrl))
-        {
             avatarBlobUrl = await DownloadImageAndUploadToBlobStorageAsync(avatarUrl, $"avatar/{channel.id}", cancellation);
-        }
 
         string? bannerUrl = thumbnails.Skip(1).FirstOrDefault()?.Url;
         if (!string.IsNullOrEmpty(bannerUrl))
-        {
             bannerBlobUrl = await DownloadImageAndUploadToBlobStorageAsync(bannerUrl, $"banner/{channel.id}", cancellation);
-        }
 
         channel = await ChannelRepository.ReloadEntityFromDBAsync(channel) ?? channel;
         channel.ChannelName = info.Uploader;
@@ -564,4 +462,72 @@ public class YoutubeService(
         await ChannelRepository.AddOrUpdateAsync(channel);
         _unitOfWorkPublic.Commit();
     }
+
+    private static string GetRssFeed(Channel channel)
+    {
+        return $"https://www.youtube.com/feeds/videos.xml?channel_id={NameHelper.ChangeId.ChannelId.PlatformType(channel.id, "Youtube")}";
+    }
+
+    private Task<string[]?> GetVideoIdsFromMemberPlaylist(string channelId, CancellationToken cancellation)
+    {
+        return GetVideoIdsByYtdlpAsync(
+            url: $"https://www.youtube.com/playlist?list=UUMO{NameHelper.ChangeId.ChannelId.PlatformType(channelId, PlatformName)[2..]}",
+            limit: 15,
+            cancellation: cancellation);
+    }
+
+    private Task<YtdlpVideoData?> GetChannelInfoByYtdlpAsync(string channelId, CancellationToken cancellation = default)
+    {
+        return GetVideoInfoByYtdlpAsync(
+            url: $"https://www.youtube.com/channel/{NameHelper.ChangeId.ChannelId.PlatformType(channelId, PlatformName)}",
+            cancellation: cancellation);
+    }
+
+    /// <summary>
+    ///     Update video info from RSS feed item. (Which are in Scheduled and Unknown states.)
+    /// </summary>
+    /// <param name="channel"></param>
+    /// <param name="item"></param>
+    /// <param name="cancellation"></param>
+    /// <returns></returns>
+    private async Task AddOrUpdateVideoAsync(Channel channel, Item item, CancellationToken cancellation = default)
+    {
+        string videoId = NameHelper.ChangeId.VideoId.DatabaseType(item.Id.Split(':').Last(), PlatformName);
+        using IDisposable _ = LogContext.PushProperty("videoId", videoId);
+        Video? video = await videoRepository.GetVideoByIdAndChannelIdAsync(videoId, channel.id);
+
+        if (null != video)
+        {
+            // Don't need to track anymore.
+            if (video.Status > VideoStatus.Scheduled)
+            {
+                logger.LogTrace("Video {videoId} is skipped. It is {videoStatus}.", videoId, Enum.GetName(typeof(VideoStatus), video.Status));
+                return;
+            }
+        }
+        else
+        {
+            video = new Video
+            {
+                id = videoId,
+                Source = PlatformName,
+                Status = VideoStatus.Unknown,
+                SourceStatus = VideoStatus.Unknown,
+                Title = item.Title,
+                ChannelId = channel.id,
+                Timestamps = new Timestamps
+                {
+                    PublishedAt = item.Date
+                }
+            };
+
+            logger.LogInformation("Found a new Video {videoId} from {channelId}", videoId, channel.id);
+        }
+
+        await UpdateVideoDataAsync(video, cancellation);
+    }
+
+    private record Item(string Id,
+                        string Title = "",
+                        DateTime? Date = null);
 }

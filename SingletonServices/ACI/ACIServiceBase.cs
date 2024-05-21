@@ -21,10 +21,10 @@ public abstract class AciServiceBase(
 
     public abstract string Name { get; }
 
-    public virtual async Task InitJobAsync(string videoId,
-        Video video,
-        bool useCookiesFile = false,
-        CancellationToken cancellation = default)
+    public virtual async Task CreateJobAsync(Video video,
+                                             bool useCookiesFile = false,
+                                             string? videoId = null,
+                                             CancellationToken cancellation = default)
     {
         string jobName = GetInstanceName(videoId);
         GenericResource? job = await GetJobByKeywordAsync(jobName, cancellation);

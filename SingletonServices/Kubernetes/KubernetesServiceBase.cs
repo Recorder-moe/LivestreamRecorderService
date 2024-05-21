@@ -1,11 +1,10 @@
-﻿using k8s;
+﻿using System.Globalization;
+using k8s;
 using k8s.Models;
 using LivestreamRecorder.DB.Models;
 using LivestreamRecorderService.Helper;
 using LivestreamRecorderService.Interfaces;
 using LivestreamRecorderService.Interfaces.Job;
-using LivestreamRecorderService.Models;
-using System.Globalization;
 
 namespace LivestreamRecorderService.SingletonServices.Kubernetes;
 
@@ -14,34 +13,23 @@ public abstract class KubernetesServiceBase(
     k8s.Kubernetes kubernetes,
     IUploaderService uploaderService) : IJobServiceBase
 {
-    public abstract string Name { get; }
-    private static string KubernetesNamespace => KubernetesService.KubernetesNamespace;
-
     private const string DefaultRegistry = "ghcr.io/recorder-moe/";
     private const string FallbackRegistry = "recordermoe/";
+    private static string KubernetesNamespace => KubernetesService.KubernetesNamespace;
 
-    public virtual async Task InitJobAsync(string videoId, Video video, bool useCookiesFile = false, CancellationToken cancellation = default)
+    /// <inheritdoc />
+    public abstract string Name { get; }
+
+    public string GetInstanceName(string videoId)
     {
-        string jobName = GetInstanceName(video.id);
-
-        V1Job? job = await GetJobByKeywordAsync(jobName, cancellation);
-        if (null != job && job.Status.Active != 0)
-        {
-            logger.LogWarning(
-                "An already active job found for {videoId} {name}!! A new job will now be created with different name. Please pay attention if this happens repeatedly.",
-                videoId,
-                jobName);
-
-            jobName += DateTimeOffset.UtcNow.ToUnixTimeMilliseconds();
-        }
-
-        logger.LogInformation("Start new K8s job for {videoId} {name}.", videoId, jobName);
-        await CreateNewJobAsync(id: videoId,
-            instanceName: jobName,
-            video: video,
-            useCookiesFile: useCookiesFile,
-            cancellation: cancellation);
+        return (Name + NameHelper.GetInstanceName(videoId)).ToLower(CultureInfo.InvariantCulture);
     }
+
+    // Must be overridden
+    public abstract Task CreateJobAsync(Video video,
+                                        bool useCookiesFile = false,
+                                        string? url = null,
+                                        CancellationToken cancellation = default);
 
     private async Task<V1Job?> GetJobByKeywordAsync(string keyword, CancellationToken cancellation)
     {
@@ -49,17 +37,56 @@ public abstract class KubernetesServiceBase(
         return jobs.Items.FirstOrDefault(p => p.Name().Contains(keyword));
     }
 
-    protected Task<V1Job> CreateInstanceAsync(string deploymentName,
-                                              string containerName,
-                                              string imageName,
-                                              string[] args,
-                                              string fileName,
-                                              string[]? command = default,
-                                              IList<EnvironmentVariable>? environment = null,
-                                              string mountPath = "/sharedvolume",
-                                              bool fallback = false,
-                                              CancellationToken cancellation = default)
+    /// <summary>
+    ///     Create Instance. Cookies file will be mounted at /cookies if K8s secrets exists.
+    /// </summary>
+    /// <param name="deploymentName">
+    ///     Should be unique. Must consist of lower case alphanumeric characters or '-', and must
+    ///     start and end with an alphanumeric character (e.g. 'my-name',  or '123-abc', regex used for validation is
+    ///     '[a-z0-9]([-a-z0-9]*[a-z0-9])?')
+    /// </param>
+    /// <param name="containerName">
+    ///     Should be unique. Must consist of lower case alphanumeric characters or '-', and must start
+    ///     and end with an alphanumeric character (e.g. 'my-name',  or '123-abc', regex used for validation is
+    ///     '[a-z0-9]([-a-z0-9]*[a-z0-9])?')
+    /// </param>
+    /// <param name="imageName">Download container image with tag. (e.g. 'yt-dlp:latest')</param>
+    /// <param name="fileName">Recording file name.</param>
+    /// <param name="command">
+    ///     Override command for the download container. The original ENTRYPOINT will be used if not
+    ///     provided.
+    /// </param>
+    /// <param name="args">
+    ///     Override args for the download container. The original CMD will be used if not provided. Both
+    ///     <paramref name="command" /> and <paramref name="args" /> cannot be empty at the same time.
+    /// </param>
+    /// <param name="mountPath">The mount path of the download container.</param>
+    /// <param name="cancellation"></param>
+    /// <returns></returns>
+    /// <exception cref="ArgumentNullException"></exception>
+    protected async Task CreateInstanceAsync(string deploymentName,
+                                             string containerName,
+                                             string imageName,
+                                             string fileName,
+                                             string[]? command = default,
+                                             string[]? args = default,
+                                             string mountPath = "/sharedvolume",
+                                             CancellationToken cancellation = default)
     {
+        if (null != command && command.Length == 0)
+            throw new ArgumentNullException(nameof(command), "command can be null, but cannot be empty.");
+
+        if ((null == command || command.Length == 0)
+            && (null == args || args.Length == 0))
+            throw new ArgumentNullException(nameof(args), "command and args cannot be empty at the same time.");
+
+        V1Job? oldJob = await GetJobByKeywordAsync(containerName, cancellation);
+        if (null != oldJob && oldJob.Status.Active != 0)
+        {
+            logger.LogError("An already active job found for {imageName}", imageName);
+            throw new InvalidOperationException("An already active job found.");
+        }
+
         V1Job job = new()
         {
             Metadata = new V1ObjectMeta
@@ -87,7 +114,7 @@ public abstract class KubernetesServiceBase(
                                 {
                                     SecretName = "cookies",
                                     DefaultMode = 432, // octal 0660 to decimal
-                                    Optional = true,
+                                    Optional = true
                                 }
                             }
                         },
@@ -97,27 +124,21 @@ public abstract class KubernetesServiceBase(
                             new()
                             {
                                 Name = containerName,
-                                Image = fallback switch
-                                {
-                                    false => DefaultRegistry + imageName,
-                                    true => FallbackRegistry + imageName
-                                },
-                                Args = args,
+                                Image = DefaultRegistry + imageName,
+                                // The args and commands will be set afterward
                                 VolumeMounts = new List<V1VolumeMount>
                                 {
                                     new()
                                     {
                                         Name = "sharedvolume",
-                                        MountPath = mountPath,
-                                        ReadOnlyProperty = false,
+                                        MountPath = mountPath
                                     },
                                     new()
                                     {
                                         Name = "cookies",
-                                        MountPath = Path.Combine(mountPath, "cookies"),
-                                        ReadOnlyProperty = false,
+                                        MountPath = "/cookies"
                                     }
-                                },
+                                }
                             }
                         },
                         // Uploader container
@@ -126,23 +147,19 @@ public abstract class KubernetesServiceBase(
                             new()
                             {
                                 Name = containerName + "-uploader",
-                                Image = fallback switch
-                                {
-                                    false => DefaultRegistry + uploaderService.Image,
-                                    true => FallbackRegistry + uploaderService.Image
-                                },
+                                Image = DefaultRegistry + uploaderService.Image,
                                 Args = [fileName.Replace(".mp4", "")],
                                 VolumeMounts = new List<V1VolumeMount>
                                 {
                                     new()
                                     {
                                         Name = "sharedvolume",
-                                        MountPath = "/sharedvolume",
+                                        MountPath = "/sharedvolume"
                                     }
                                 },
                                 Env = uploaderService.GetEnvironmentVariables()
                                                      .Select(p => new V1EnvVar(p.Name, p.Value ?? p.SecureValue))
-                                                     .ToList(),
+                                                     .ToList()
                             }
                         },
                         SecurityContext = new V1PodSecurityContext
@@ -156,28 +173,35 @@ public abstract class KubernetesServiceBase(
             }
         };
 
-        if (null != environment && environment.Count > 0)
-        {
-            job.Spec.Template.Spec.Containers[0].Env = environment.Select(p => new V1EnvVar(p.Name, p.Value ?? p.SecureValue)).ToList();
-        }
+        // Add command if provided
+        if (null != command && command.Length > 0) job.Spec.Template.Spec.InitContainers[0].Command = command;
 
-        if (null != command && command.Length > 0)
-        {
-            job.Spec.Template.Spec.Containers[0].Command = command;
-        }
+        // Add args if provided, args can be empty
+        if (null != args) job.Spec.Template.Spec.InitContainers[0].Args = args;
 
-        return kubernetes.CreateNamespacedJobAsync(body: job,
-                                                   namespaceParameter: KubernetesNamespace,
-                                                   cancellationToken: cancellation);
+        try
+        {
+            await kubernetes.CreateNamespacedJobAsync(body: job,
+                                                      namespaceParameter: KubernetesNamespace,
+                                                      cancellationToken: cancellation);
+        }
+        catch (Exception e)
+        {
+            logger.LogWarning(e, "Failed once, try fallback registry.");
+            job.Spec.Template.Spec.InitContainers[0].Image = FallbackRegistry + imageName;
+            job.Spec.Template.Spec.Containers[0].Image = FallbackRegistry + imageName;
+
+            try
+            {
+                await kubernetes.CreateNamespacedJobAsync(body: job,
+                                                          namespaceParameter: KubernetesNamespace,
+                                                          cancellationToken: cancellation);
+            }
+            catch (Exception e2)
+            {
+                logger.LogError(e2, "Failed twice, abort.");
+                throw;
+            }
+        }
     }
-
-    public string GetInstanceName(string videoId)
-        => (Name + NameHelper.GetInstanceName(videoId)).ToLower(CultureInfo.InvariantCulture);
-
-    // Must be overridden
-    protected abstract Task<V1Job> CreateNewJobAsync(string id,
-        string instanceName,
-        Video video,
-        bool useCookiesFile = false,
-        CancellationToken cancellation = default);
 }

@@ -17,10 +17,10 @@ public class StreamlinkService(
 
     public override string Name => IStreamlinkService.Name;
 
-    public override Task InitJobAsync(string videoId,
-        Video video,
-        bool useCookiesFile = false,
-        CancellationToken cancellation = default)
+    public override Task CreateJobAsync(Video video,
+                                        bool useCookiesFile = false,
+                                        string? videoId = null,
+                                        CancellationToken cancellation = default)
     {
         string filename = NameHelper.GetFileName(video, IStreamlinkService.Name);
         video.Filename = filename;

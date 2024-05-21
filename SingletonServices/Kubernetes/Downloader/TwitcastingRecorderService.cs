@@ -1,10 +1,7 @@
-﻿using k8s.Models;
-using LivestreamRecorder.DB.Models;
+﻿using LivestreamRecorder.DB.Models;
 using LivestreamRecorderService.Helper;
 using LivestreamRecorderService.Interfaces;
 using LivestreamRecorderService.Interfaces.Job.Downloader;
-using LivestreamRecorderService.Models.Options;
-using Microsoft.Extensions.Options;
 
 namespace LivestreamRecorderService.SingletonServices.Kubernetes.Downloader;
 
@@ -17,46 +14,32 @@ public class TwitcastingRecorderService(
 {
     public override string Name => ITwitcastingRecorderService.Name;
 
-    protected override Task<V1Job> CreateNewJobAsync(string _,
-                                                     string instanceName,
-                                                     Video video,
-                                                     bool useCookiesFile = false,
-                                                     CancellationToken cancellation = default)
+    public override Task CreateJobAsync(Video video,
+                                        bool useCookiesFile = false,
+                                        string? url = null,
+                                        CancellationToken cancellation = default)
     {
-        const string mountPath = "/download";
+        string channelId = url?.Split('/', StringSplitOptions.RemoveEmptyEntries).Last()
+                           ?? NameHelper.ChangeId.ChannelId.PlatformType(video.ChannelId, Name);
+
         string fileName = NameHelper.GetFileName(video, ITwitcastingRecorderService.Name);
         video.Filename = fileName;
+
+        const string mountPath = "/download";
+        string instanceName = GetInstanceName(video.id);
         string[] args =
         [
-            NameHelper.ChangeId.ChannelId.PlatformType(video.ChannelId, Name),
+            channelId,
             "once",
             "-o", Path.GetFileNameWithoutExtension(fileName)
         ];
 
-        try
-        {
-            return CreateInstanceAsync(deploymentName: instanceName,
-                                       containerName: instanceName,
-                                       imageName: "twitcasting-recorder",
-                                       args: args,
-                                       fileName: fileName,
-                                       mountPath: mountPath,
-                                       fallback: false,
-                                       cancellation: cancellation);
-        }
-        // skipcq: CS-R1008
-        catch (Exception)
-        {
-            // Use DockerHub as fallback
-            logger.LogWarning("Failed once, try docker hub as fallback.");
-            return CreateInstanceAsync(deploymentName: instanceName,
-                                       containerName: instanceName,
-                                       imageName: "twitcasting-recorder",
-                                       args: args,
-                                       fileName: fileName,
-                                       mountPath: mountPath,
-                                       fallback: true,
-                                       cancellation: cancellation);
-        }
+        return CreateInstanceAsync(deploymentName: instanceName,
+                                   containerName: instanceName,
+                                   imageName: "twitcasting-recorder",
+                                   fileName: fileName,
+                                   args: args,
+                                   mountPath: mountPath,
+                                   cancellation: cancellation);
     }
 }
