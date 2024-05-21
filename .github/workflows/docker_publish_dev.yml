@@ -86,8 +86,8 @@ jobs:
             RELEASE=${{ github.run_number }}
           platforms: linux/amd64,linux/arm64
           # Cache to regietry instead of gha to avoid the capacity limit.
-          cache-from: type=registry,ref=ghcr.io/${{ github.repository }}:cache
-          cache-to: type=registry,ref=ghcr.io/${{ github.repository }}:cache,mode=max
+          cache-from: type=registry,ref=ghcr.io/recorder-moe/livestreamrecorderservice:cache
+          cache-to: type=registry,ref=ghcr.io/recorder-moe/livestreamrecorderservice:cache,mode=max
           sbom: true
           provenance: true
 
@@ -106,7 +106,7 @@ jobs:
             RELEASE=${{ github.run_number }}
           platforms: linux/amd64,linux/arm64
           # Cache to regietry instead of gha to avoid the capacity limit.
-          cache-from: type=registry,ref=ghcr.io/${{ github.repository }}:cache
-          cache-to: type=registry,ref=ghcr.io/${{ github.repository }}:cache,mode=max
+          cache-from: type=registry,ref=ghcr.io/recorder-moe/livestreamrecorderservice:cache
+          cache-to: type=registry,ref=ghcr.io/recorder-moe/livestreamrecorderservice:cache,mode=max
           sbom: true
           provenance: true
