@@ -30,5 +30,5 @@ public record UploaderCommand(string[] value);
 
 public class CommandOverrideArray(string[] value)
 {
-    public string[] value { get; set; } = value;
+    public string[] value { get; set; } = [.. value];
 }
