@@ -8,12 +8,14 @@ using LivestreamRecorder.DB.Interfaces;
 using LivestreamRecorder.DB.Models;
 using LivestreamRecorderService.Helper;
 using LivestreamRecorderService.Interfaces;
-using LivestreamRecorderService.Interfaces.Job.Downloader;
 using LivestreamRecorderService.Models.Options;
 using Microsoft.Extensions.Options;
 using Serilog.Context;
 using TwitchLib.Api.Helix.Models.Streams.GetStreams;
+using TwitchLib.Api.Helix.Models.Users.GetUsers;
 using TwitchLib.Api.Interfaces;
+using Stream = TwitchLib.Api.Helix.Models.Streams.GetStreams.Stream;
+using User = TwitchLib.Api.Helix.Models.Users.GetUsers.User;
 
 namespace LivestreamRecorderService.ScopedServices.PlatformService;
 
@@ -30,11 +32,11 @@ public class TwitchService(
     IHttpClientFactory httpClientFactory,
     IOptions<DiscordOption> discordOptions,
     IServiceProvider serviceProvider) : PlatformService(channelRepository,
-    storageService,
-    httpClientFactory,
-    logger,
-    discordOptions,
-    serviceProvider), IPlatformService
+                                                        storageService,
+                                                        httpClientFactory,
+                                                        logger,
+                                                        discordOptions,
+                                                        serviceProvider), IPlatformService
 {
 #pragma warning disable CA1859 // 盡可能使用具象類型以提高效能
     private readonly IUnitOfWork _unitOfWorkPublic = unitOfWorkPublic;
@@ -55,7 +57,7 @@ public class TwitchService(
 
         if (null != streams
             && streams.Streams.Length > 0
-            && streams.Streams.First() is TwitchLib.Api.Helix.Models.Streams.GetStreams.Stream stream)
+            && streams.Streams.First() is Stream stream)
         {
             string videoId = NameHelper.ChangeId.VideoId.DatabaseType(stream.Id.TrimStart('v'), PlatformName);
             using IDisposable ___ = LogContext.PushProperty("videoId", videoId);
@@ -63,7 +65,6 @@ public class TwitchService(
             Video? video = await videoRepository.GetVideoByIdAndChannelIdAsync(videoId, channel.id);
 
             if (null != video)
-            {
                 switch (video.Status)
                 {
                     case VideoStatus.WaitingToRecord:
@@ -85,10 +86,8 @@ public class TwitchService(
                         logger.LogWarning("{videoId} is in {status}, skip.", video.id, Enum.GetName(typeof(VideoStatus), video.Status));
                         return;
                 }
-            }
             else
-            {
-                video = new Video()
+                video = new Video
                 {
                     id = videoId,
                     Source = PlatformName,
@@ -97,15 +96,14 @@ public class TwitchService(
                     IsLiveStream = true,
                     Title = stream.Title,
                     Description = stream.GameName,
-                    Timestamps = new()
+                    Timestamps = new Timestamps
                     {
                         PublishedAt = stream.StartedAt,
-                        ActualStartTime = stream.StartedAt,
+                        ActualStartTime = stream.StartedAt
                     },
 
-                    ChannelId = channel.id,
+                    ChannelId = channel.id
                 };
-            }
 
             video.Title = stream.Title;
             video.Description = stream.GameName;
@@ -116,17 +114,13 @@ public class TwitchService(
             if (video.Status < VideoStatus.Recording
                 || video.Status == VideoStatus.Missing)
             {
-                await streamlinkService.InitJobAsync(url: video.id,
-                    video: video,
-                    useCookiesFile: false,
-                    cancellation: cancellation);
+                await streamlinkService.CreateJobAsync(video: video,
+                                                       useCookiesFile: false,
+                                                       cancellation: cancellation);
 
                 video.Status = VideoStatus.Recording;
                 logger.LogInformation("{channelId} is now lived! Start recording.", channel.id);
-                if (null != DiscordService)
-                {
-                    await DiscordService.SendStartRecordingMessageAsync(video, channel);
-                }
+                if (null != DiscordService) await DiscordService.SendStartRecordingMessageAsync(video, channel);
             }
 
             await videoRepository.AddOrUpdateAsync(video);
@@ -141,15 +135,9 @@ public class TwitchService(
     public override async Task UpdateVideoDataAsync(Video video, CancellationToken cancellation = default)
     {
         await videoRepository.ReloadEntityFromDBAsync(video);
-        if (null == video.Timestamps.ActualStartTime)
-        {
-            video.Timestamps.ActualStartTime = video.Timestamps.PublishedAt;
-        }
+        if (null == video.Timestamps.ActualStartTime) video.Timestamps.ActualStartTime = video.Timestamps.PublishedAt;
 
-        if (video.Status <= VideoStatus.Pending)
-        {
-            video.Status = VideoStatus.WaitingToDownload;
-        }
+        if (video.Status <= VideoStatus.Pending) video.Status = VideoStatus.WaitingToDownload;
 
         if (!string.IsNullOrEmpty(video.Filename))
         {
@@ -167,7 +155,7 @@ public class TwitchService(
                 video.Status = VideoStatus.Archived;
                 video.Note = null;
                 logger.LogInformation("Correct video status to {status} because archived is exists.",
-                    Enum.GetName(typeof(VideoStatus), video.Status));
+                                      Enum.GetName(typeof(VideoStatus), video.Status));
             }
         }
 
@@ -177,19 +165,21 @@ public class TwitchService(
 
     public override async Task UpdateChannelDataAsync(Channel channel, CancellationToken stoppingToken)
     {
-        var channelId = channel.id;
-        var usersResponse = await twitchApi.Helix.Users.GetUsersAsync(logins: [NameHelper.ChangeId.ChannelId.PlatformType(channelId, PlatformName)]);
+        string? channelId = channel.id;
+        GetUsersResponse? usersResponse =
+            await twitchApi.Helix.Users.GetUsersAsync(logins: [NameHelper.ChangeId.ChannelId.PlatformType(channelId, PlatformName)]);
+
         if (null == usersResponse || usersResponse.Users.Length == 0)
         {
             logger.LogWarning("Failed to get channel info for {channelId}", channelId);
             return;
         }
 
-        var user = usersResponse.Users.First();
+        User? user = usersResponse.Users.First();
 
-        var avatarBlobUrl = await getAvatarBlobUrl() ?? channel.Avatar;
-        var bannerBlobUrl = await getBannerBlobUrl() ?? channel.Banner;
-        var channelName = getChannelName() ?? channel.ChannelName;
+        string? avatarBlobUrl = await getAvatarBlobUrl() ?? channel.Avatar;
+        string? bannerBlobUrl = await getBannerBlobUrl() ?? channel.Banner;
+        string channelName = getChannelName() ?? channel.ChannelName;
 
         channel = await ChannelRepository.ReloadEntityFromDBAsync(channel) ?? channel;
         channel.ChannelName = channelName;
@@ -201,7 +191,7 @@ public class TwitchService(
 
         async Task<string?> getAvatarBlobUrl()
         {
-            var avatarUrl = user.ProfileImageUrl.Replace("70x70", "300x300");
+            string avatarUrl = user.ProfileImageUrl.Replace("70x70", "300x300");
             if (string.IsNullOrEmpty(avatarUrl)) return null;
 
             avatarBlobUrl = await DownloadImageAndUploadToBlobStorageAsync(avatarUrl, $"avatar/{channelId}", stoppingToken);
@@ -211,7 +201,7 @@ public class TwitchService(
 
         async Task<string?> getBannerBlobUrl()
         {
-            var bannerUrl = user.OfflineImageUrl;
+            string? bannerUrl = user.OfflineImageUrl;
             if (string.IsNullOrEmpty(bannerUrl)) return null;
 
             bannerBlobUrl = await DownloadImageAndUploadToBlobStorageAsync(bannerUrl, $"banner/{channelId}", stoppingToken);

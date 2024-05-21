@@ -1,12 +1,8 @@
-version: '3.4'
-
 services:
   livestreamrecorderservice:
     container_name: livestreamrecorderservice
     image: ghcr.io/recorder-moe/livestreamrecorderservice:latest
-    #build:
-    #  context: .
-    #  dockerfile: Dockerfile
+    user: "1654:0"
     env_file:
       - .env
     volumes:

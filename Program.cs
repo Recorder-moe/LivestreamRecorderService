@@ -1,18 +1,21 @@
+using System.Configuration;
 using LivestreamRecorderService.DependencyInjection;
 using LivestreamRecorderService.Enums;
+using LivestreamRecorderService.Interfaces;
 using LivestreamRecorderService.Models.Options;
 using LivestreamRecorderService.ScopedServices;
 using LivestreamRecorderService.ScopedServices.PlatformService;
 using LivestreamRecorderService.SingletonServices;
+using LivestreamRecorderService.SingletonServices.Downloader;
 using LivestreamRecorderService.Workers;
 using Microsoft.Extensions.Options;
 using Serilog;
-using System.Configuration;
+using Serilog.Debugging;
 
 // ReSharper disable SwitchStatementHandlesSomeKnownEnumValuesWithDefault
 
 #if !RELEASE
-Serilog.Debugging.SelfLog.Enable(Console.WriteLine);
+SelfLog.Enable(Console.WriteLine);
 #endif
 
 
@@ -34,7 +37,7 @@ Log.Information("Starting up...");
 
 try
 {
-    var hostBuilder =
+    IHostBuilder hostBuilder =
         Host.CreateDefaultBuilder(args)
             .UseSerilog()
             .ConfigureServices((context, services) =>
@@ -62,8 +65,9 @@ try
                         .ValidateDataAnnotations()
                         .ValidateOnStart();
 
-                var serviceOptions = services.BuildServiceProvider().GetRequiredService<IOptions<ServiceOption>>().Value;
-                var azureOptions = services.BuildServiceProvider().GetRequiredService<IOptions<AzureOption>>().Value;
+                ServiceOption serviceOptions = services.BuildServiceProvider()
+                                                       .GetRequiredService<IOptions<ServiceOption>>()
+                                                       .Value;
 
                 switch (serviceOptions.JobService)
                 {
@@ -73,71 +77,10 @@ try
                     case ServiceName.Kubernetes:
                         services.AddKubernetesService(configuration);
                         break;
-                    case ServiceName.Docker:
-                        Log.Fatal("Currently only Azure Container Instance and K8s are supported.");
-                        throw new NotImplementedException("Currently only Azure Container Instance and K8s are supported.");
                     default:
-                        Log.Fatal("Job Service is limited to Azure Container Instance, Kubernetes or Docker.");
+                        Log.Fatal("Job Service is limited to Azure Container Instance, Kubernetes.");
                         throw new ConfigurationErrorsException(
-                            "Job Service is limited to Azure Container Instance, Kubernetes or Docker.");
-                }
-
-                switch (serviceOptions.SharedVolumeService)
-                {
-                    case ServiceName.AzureFileShare:
-                        if (null == azureOptions.FileShare
-                            || string.IsNullOrEmpty(azureOptions.FileShare.StorageAccountName)
-                            || string.IsNullOrEmpty(azureOptions.FileShare.StorageAccountKey)
-                            || string.IsNullOrEmpty(azureOptions.FileShare.ShareName))
-                        {
-                            Log.Fatal("AzureFileShare StorageAccountName, StorageAccountKey, ShareName must be specified.");
-                            throw new ConfigurationErrorsException(
-                                "AzureFileShare StorageAccountName, StorageAccountKey, ShareName must be specified.");
-                        }
-
-                        if (serviceOptions.JobService == ServiceName.Kubernetes)
-                        {
-                            Log.Warning(
-                                "If you are using Azure File Share with Kubernetes other than AKS, ensure that you have set up the Azure File CSI Driver.");
-                        }
-
-                        break;
-                    case ServiceName.DockerVolume:
-                        Log.Fatal("Currently only AzureFileShare and NFS is supported.");
-                        throw new NotImplementedException("Currently only AzureFileShare and NFS is supported.");
-
-                    //if (serviceOptions.JobService == ServiceName.AzureContainerInstance)
-                    //{
-                    //    Log.Fatal("Azure Container Instance is not able to mount Docker volume. Use Azure File Share instead.");
-                    //    throw new ConfigurationErrorsException("Azure Container Instance is not able to mount Docker volume. Use Azure File Share instead.");
-                    //}
-                    case ServiceName.CustomPVC:
-                        if (serviceOptions.JobService != ServiceName.Kubernetes)
-                        {
-                            Log.Fatal("CustomPVC is only supported in Kubernetes.");
-                            throw new ConfigurationErrorsException("CustomPVC is only supported in Kubernetes.");
-                        }
-
-                        var k8SOption = services.BuildServiceProvider().GetRequiredService<IOptions<KubernetesOption>>()
-                                                .Value;
-
-                        if (string.IsNullOrEmpty(k8SOption.PVCName))
-                        {
-                            Log.Fatal(
-                                "When selected the CustomPVC for SharedVolumeService, it is necessary to specify the Kubernetes.PVCName.");
-
-                            throw new ConfigurationErrorsException(
-                                "When selected the CustomPVC for SharedVolumeService, it is necessary to specify the Kubernetes.PVCName.");
-                        }
-
-                        Log.Warning(
-                            $"CustomPVC has been selected as the SharedVolumeService. Please ensure that you have already prepared the PersistentVolumeClaim with the name {k8SOption.PVCName} in the Namespace {k8SOption.Namespace}.");
-
-                        break;
-                    default:
-                        Log.Fatal("Shared Volume Service is limited to Azure File Share, DockerVolume, NFS or CustomPVC(k8s).");
-                        throw new ConfigurationErrorsException(
-                            "Shared Volume Service is limited to Azure File Share, DockerVolume or NFS.");
+                            "Job Service is limited to Azure Container Instance, Kubernetes.");
                 }
 
                 switch (serviceOptions.StorageService)
@@ -168,6 +111,14 @@ try
 
                 services.AddDiscordService(configuration);
 
+                services.AddSingleton<IYtarchiveService, YtarchiveService>();
+                services.AddSingleton<IYtdlpService, YtdlpService>();
+                services.AddSingleton<IStreamlinkService, StreamlinkService>();
+                services.AddSingleton<ITwitcastingRecorderService, TwitcastingRecorderService>();
+                services.AddSingleton<IFc2LiveDLService, Fc2LiveDLService>();
+
+                services.AddSingleton<IUploaderService, UploaderService>();
+
                 services.AddHostedService<MigrationWorker>();
                 services.AddHostedService<MonitorWorker>();
                 services.AddHostedService<RecordWorker>();
@@ -185,7 +136,7 @@ try
                 services.AddScoped<Fc2Service>();
             });
 
-    var host = hostBuilder.Build();
+    IHost host = hostBuilder.Build();
 
     host.Run();
 }

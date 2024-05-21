@@ -1,7 +1,8 @@
-version: '3.4'
-
 services:
   livestreamrecorderservice:
+    image: ghcr.io/recorder-moe/livestreamrecorderservice:debug
+    build:
+      target: debug
     environment:
       - DOTNET_ENVIRONMENT=Development
     volumes:

@@ -1,7 +1,6 @@
 ﻿using LivestreamRecorder.DB.Enums;
 using LivestreamRecorder.DB.Models;
 using LivestreamRecorderService.Interfaces;
-using LivestreamRecorderService.Interfaces.Job;
 using LivestreamRecorderService.Models.Options;
 using LivestreamRecorderService.ScopedServices;
 using LivestreamRecorderService.ScopedServices.PlatformService;
@@ -15,8 +14,8 @@ public class MonitorWorker(
     IOptions<TwitchOption> twitchOption,
     IServiceProvider serviceProvider) : BackgroundService
 {
-    private readonly TwitchOption _twitchOption = twitchOption.Value;
     private const int Interval = 10; // in seconds
+    private readonly TwitchOption _twitchOption = twitchOption.Value;
 
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
@@ -68,10 +67,7 @@ public class MonitorWorker(
 
         async Task updateVideosDataFromSource()
         {
-            foreach (Channel? channel in channels)
-            {
-                await platformService.UpdateVideosDataAsync(channel, cancellation);
-            }
+            foreach (Channel? channel in channels) await platformService.UpdateVideosDataAsync(channel, cancellation);
         }
 
         async Task updateScheduledVideosStatus()

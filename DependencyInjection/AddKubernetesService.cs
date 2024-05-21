@@ -1,15 +1,12 @@
-﻿using k8s;
+﻿using System.Configuration;
+using k8s;
+using k8s.Models;
 using LivestreamRecorderService.Enums;
-using LivestreamRecorderService.Interfaces.Job;
-using LivestreamRecorderService.Interfaces.Job.Downloader;
-using LivestreamRecorderService.Interfaces.Job.Uploader;
+using LivestreamRecorderService.Interfaces;
 using LivestreamRecorderService.Models.Options;
-using LivestreamRecorderService.SingletonServices.Kubernetes;
-using LivestreamRecorderService.SingletonServices.Kubernetes.Downloader;
-using LivestreamRecorderService.SingletonServices.Kubernetes.Uploader;
+using LivestreamRecorderService.SingletonServices;
 using Microsoft.Extensions.Options;
 using Serilog;
-using System.Configuration;
 
 namespace LivestreamRecorderService.DependencyInjection;
 
@@ -21,10 +18,7 @@ public static partial class Extensions
         {
             ServiceOption serviceOptions = services.BuildServiceProvider().GetRequiredService<IOptions<ServiceOption>>().Value;
 
-            if (serviceOptions.JobService != ServiceName.Kubernetes)
-            {
-                return services;
-            }
+            if (serviceOptions.JobService != ServiceName.Kubernetes) return services;
 
             IConfigurationSection config = configuration.GetSection(KubernetesOption.ConfigurationSectionName);
             KubernetesOption? kubernetesOptions = config.Get<KubernetesOption>();
@@ -43,23 +37,16 @@ public static partial class Extensions
                         ? KubernetesClientConfiguration.BuildConfigFromConfigFile(kubernetesOptions.ConfigFile)
                         : KubernetesClientConfiguration.BuildDefaultConfig();
 
+            k8SConfig.Namespace =
+                !string.IsNullOrWhiteSpace(kubernetesOptions.Namespace)
+                    ? kubernetesOptions.Namespace
+                    : "recordermoe";
+
             var client = new Kubernetes(k8SConfig);
+            ensureNamespaceExists(client, k8SConfig.Namespace);
             services.AddSingleton(client);
 
             services.AddSingleton<IJobService, KubernetesService>();
-
-            KubernetesService.KubernetesNamespace = string.IsNullOrWhiteSpace(kubernetesOptions.Namespace)
-                ? "recordermoe"
-                : kubernetesOptions.Namespace;
-
-            services.AddSingleton<IYtarchiveService, YtarchiveService>();
-            services.AddSingleton<IYtdlpService, YtdlpService>();
-            services.AddSingleton<IStreamlinkService, StreamlinkService>();
-            services.AddSingleton<ITwitcastingRecorderService, TwitcastingRecorderService>();
-            services.AddSingleton<IFc2LiveDLService, Fc2LiveDLService>();
-
-            services.AddSingleton<IAzureUploaderService, AzureUploaderService>();
-            services.AddSingleton<IS3UploaderService, S3UploaderService>();
 
             return services;
         }
@@ -67,6 +54,26 @@ public static partial class Extensions
         {
             Log.Fatal("Kubernetes configuration is invalid.");
             throw new ConfigurationErrorsException("Kubernetes configuration is invalid.");
+        }
+
+        void ensureNamespaceExists(ICoreV1Operations client, string namespaceName)
+        {
+            V1Namespace? existingNamespace = client.ListNamespace().Items
+                                                   .ToList()
+                                                   .Find(ns => ns.Metadata.Name == namespaceName);
+
+            if (existingNamespace != null) return;
+
+            var newNamespace = new V1Namespace
+            {
+                Metadata = new V1ObjectMeta
+                {
+                    Name = namespaceName
+                }
+            };
+
+            client.CreateNamespace(newNamespace);
+            Log.Information("Namespace {namespaceName} created.", namespaceName);
         }
     }
 }

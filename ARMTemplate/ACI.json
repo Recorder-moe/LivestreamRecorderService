@@ -2,60 +2,48 @@
     "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
     "contentVersion": "1.0.0.0",
     "parameters": {
-        "dockerImageName": {
+        "DockerImageName": {
             "type": "string"
         },
-        "containerName": {
+        "UploaderImageName": {
             "type": "string"
         },
-        "commandOverrideArray": {
+        "ContainerName": {
+            "type": "string"
+        },
+        "CommandOverrideArray": {
             "type": "array"
         },
-        "fileshareVolumeName": {
-            "type": "string"
-        },
-        "storageAccountName": {
-            "type": "string"
-        },
-        "storageAccountKey": {
-            "type": "securestring"
-        },
-        "mountPath": {
+        "MountPath": {
             "type": "string",
             "defaultValue": "/sharedvolume"
+        },
+        "UploaderCommand": {
+            "type": "string"
+        },
+        "EnvironmentVariables": {
+            "type": "array"
         }
     },
     "resources": [
         {
             "apiVersion": "2023-05-01",
-            "name": "[parameters('containerName')]",
+            "name": "[parameters('ContainerName')]",
             "location": "eastasia",
             "tags": {},
             "type": "Microsoft.ContainerInstance/containerGroups",
             "zones": [],
             "properties": {
-                "containers": [
+                "initContainers": [
                     {
-                        "name": "[parameters('containerName')]",
+                        "name": "[parameters('ContainerName')]",
                         "properties": {
-                            "image": "[parameters('dockerImageName')]",
-                            "resources": {
-                                "requests": {
-                                    "cpu": "1",
-                                    "memoryInGB": "1"
-                                }
-                            },
-                            "command": "[parameters('commandOverrideArray')]",
-                            "ports": [
-                                {
-                                    "port": 80,
-                                    "protocol": "TCP"
-                                }
-                            ],
+                            "image": "[parameters('DockerImageName')]",
+                            "command": "[parameters('CommandOverrideArray')]",
                             "volumeMounts": [
                                 {
                                     "name": "sharedvolume",
-                                    "mountPath": "[parameters('mountPath')]"
+                                    "MountPath": "[parameters('MountPath')]"
                                 }
                             ],
                             "securityContext": {
@@ -65,7 +53,39 @@
                         }
                     }
                 ],
-                "restartPolicy": "Never",
+                "containers": [
+                    {
+                        "name": "uploader",
+                        "properties": {
+                            "image": "[parameters('UploaderImageName')]",
+                            "resources": {
+                                "requests": {
+                                    "cpu": 1,
+                                    "memoryInGB": "1"
+                                }
+                            },
+                            "command": "[parameters('UploaderCommand')]",
+                            "ports": [
+                                {
+                                    "port": 80,
+                                    "protocol": "TCP"
+                                }
+                            ],
+                            "volumeMounts": [
+                                {
+                                    "name": "sharedvolume",
+                                    "MountPath": "/sharedvolume"
+                                }
+                            ],
+                            "environmentVariables": "[parameters('environmentVariables')]",
+                            "securityContext": {
+                                "runAsUser": 1001,
+                                "runAsGroup": 0
+                            }
+                        }
+                    }
+                ],
+                "restartPolicy": "OnFailure",
                 "osType": "Linux",
                 "ipAddress": {
                     "type": "Public",
@@ -79,11 +99,7 @@
                 "volumes": [
                     {
                         "name": "sharedvolume",
-                        "azureFile": {
-                            "shareName": "[parameters('fileshareVolumeName')]",
-                            "storageAccountName": "[parameters('storageAccountName')]",
-                            "storageAccountKey": "[parameters('storageAccountKey')]"
-                        }
+                        "emptyDir": {}
                     }
                 ]
             }

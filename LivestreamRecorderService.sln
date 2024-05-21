@@ -41,7 +41,7 @@ Global
 		{D9705463-12BD-4589-B8E0-53C6EE792EE8}.ApacheCouchDB_Release|Any CPU.ActiveCfg = Release|Any CPU
 		{D9705463-12BD-4589-B8E0-53C6EE792EE8}.AzureCosmosDB_Release|Any CPU.ActiveCfg = Release|Any CPU
 		{D9705463-12BD-4589-B8E0-53C6EE792EE8}.CosmosDB|Any CPU.ActiveCfg = Release|Any CPU
-		{D9705463-12BD-4589-B8E0-53C6EE792EE8}.CouchDB|Any CPU.ActiveCfg = Release|Any CPU
+		{D9705463-12BD-4589-B8E0-53C6EE792EE8}.CouchDB|Any CPU.ActiveCfg = CouchDB|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

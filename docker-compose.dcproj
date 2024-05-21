@@ -5,6 +5,10 @@
     <DockerTargetOS>Linux</DockerTargetOS>
     <ProjectGuid>d9705463-12bd-4589-b8e0-53c6ee792ee8</ProjectGuid>
   </PropertyGroup>
+  <PropertyGroup>
+    <DockerServiceName>livestreamrecorderservice</DockerServiceName>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='CouchDB|AnyCPU'" />
   <ItemGroup>
     <None Include="docker-compose.override.yml">
       <DependentUpon>docker-compose.yml</DependentUpon>

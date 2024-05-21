@@ -1,16 +1,12 @@
-﻿using Azure.Identity;
+﻿using System.Configuration;
+using Azure.Identity;
 using Azure.ResourceManager;
-using LivestreamRecorderService.Interfaces.Job;
-using LivestreamRecorderService.Interfaces.Job.Downloader;
-using LivestreamRecorderService.Interfaces.Job.Uploader;
+using LivestreamRecorderService.Interfaces;
 using LivestreamRecorderService.Models.Options;
-using LivestreamRecorderService.SingletonServices.ACI;
-using LivestreamRecorderService.SingletonServices.ACI.Downloader;
-using LivestreamRecorderService.SingletonServices.ACI.Uploader;
+using LivestreamRecorderService.SingletonServices;
 using Microsoft.Extensions.Azure;
 using Microsoft.Extensions.Options;
 using Serilog;
-using System.Configuration;
 
 namespace LivestreamRecorderService.DependencyInjection;
 
@@ -27,24 +23,15 @@ public static partial class Extensions
                 throw new ConfigurationErrorsException();
 
             services.AddAzureClients(clientsBuilder
-                => clientsBuilder.UseCredential((_)
-                                     => new ClientSecretCredential(
-                                         tenantId: azureOptions.ContainerInstance.ClientSecret.TenantID,
-                                         clientId: azureOptions.ContainerInstance.ClientSecret.ClientID,
-                                         clientSecret: azureOptions.ContainerInstance.ClientSecret
-                                                                   .ClientSecret))
-                                 .AddClient<ArmClient, ArmClientOptions>((_, token) => new ArmClient(token)));
+                                         => clientsBuilder.UseCredential(_
+                                                                             => new ClientSecretCredential(
+                                                                                 tenantId: azureOptions.ContainerInstance.ClientSecret.TenantID,
+                                                                                 clientId: azureOptions.ContainerInstance.ClientSecret.ClientID,
+                                                                                 clientSecret: azureOptions.ContainerInstance.ClientSecret
+                                                                                     .ClientSecret))
+                                                          .AddClient<ArmClient, ArmClientOptions>((_, token) => new ArmClient(token)));
 
             services.AddSingleton<IJobService, AciService>();
-
-            services.AddSingleton<IYtarchiveService, YtarchiveService>();
-            services.AddSingleton<IYtdlpService, YtdlpService>();
-            services.AddSingleton<IStreamlinkService, StreamlinkService>();
-            services.AddSingleton<ITwitcastingRecorderService, TwitcastingRecorderService>();
-            services.AddSingleton<IFc2LiveDLService, Fc2LiveDLService>();
-
-            services.AddSingleton<IAzureUploaderService, AzureUploaderService>();
-            services.AddSingleton<IS3UploaderService, S3UploaderService>();
 
             return services;
         }
