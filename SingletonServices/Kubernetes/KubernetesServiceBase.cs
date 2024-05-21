@@ -114,13 +114,13 @@ public abstract class KubernetesServiceBase(
                                     false => DefaultRegistry + uploaderService.Image,
                                     true => FallbackRegistry + uploaderService.Image
                                 },
-                                Args = [Path.Combine(mountPath, fileName.Replace(".mp4", ""))],
+                                Args = [fileName.Replace(".mp4", "")],
                                 VolumeMounts = new List<V1VolumeMount>
                                 {
                                     new()
                                     {
                                         Name = "sharedvolume",
-                                        MountPath = mountPath,
+                                        MountPath = "/sharedvolume",
                                     }
                                 },
                                 Env = uploaderService.GetEnvironmentVariables()
