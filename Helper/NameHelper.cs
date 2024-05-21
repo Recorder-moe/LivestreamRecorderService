@@ -34,20 +34,28 @@ public static class NameHelper
             public static string PlatformType(string channelId, string platform)
                 => platform switch
                 {
-                    "Youtube" or IYtarchiveService.Name or IYtdlpService.Name => channelId, // Youtube channelId already starts with "UC"
-                    "Twitch" or IStreamlinkService.Name => channelId[2..],
-                    "Twitcasting" or ITwitcastingRecorderService.Name => channelId[2..],
-                    "FC2" or IFc2LiveDLService.Name => channelId[2..],
+                    "Youtube" or IYtarchiveService.Name or IYtdlpService.Name
+                        => channelId, // Youtube channelId already starts with "UC"
+                    "Twitch" or IStreamlinkService.Name
+                        => channelId.StartsWith("TW") ? channelId[2..] : channelId,
+                    "Twitcasting" or ITwitcastingRecorderService.Name
+                        => channelId.StartsWith("TC") ? channelId[2..] : channelId,
+                    "FC2" or IFc2LiveDLService.Name
+                        => channelId.StartsWith("FC") ? channelId[2..] : channelId,
                     _ => throw new NotImplementedException(),
                 };
 
             public static string DatabaseType(string channelId, string platform)
                 => platform switch
                 {
-                    "Youtube" or IYtarchiveService.Name or IYtdlpService.Name => channelId, // Youtube channelId always starts with "UC"
-                    "Twitch" or IStreamlinkService.Name => "TW" + channelId,
-                    "Twitcasting" or ITwitcastingRecorderService.Name => "TC" + channelId,
-                    "FC2" or IFc2LiveDLService.Name => "FC" + channelId,
+                    "Youtube" or IYtarchiveService.Name or IYtdlpService.Name
+                        => channelId, // Youtube channelId always starts with "UC"
+                    "Twitch" or IStreamlinkService.Name
+                        => channelId.StartsWith("TW") ? channelId : "TW" + channelId,
+                    "Twitcasting" or ITwitcastingRecorderService.Name
+                        => channelId.StartsWith("TC") ? channelId : "TC" + channelId,
+                    "FC2" or IFc2LiveDLService.Name
+                        => channelId.StartsWith("FC") ? channelId : "FC" + channelId,
                     _ => throw new NotImplementedException(),
                 };
         }
@@ -57,20 +65,28 @@ public static class NameHelper
             public static string PlatformType(string videoId, string platform)
                 => platform switch
                 {
-                    "Youtube" or IYtarchiveService.Name or IYtdlpService.Name => videoId[1..],
-                    "Twitch" or IStreamlinkService.Name => videoId[2..],
-                    "Twitcasting" or ITwitcastingRecorderService.Name => videoId[2..],
-                    "FC2" or IFc2LiveDLService.Name => videoId[2..],
+                    "Youtube" or IYtarchiveService.Name or IYtdlpService.Name
+                        => videoId.TrimStart('Y'),
+                    "Twitch" or IStreamlinkService.Name
+                        => videoId.StartsWith("TW") ? videoId[2..] : videoId,
+                    "Twitcasting" or ITwitcastingRecorderService.Name
+                        => videoId.StartsWith("TC") ? videoId[2..] : videoId,
+                    "FC2" or IFc2LiveDLService.Name
+                        => videoId.StartsWith("FC") ? videoId[2..] : videoId,
                     _ => throw new NotImplementedException(),
                 };
 
             public static string DatabaseType(string videoId, string platform)
                 => platform switch
                 {
-                    "Youtube" or IYtarchiveService.Name or IYtdlpService.Name => "Y" + videoId,
-                    "Twitch" or IStreamlinkService.Name => "TW" + videoId,
-                    "Twitcasting" or ITwitcastingRecorderService.Name => "TC" + videoId,
-                    "FC2" or IFc2LiveDLService.Name => "FC" + videoId,
+                    "Youtube" or IYtarchiveService.Name or IYtdlpService.Name
+                        => videoId.StartsWith('Y') ? videoId : "Y" + videoId,
+                    "Twitch" or IStreamlinkService.Name
+                        => videoId.StartsWith("TW") ? videoId : "TW" + videoId,
+                    "Twitcasting" or ITwitcastingRecorderService.Name
+                        => videoId.StartsWith("TC") ? videoId : "TC" + videoId,
+                    "FC2" or IFc2LiveDLService.Name
+                        => videoId.StartsWith("FC") ? videoId : "FC" + videoId,
                     _ => throw new NotImplementedException(),
                 };
         }

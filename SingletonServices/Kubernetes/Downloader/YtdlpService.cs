@@ -23,7 +23,7 @@ public class YtdlpService(
         url ??= NameHelper.ChangeId.VideoId.PlatformType(video.id, Name);
 
         if (!url.StartsWith("http"))
-            url = $"https://youtu.be/{NameHelper.ChangeId.VideoId.PlatformType(url, Name)}";
+            url = $"https://youtu.be/{url}";
 
         const string mountPath = "/download";
         string fileName = NameHelper.GetFileName(video, IYtdlpService.Name);
