@@ -79,6 +79,16 @@ public abstract class KubernetesServiceBase(
                             {
                                 Name = "sharedvolume",
                                 EmptyDir = new V1EmptyDirVolumeSource()
+                            },
+                            new()
+                            {
+                                Name = "cookies",
+                                Secret = new V1SecretVolumeSource
+                                {
+                                    SecretName = "cookies",
+                                    DefaultMode = 432, // octal 0660 to decimal
+                                    Optional = true,
+                                }
                             }
                         },
                         // Downloader container
@@ -99,6 +109,13 @@ public abstract class KubernetesServiceBase(
                                     {
                                         Name = "sharedvolume",
                                         MountPath = mountPath,
+                                        ReadOnlyProperty = false,
+                                    },
+                                    new()
+                                    {
+                                        Name = "cookies",
+                                        MountPath = Path.Combine(mountPath, "cookies"),
+                                        ReadOnlyProperty = false,
                                     }
                                 },
                             }
