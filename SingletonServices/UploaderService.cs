@@ -23,6 +23,13 @@ public class UploaderService(
         _ => throw new NotImplementedException()
     };
 
+    public string ScriptName => _serviceOptions.StorageService switch
+    {
+        ServiceName.AzureBlobStorage => "./azure-uploader.sh",
+        ServiceName.S3 => "./s3-uploader.sh",
+        _ => throw new NotImplementedException()
+    };
+
     public List<EnvironmentVariable> GetEnvironmentVariables()
     {
         return _serviceOptions.StorageService switch

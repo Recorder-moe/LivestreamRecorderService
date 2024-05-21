@@ -14,7 +14,7 @@ public class UpdateChannelInfoWorker(
 {
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
-        using var _ = LogContext.PushProperty("Worker", nameof(UpdateChannelInfoWorker));
+        using IDisposable _ = LogContext.PushProperty("Worker", nameof(UpdateChannelInfoWorker));
 
 #if RELEASE
         logger.LogInformation("{Worker} will sleep 60 seconds avoid being overloaded with {WorkerToWait}.", nameof(RecordWorker), nameof(MonitorWorker));
@@ -25,14 +25,14 @@ public class UpdateChannelInfoWorker(
 
         while (!stoppingToken.IsCancellationRequested)
         {
-            using var __ = LogContext.PushProperty("WorkerRunId", $"{nameof(UpdateChannelInfoWorker)}_{DateTime.UtcNow:yyyyMMddHHmmssfff}");
+            using IDisposable __ = LogContext.PushProperty("WorkerRunId", $"{nameof(UpdateChannelInfoWorker)}_{DateTime.UtcNow:yyyyMMddHHmmssfff}");
 
             #region DI
 
-            using var scope = serviceProvider.CreateScope();
-            var youtubeService = scope.ServiceProvider.GetRequiredService<YoutubeService>();
-            var twitcastingService = scope.ServiceProvider.GetRequiredService<TwitcastingService>();
-            var fC2Service = scope.ServiceProvider.GetRequiredService<Fc2Service>();
+            using IServiceScope scope = serviceProvider.CreateScope();
+            YoutubeService youtubeService = scope.ServiceProvider.GetRequiredService<YoutubeService>();
+            TwitcastingService twitcastingService = scope.ServiceProvider.GetRequiredService<TwitcastingService>();
+            Fc2Service fC2Service = scope.ServiceProvider.GetRequiredService<Fc2Service>();
 
             #endregion
 
@@ -42,7 +42,7 @@ public class UpdateChannelInfoWorker(
 
             if (twitchOptions.Value.Enabled)
             {
-                var twitchService = scope.ServiceProvider.GetRequiredService<TwitchService>();
+                TwitchService twitchService = scope.ServiceProvider.GetRequiredService<TwitchService>();
                 await UpdatePlatformAsync(twitchService, stoppingToken);
             }
 
@@ -58,9 +58,6 @@ public class UpdateChannelInfoWorker(
                        .ToList();
 
         logger.LogDebug("Get {channelCount} channels for {platform}", channels.Count, platformService.PlatformName);
-        foreach (var channel in channels)
-        {
-            await platformService.UpdateChannelDataAsync(channel, stoppingToken);
-        }
+        foreach (Channel channel in channels) await platformService.UpdateChannelDataAsync(channel, stoppingToken);
     }
 }

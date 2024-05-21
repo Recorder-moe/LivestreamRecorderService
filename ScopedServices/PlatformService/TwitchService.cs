@@ -8,7 +8,6 @@ using LivestreamRecorder.DB.Interfaces;
 using LivestreamRecorder.DB.Models;
 using LivestreamRecorderService.Helper;
 using LivestreamRecorderService.Interfaces;
-using LivestreamRecorderService.Interfaces.Job.Downloader;
 using LivestreamRecorderService.Models.Options;
 using Microsoft.Extensions.Options;
 using Serilog.Context;

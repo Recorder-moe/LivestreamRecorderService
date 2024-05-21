@@ -2,34 +2,33 @@
     "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
     "contentVersion": "1.0.0.0",
     "parameters": {
-        "dockerImageName": {
+        "DockerImageName": {
             "type": "string"
         },
-        "uploaderImageName": {
+        "UploaderImageName": {
             "type": "string"
         },
-        "containerName": {
+        "ContainerName": {
             "type": "string"
         },
-        "commandOverrideArray": {
+        "CommandOverrideArray": {
             "type": "array"
         },
-        "mountPath": {
+        "MountPath": {
             "type": "string",
             "defaultValue": "/sharedvolume"
         },
-        "mountPathAndFileName": {
-            "type": "string",
-            "defaultValue": "/sharedvolume/$(newGuid())"
+        "UploaderCommand": {
+            "type": "string"
         },
-        "environmentVariables": {
+        "EnvironmentVariables": {
             "type": "array"
         }
     },
     "resources": [
         {
             "apiVersion": "2023-05-01",
-            "name": "[parameters('containerName')]",
+            "name": "[parameters('ContainerName')]",
             "location": "eastasia",
             "tags": {},
             "type": "Microsoft.ContainerInstance/containerGroups",
@@ -37,23 +36,16 @@
             "properties": {
                 "initContainers": [
                     {
-                        "name": "[parameters('containerName')]",
+                        "name": "[parameters('ContainerName')]",
                         "properties": {
-                            "image": "[parameters('dockerImageName')]",
-                            "command": "[parameters('commandOverrideArray')]",
-                            "ports": [
-                                {
-                                    "port": 80,
-                                    "protocol": "TCP"
-                                }
-                            ],
+                            "image": "[parameters('DockerImageName')]",
+                            "command": "[parameters('CommandOverrideArray')]",
                             "volumeMounts": [
                                 {
                                     "name": "sharedvolume",
-                                    "mountPath": "[parameters('mountPath')]"
+                                    "MountPath": "[parameters('MountPath')]"
                                 }
                             ],
-                            "environmentVariables": "[parameters('environmentVariables')]",
                             "securityContext": {
                                 "runAsUser": 1001,
                                 "runAsGroup": 0
@@ -65,14 +57,14 @@
                     {
                         "name": "uploader",
                         "properties": {
-                            "image": "[parameters('uploaderImageName')]",
+                            "image": "[parameters('UploaderImageName')]",
                             "resources": {
                                 "requests": {
                                     "cpu": 1,
                                     "memoryInGB": "1"
                                 }
                             },
-                            "command": "[parameters('mountPathAndFileName')]",
+                            "command": "[parameters('UploaderCommand')]",
                             "ports": [
                                 {
                                     "port": 80,
@@ -82,7 +74,7 @@
                             "volumeMounts": [
                                 {
                                     "name": "sharedvolume",
-                                    "mountPath": "[parameters('mountPath')]"
+                                    "MountPath": "/sharedvolume"
                                 }
                             ],
                             "environmentVariables": "[parameters('environmentVariables')]",

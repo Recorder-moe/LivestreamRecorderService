@@ -1,19 +1,21 @@
+using System.Configuration;
 using LivestreamRecorderService.DependencyInjection;
 using LivestreamRecorderService.Enums;
+using LivestreamRecorderService.Interfaces;
 using LivestreamRecorderService.Models.Options;
 using LivestreamRecorderService.ScopedServices;
 using LivestreamRecorderService.ScopedServices.PlatformService;
 using LivestreamRecorderService.SingletonServices;
+using LivestreamRecorderService.SingletonServices.Downloader;
 using LivestreamRecorderService.Workers;
 using Microsoft.Extensions.Options;
 using Serilog;
-using System.Configuration;
-using LivestreamRecorderService.Interfaces;
+using Serilog.Debugging;
 
 // ReSharper disable SwitchStatementHandlesSomeKnownEnumValuesWithDefault
 
 #if !RELEASE
-Serilog.Debugging.SelfLog.Enable(Console.WriteLine);
+SelfLog.Enable(Console.WriteLine);
 #endif
 
 
@@ -35,7 +37,7 @@ Log.Information("Starting up...");
 
 try
 {
-    var hostBuilder =
+    IHostBuilder hostBuilder =
         Host.CreateDefaultBuilder(args)
             .UseSerilog()
             .ConfigureServices((context, services) =>
@@ -63,7 +65,9 @@ try
                         .ValidateDataAnnotations()
                         .ValidateOnStart();
 
-                var serviceOptions = services.BuildServiceProvider().GetRequiredService<IOptions<ServiceOption>>().Value;
+                ServiceOption serviceOptions = services.BuildServiceProvider()
+                                                       .GetRequiredService<IOptions<ServiceOption>>()
+                                                       .Value;
 
                 switch (serviceOptions.JobService)
                 {
@@ -73,13 +77,10 @@ try
                     case ServiceName.Kubernetes:
                         services.AddKubernetesService(configuration);
                         break;
-                    case ServiceName.Docker:
-                        Log.Fatal("Currently only Azure Container Instance and K8s are supported.");
-                        throw new NotImplementedException("Currently only Azure Container Instance and K8s are supported.");
                     default:
-                        Log.Fatal("Job Service is limited to Azure Container Instance, Kubernetes or Docker.");
+                        Log.Fatal("Job Service is limited to Azure Container Instance, Kubernetes.");
                         throw new ConfigurationErrorsException(
-                            "Job Service is limited to Azure Container Instance, Kubernetes or Docker.");
+                            "Job Service is limited to Azure Container Instance, Kubernetes.");
                 }
 
                 switch (serviceOptions.StorageService)
@@ -110,6 +111,12 @@ try
 
                 services.AddDiscordService(configuration);
 
+                services.AddSingleton<IYtarchiveService, YtarchiveService>();
+                services.AddSingleton<IYtdlpService, YtdlpService>();
+                services.AddSingleton<IStreamlinkService, StreamlinkService>();
+                services.AddSingleton<ITwitcastingRecorderService, TwitcastingRecorderService>();
+                services.AddSingleton<IFc2LiveDLService, Fc2LiveDLService>();
+
                 services.AddSingleton<IUploaderService, UploaderService>();
 
                 services.AddHostedService<MigrationWorker>();
@@ -129,7 +136,7 @@ try
                 services.AddScoped<Fc2Service>();
             });
 
-    var host = hostBuilder.Build();
+    IHost host = hostBuilder.Build();
 
     host.Run();
 }

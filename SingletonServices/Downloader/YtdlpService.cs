@@ -1,32 +1,26 @@
 ﻿using LivestreamRecorder.DB.Models;
 using LivestreamRecorderService.Helper;
 using LivestreamRecorderService.Interfaces;
-using LivestreamRecorderService.Interfaces.Job.Downloader;
 
-namespace LivestreamRecorderService.SingletonServices.Kubernetes.Downloader;
+namespace LivestreamRecorderService.SingletonServices.Downloader;
 
-public class YtdlpService(
-    ILogger<YtdlpService> logger,
-    k8s.Kubernetes kubernetes,
-    IUploaderService uploaderService) : KubernetesServiceBase(logger,
-                                                              kubernetes,
-                                                              uploaderService), IYtdlpService
+public class YtdlpService(IJobService jobService) : IYtdlpService
 {
-    public override string Name => IYtdlpService.Name;
+    private static string Name => IYtdlpService.Name;
 
-    public override Task CreateJobAsync(Video video,
-                                        bool useCookiesFile = false,
-                                        string? url = null,
-                                        CancellationToken cancellation = default)
+    public Task CreateJobAsync(Video video,
+                               bool useCookiesFile = false,
+                               string? url = null,
+                               CancellationToken cancellation = default)
     {
-        string instanceName = GetInstanceName(video.id);
+        string instanceName = NameHelper.GetInstanceName(Name, video.id);
         url ??= NameHelper.ChangeId.VideoId.PlatformType(video.id, Name);
 
         if (!url.StartsWith("http"))
             url = $"https://youtu.be/{url}";
 
         const string mountPath = "/download";
-        string fileName = NameHelper.GetFileName(video, IYtdlpService.Name);
+        string fileName = NameHelper.GetFileName(video, Name);
         video.Filename = fileName;
         string[]? command = null;
         string[] args =
@@ -54,14 +48,14 @@ public class YtdlpService(
             // https://github.com/yt-dlp/yt-dlp/issues/5977#issuecomment-2121742572
             (command, args) = copyCookiesHack();
 
-        return CreateInstanceAsync(deploymentName: instanceName,
-                                   containerName: instanceName,
-                                   imageName: "yt-dlp",
-                                   fileName: fileName,
-                                   command: command,
-                                   args: args,
-                                   mountPath: mountPath,
-                                   cancellation: cancellation);
+        return jobService.CreateInstanceAsync(deploymentName: instanceName,
+                                              containerName: instanceName,
+                                              imageName: "yt-dlp",
+                                              fileName: fileName,
+                                              command: command,
+                                              args: args,
+                                              mountPath: mountPath,
+                                              cancellation: cancellation);
 
         (string[] command, string[] args) copyCookiesHack()
         {

@@ -10,7 +10,6 @@ using LivestreamRecorder.DB.Interfaces;
 using LivestreamRecorder.DB.Models;
 using LivestreamRecorderService.Helper;
 using LivestreamRecorderService.Interfaces;
-using LivestreamRecorderService.Interfaces.Job.Downloader;
 using LivestreamRecorderService.Json;
 using LivestreamRecorderService.Models;
 using LivestreamRecorderService.Models.Options;
@@ -245,6 +244,8 @@ public class TwitcastingService(
             return;
         }
 
+        string channelId = channel.id;
+
         string? avatarBlobUrl = await getAvatarBlobUrl() ?? channel.Avatar;
         string? bannerBlobUrl = await getBannerBlobUrl() ?? channel.Banner;
         string channelName = getChannelName() ?? channel.ChannelName;
@@ -265,7 +266,7 @@ public class TwitcastingService(
 
             if (string.IsNullOrEmpty(avatarUrl)) return null;
 
-            avatarBlobUrl = await DownloadImageAndUploadToBlobStorageAsync(avatarUrl, $"avatar/{channel.id}", stoppingToken);
+            avatarBlobUrl = await DownloadImageAndUploadToBlobStorageAsync(avatarUrl, $"avatar/{channelId}", stoppingToken);
 
             return avatarBlobUrl;
         }
@@ -276,7 +277,7 @@ public class TwitcastingService(
             string? bannerUrl = extractBackgroundImageUrl(bannerNode?.GetAttributeValue("style", "") ?? "");
             if (string.IsNullOrEmpty(bannerUrl)) return null;
 
-            bannerBlobUrl = await DownloadImageAndUploadToBlobStorageAsync(bannerUrl, $"banner/{channel.id}", stoppingToken);
+            bannerBlobUrl = await DownloadImageAndUploadToBlobStorageAsync(bannerUrl, $"banner/{channelId}", stoppingToken);
 
             return bannerBlobUrl;
         }

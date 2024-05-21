@@ -1,8 +1,7 @@
 ﻿using LivestreamRecorder.DB.Enums;
 using LivestreamRecorder.DB.Models;
 using LivestreamRecorderService.Helper;
-using LivestreamRecorderService.Interfaces.Job;
-using LivestreamRecorderService.Interfaces.Job.Downloader;
+using LivestreamRecorderService.Interfaces;
 using LivestreamRecorderService.Models.Options;
 using LivestreamRecorderService.ScopedServices;
 using LivestreamRecorderService.Workers;

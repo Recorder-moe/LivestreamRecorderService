@@ -21,16 +21,16 @@ public class UpdateVideoStatusWorker(
     IServiceProvider serviceProvider) : BackgroundService
 {
     private readonly AzureOption _azureOption = azureOptions.Value;
-    private readonly TwitchOption _twitchOption = twitchOptions.Value;
-    private readonly ServiceOption _serviceOption = serviceOptions.Value;
     private readonly S3Option _s3Option = s3Options.Value;
+    private readonly ServiceOption _serviceOption = serviceOptions.Value;
+    private readonly TwitchOption _twitchOption = twitchOptions.Value;
 
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
         using IDisposable _ = LogContext.PushProperty("Worker", nameof(UpdateVideoStatusWorker));
         logger.LogTrace("{Worker} starts...", nameof(UpdateVideoStatusWorker));
 
-        int i = 0;
+        var i = 0;
         DateTime expireDate = DateTime.Today;
         while (!stoppingToken.IsCancellationRequested)
         {
@@ -49,10 +49,7 @@ public class UpdateVideoStatusWorker(
                 #endregion
 
                 IPlatformService? twitchService = null;
-                if (_twitchOption.Enabled)
-                {
-                    twitchService = scope.ServiceProvider.GetRequiredService<TwitchService>();
-                }
+                if (_twitchOption.Enabled) twitchService = scope.ServiceProvider.GetRequiredService<TwitchService>();
 
                 // Iterate over all elements, regardless of whether their content has changed.
                 i++;
@@ -62,7 +59,7 @@ public class UpdateVideoStatusWorker(
                                                   && p.Status < VideoStatus.Expired)
                                       .AsEnumerable()
                                       // Sort locally to reduce the CPU usage of CosmosDB
-                                      .OrderByDescending(p => p.Timestamps.PublishedAt),
+                                      .OrderByDescending(p => p.Timestamps.PublishedAt)
                 ];
 
                 if (videos.Count > 0)
@@ -84,8 +81,13 @@ public class UpdateVideoStatusWorker(
         }
     }
 
-    private async Task UpdateVideoAsync(int i, List<Video> videos, IPlatformService youtubeService, IPlatformService twitcastingService,
-        IPlatformService fc2Service, IPlatformService? twitchService, CancellationToken stoppingToken)
+    private async Task UpdateVideoAsync(int i,
+                                        List<Video> videos,
+                                        IPlatformService youtubeService,
+                                        IPlatformService twitcastingService,
+                                        IPlatformService fc2Service,
+                                        IPlatformService? twitchService,
+                                        CancellationToken stoppingToken)
     {
         logger.LogInformation("Process: {index}/{amount}", i, videos.Count);
 
@@ -138,9 +140,7 @@ public class UpdateVideoStatusWorker(
         {
             if (video.SourceStatus == VideoStatus.Deleted
                 || video.SourceStatus == VideoStatus.Reject)
-            {
                 logger.LogWarning("The video {videoId} that has expired does not exist on the source platform!!", video.id);
-            }
 
             if (!string.IsNullOrEmpty(video.Filename)
                 && await storageService.DeleteVideoBlobAsync(video.Filename, cancellation))
@@ -154,7 +154,7 @@ public class UpdateVideoStatusWorker(
                 logger.LogError("FAILED to Delete blob {path}", video.Filename);
                 await videoService.UpdateVideoStatusAsync(video, VideoStatus.Error);
                 await videoService.UpdateVideoNoteAsync(video,
-                    $"Failed to delete blob after {retentionDays} days. Please contact admin if you see this message.");
+                                                        $"Failed to delete blob after {retentionDays} days. Please contact admin if you see this message.");
             }
         }
     }

@@ -1,77 +1,94 @@
-﻿using System.Globalization;
-using k8s;
+﻿using k8s;
 using k8s.Models;
 using LivestreamRecorder.DB.Models;
 using LivestreamRecorderService.Helper;
 using LivestreamRecorderService.Interfaces;
-using LivestreamRecorderService.Interfaces.Job;
+using LivestreamRecorderService.Models.Options;
+using Microsoft.Extensions.Options;
 
-namespace LivestreamRecorderService.SingletonServices.Kubernetes;
+namespace LivestreamRecorderService.SingletonServices;
 
-public abstract class KubernetesServiceBase(
-    ILogger<KubernetesServiceBase> logger,
-    k8s.Kubernetes kubernetes,
-    IUploaderService uploaderService) : IJobServiceBase
+public class KubernetesService(
+    ILogger<KubernetesService> logger,
+    Kubernetes kubernetes,
+    IOptions<KubernetesOption> options,
+    IUploaderService uploaderService) : IJobService
 {
     private const string DefaultRegistry = "ghcr.io/recorder-moe/";
     private const string FallbackRegistry = "recordermoe/";
-    private static string KubernetesNamespace => KubernetesService.KubernetesNamespace;
 
-    /// <inheritdoc />
-    public abstract string Name { get; }
+    private readonly string _kubernetesNamespace = options.Value.Namespace ?? "recordermoe";
 
-    public string GetInstanceName(string videoId)
+    public Task<bool> IsJobSucceededAsync(Video video, CancellationToken cancellation = default)
     {
-        return (Name + NameHelper.GetInstanceName(videoId)).ToLower(CultureInfo.InvariantCulture);
+        return IsJobSucceededAsync(NameHelper.CleanUpInstanceName(video.id), cancellation);
     }
 
-    // Must be overridden
-    public abstract Task CreateJobAsync(Video video,
-                                        bool useCookiesFile = false,
-                                        string? url = null,
-                                        CancellationToken cancellation = default);
-
-    private async Task<V1Job?> GetJobByKeywordAsync(string keyword, CancellationToken cancellation)
+    public async Task<bool> IsJobSucceededAsync(string keyword, CancellationToken cancellation = default)
     {
-        V1JobList? jobs = await kubernetes.ListNamespacedJobAsync(KubernetesNamespace, cancellationToken: cancellation);
-        return jobs.Items.FirstOrDefault(p => p.Name().Contains(keyword));
+        return (await GetJobsByKeywordAsync(keyword, cancellation))
+            .Any(job => job.Status.Active is null or 0
+                        && job.Status.Succeeded > 0);
     }
 
-    /// <summary>
-    ///     Create Instance. Cookies file will be mounted at /cookies if K8s secrets exists.
-    /// </summary>
-    /// <param name="deploymentName">
-    ///     Should be unique. Must consist of lower case alphanumeric characters or '-', and must
-    ///     start and end with an alphanumeric character (e.g. 'my-name',  or '123-abc', regex used for validation is
-    ///     '[a-z0-9]([-a-z0-9]*[a-z0-9])?')
-    /// </param>
-    /// <param name="containerName">
-    ///     Should be unique. Must consist of lower case alphanumeric characters or '-', and must start
-    ///     and end with an alphanumeric character (e.g. 'my-name',  or '123-abc', regex used for validation is
-    ///     '[a-z0-9]([-a-z0-9]*[a-z0-9])?')
-    /// </param>
-    /// <param name="imageName">Download container image with tag. (e.g. 'yt-dlp:latest')</param>
-    /// <param name="fileName">Recording file name.</param>
-    /// <param name="command">
-    ///     Override command for the download container. The original ENTRYPOINT will be used if not
-    ///     provided.
-    /// </param>
-    /// <param name="args">
-    ///     Override args for the download container. The original CMD will be used if not provided. Both
-    ///     <paramref name="command" /> and <paramref name="args" /> cannot be empty at the same time.
-    /// </param>
-    /// <param name="mountPath">The mount path of the download container.</param>
-    /// <param name="cancellation"></param>
-    /// <returns></returns>
-    /// <exception cref="ArgumentNullException"></exception>
-    protected async Task CreateInstanceAsync(string deploymentName,
-                                             string containerName,
-                                             string imageName,
-                                             string fileName,
-                                             string[]? command = default,
-                                             string[]? args = default,
-                                             string mountPath = "/sharedvolume",
-                                             CancellationToken cancellation = default)
+    public Task<bool> IsJobFailedAsync(Video video, CancellationToken cancellation = default)
+    {
+        return IsJobFailedAsync(NameHelper.CleanUpInstanceName(video.id), cancellation);
+    }
+
+    public async Task<bool> IsJobFailedAsync(string keyword, CancellationToken cancellation = default)
+    {
+        return (await GetJobsByKeywordAsync(keyword, cancellation))
+            .Any(job => job.Status.Active is null or 0
+                        && job.Status.Failed > 0);
+    }
+
+    public async Task RemoveCompletedJobsAsync(Video video, CancellationToken cancellation = default)
+    {
+        var jobs = (await GetJobsByKeywordAsync(video.id, cancellation)).Where(p => p.Status.Conditions.LastOrDefault()?.Type == "Complete").ToList();
+        if (jobs.Count == 0)
+        {
+            logger.LogError("Failed to retrieve K8s job for {videoId} while removing completed job. Please verify if any job exists.", video.id);
+            throw new InvalidOperationException($"No K8s jobs found! {video.id}");
+        }
+
+        if (jobs.Count > 1)
+            logger.LogWarning(
+                "Multiple jobs were found for {videoId} while removing the COMPLETED job. This should not occur in the normal process, but we will take care of cleaning them up.",
+                video.id);
+
+        foreach (V1Job? job in jobs)
+        {
+            string jobName = job.Name();
+            if (await IsJobFailedAsync(video, cancellation))
+            {
+                logger.LogError("K8s job status FAILED! {videoId} {jobName}", video.id, jobName);
+                throw new InvalidOperationException($"K8s job status FAILED! {jobName}");
+            }
+
+            V1Status? status = await kubernetes.DeleteNamespacedJobAsync(name: jobName,
+                                                                         namespaceParameter: job.Namespace(),
+                                                                         propagationPolicy: "Background",
+                                                                         cancellationToken: cancellation);
+
+            if (status.Status != "Success")
+            {
+                logger.LogError("Failed to delete job {jobName} {videoId} {status}", jobName, video.id, status.Message);
+                throw new InvalidOperationException($"Failed to delete job {jobName} {video.id} {status.Message}");
+            }
+
+            logger.LogInformation("K8s job {jobName} {videoId} removed", jobName, video.id);
+        }
+    }
+
+    public async Task CreateInstanceAsync(string deploymentName,
+                                          string containerName,
+                                          string imageName,
+                                          string fileName,
+                                          string[]? command = default,
+                                          string[]? args = default,
+                                          string mountPath = "/sharedvolume",
+                                          CancellationToken cancellation = default)
     {
         if (null != command && command.Length == 0)
             throw new ArgumentNullException(nameof(command), "command can be null, but cannot be empty.");
@@ -182,7 +199,7 @@ public abstract class KubernetesServiceBase(
         try
         {
             await kubernetes.CreateNamespacedJobAsync(body: job,
-                                                      namespaceParameter: KubernetesNamespace,
+                                                      namespaceParameter: _kubernetesNamespace,
                                                       cancellationToken: cancellation);
         }
         catch (Exception e)
@@ -194,7 +211,7 @@ public abstract class KubernetesServiceBase(
             try
             {
                 await kubernetes.CreateNamespacedJobAsync(body: job,
-                                                          namespaceParameter: KubernetesNamespace,
+                                                          namespaceParameter: _kubernetesNamespace,
                                                           cancellationToken: cancellation);
             }
             catch (Exception e2)
@@ -203,5 +220,17 @@ public abstract class KubernetesServiceBase(
                 throw;
             }
         }
+    }
+
+    private async Task<List<V1Job>> GetJobsByKeywordAsync(string keyword, CancellationToken cancellation)
+    {
+        V1JobList? jobs = await kubernetes.ListNamespacedJobAsync(_kubernetesNamespace, cancellationToken: cancellation);
+        return jobs.Items.Where(p => p.Name().Contains(NameHelper.CleanUpInstanceName(keyword))).ToList();
+    }
+
+    private async Task<V1Job?> GetJobByKeywordAsync(string keyword, CancellationToken cancellation)
+    {
+        V1JobList? jobs = await kubernetes.ListNamespacedJobAsync(_kubernetesNamespace, cancellationToken: cancellation);
+        return jobs.Items.FirstOrDefault(p => p.Name().Contains(keyword));
     }
 }
