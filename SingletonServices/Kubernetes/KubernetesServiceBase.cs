@@ -108,7 +108,7 @@ public abstract class KubernetesServiceBase(
                         {
                             new()
                             {
-                                Name = containerName + "_uploader",
+                                Name = containerName + "-uploader",
                                 Image = fallback switch
                                 {
                                     false => DefaultRegistry + uploaderService.Image,
