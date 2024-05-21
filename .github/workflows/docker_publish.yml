@@ -12,6 +12,11 @@ on:
   # Allows you to run this workflow manually from the Actions tab
   workflow_dispatch:
 
+# Sets the permissions granted to the GITHUB_TOKEN for the actions in this job.
+permissions:
+  contents: read
+  packages: write
+
 # A workflow run is made up of one or more jobs that can run sequentially or in parallel
 jobs:
   # This workflow contains a single job called "build"
@@ -22,13 +27,13 @@ jobs:
     # Steps represent a sequence of tasks that will be executed as part of the job
     steps:
       - name: Checkout
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
         with:
           submodules: true
 
       - name: Docker meta
         id: meta_ApacheCouchDB
-        uses: docker/metadata-action@v4
+        uses: docker/metadata-action@v5
         with:
           images: ${{ secrets.DOCKERHUB_ORGANIZATION_NAME }}/${{ github.event.repository.name }},ghcr.io/${{ github.repository }}
           flavor: |
@@ -38,47 +43,72 @@ jobs:
 
       - name: Docker meta
         id: meta_AzureCosmosDB
-        uses: docker/metadata-action@v4
+        uses: docker/metadata-action@v5
         with:
           images: ${{ secrets.DOCKERHUB_ORGANIZATION_NAME }}/${{ github.event.repository.name }},ghcr.io/${{ github.repository }}
           tags: |
             type=raw,value=AzureCosmosDB
+
+      - name: Set up QEMU
+        uses: docker/setup-qemu-action@v3
+      
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
 
       # Create a Access Token and save it as as Actions secret
       # https://hub.docker.com/settings/security
       # DOCKERHUB_USERNAME
       # DOCKERHUB_TOKEN
       - name: Login to DockerHub
-        uses: docker/login-action@v2
+        uses: docker/login-action@v3
         with:
           username: ${{ secrets.DOCKERHUB_USERNAME }}
           password: ${{ secrets.DOCKERHUB_TOKEN }}
 
-      # Create a Access Token with `read:packages` and `write:packages` scopes
-      # CR_PAT
+      # You may need to manage write and read access of GitHub Actions for repositories in the container settings.
       - name: Login to GitHub Container Registry
-        uses: docker/login-action@v2
+        uses: docker/login-action@v3
         with:
           registry: ghcr.io
           username: ${{ github.repository_owner }}
-          password: ${{ secrets.CR_PAT }}
+          password: ${{ github.token }}
 
       - name: Build and push
-        uses: docker/build-push-action@v4
+        uses: docker/build-push-action@v5
         with:
           context: .
+          file: ./Dockerfile
           push: true
+          target: final
           tags: ${{ steps.meta_ApacheCouchDB.outputs.tags }}
           labels: ${{ steps.meta_ApacheCouchDB.outputs.labels }}
           build-args: |
             BUILD_CONFIGURATION=ApacheCouchDB_Release
+            VERSION=${{ github.ref_name }}
+            RELEASE=${{ github.run_number }}
+          platforms: linux/amd64,linux/arm64
+          # Cache to regietry instead of gha to avoid the capacity limit.
+          cache-from: type=registry,ref=ghcr.io/${{ github.repository }}:cache
+          cache-to: type=registry,ref=ghcr.io/${{ github.repository }}:cache,mode=max
+          sbom: true
+          provenance: true
 
       - name: Build and push
-        uses: docker/build-push-action@v4
+        uses: docker/build-push-action@v5
         with:
           context: .
+          file: ./Dockerfile
           push: true
+          target: final
           tags: ${{ steps.meta_AzureCosmosDB.outputs.tags }}
           labels: ${{ steps.meta_AzureCosmosDB.outputs.labels }}
           build-args: |
             BUILD_CONFIGURATION=AzureCosmosDB_Release
+            VERSION=${{ github.ref_name }}
+            RELEASE=${{ github.run_number }}
+          platforms: linux/amd64,linux/arm64
+          # Cache to regietry instead of gha to avoid the capacity limit.
+          cache-from: type=registry,ref=ghcr.io/${{ github.repository }}:cache
+          cache-to: type=registry,ref=ghcr.io/${{ github.repository }}:cache,mode=max
+          sbom: true
+          provenance: true
