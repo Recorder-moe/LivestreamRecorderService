@@ -55,6 +55,7 @@ public class Fc2Service(
         Justification = $"{nameof(SourceGenerationContext)} is set.")]
     public override async Task UpdateVideosDataAsync(Channel channel, CancellationToken cancellation = default)
     {
+        // TODO Complex method, need to refactor.
         using IDisposable ____ = LogContext.PushProperty("Platform", PlatformName);
         using IDisposable __ = LogContext.PushProperty("channelId", channel.id);
 

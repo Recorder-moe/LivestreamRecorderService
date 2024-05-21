@@ -86,6 +86,7 @@ public class YoutubeService(
     /// <returns></returns>
     public override async Task UpdateVideoDataAsync(Video video, CancellationToken cancellation = default)
     {
+        // TODO Complex method, need to refactor.
         using IDisposable __ = LogContext.PushProperty("videoId", video.id);
         YtdlpVideoData? videoData =
             await GetVideoInfoByYtdlpAsync($"https://youtu.be/{NameHelper.ChangeId.VideoId.PlatformType(video.id, PlatformName)}", cancellation);
