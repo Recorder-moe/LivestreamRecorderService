@@ -61,7 +61,6 @@ public class VideoService(
     {
         await videoRepository.ReloadEntityFromDBAsync(video);
 
-
         await videoRepository.AddOrUpdateAsync(video);
         _unitOfWorkPublic.Commit();
     }
