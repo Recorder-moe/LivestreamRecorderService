@@ -66,7 +66,22 @@ public class RecordService
             _logger.LogTrace("No videos recording/downloading");
 
         foreach (Video video in videos)
-            if (await _jobService.IsJobFailedAsync(video, stoppingToken))
+            if (await _jobService.IsJobMissing(video, stoppingToken))
+                switch (video.Source)
+                {
+                    case "Youtube":
+                        await videoService.UpdateVideoStatusAsync(video, VideoStatus.Pending);
+                        _logger.LogWarning("{videoId} is missing. Set status to {status}", video.id, video.Status);
+                        break;
+                    default:
+                        await videoService.UpdateVideoStatusAsync(video, VideoStatus.Missing);
+                        await videoService.UpdateVideoNoteAsync(video,
+                                                                "This video archive is missing. If you would like to provide it, please contact admin.");
+
+                        _logger.LogWarning("{videoId} is missing.", video.id);
+                        break;
+                }
+            else if (await _jobService.IsJobFailedAsync(video, stoppingToken))
                 switch (video.Source)
                 {
                     case "Youtube":

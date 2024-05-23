@@ -84,6 +84,13 @@ public class Fc2Service(
                     case VideoStatus.Skipped:
                         logger.LogTrace("{videoId} is rejected for recording.", video.id);
                         return;
+                    case VideoStatus.Missing:
+                        logger.LogWarning(
+                            "{videoId} has been marked missing. It is possible that a server malfunction occurred during the previous recording. Changed its state back to Recording.",
+                            video.id);
+
+                        video.Status = VideoStatus.WaitingToRecord;
+                        break;
                     case VideoStatus.Archived:
                     case VideoStatus.PermanentArchived:
                         logger.LogWarning(
@@ -98,8 +105,8 @@ public class Fc2Service(
                     case VideoStatus.Pending:
                     case VideoStatus.WaitingToDownload:
                     case VideoStatus.Downloading:
+                    //case VideoStatus.Uploading:
                     case VideoStatus.Expired:
-                    case VideoStatus.Missing:
                     case VideoStatus.Error:
                     case VideoStatus.Exist:
                     case VideoStatus.Edited:

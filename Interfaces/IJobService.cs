@@ -4,6 +4,8 @@ namespace LivestreamRecorderService.Interfaces;
 
 public interface IJobService
 {
+    Task<bool> IsJobMissing(Video video, CancellationToken cancellation);
+    Task<bool> IsJobMissing(string keyword, CancellationToken cancellation);
     Task<bool> IsJobFailedAsync(Video video, CancellationToken cancellation = default);
     Task<bool> IsJobFailedAsync(string keyword, CancellationToken cancellation = default);
     Task<bool> IsJobSucceededAsync(Video video, CancellationToken cancellation = default);
