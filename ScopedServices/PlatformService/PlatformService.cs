@@ -104,7 +104,7 @@ public abstract class PlatformService : IPlatformService
                     $"Failed to fetch video data from yt-dlp for URL: {url}. Errors: {string.Join(' ', res.ErrorOutput)}");
             }
 
-            var videoData = res.Data;
+            YtdlpVideoData? videoData = res.Data;
             return videoData;
         }
         catch (Exception e)
@@ -190,21 +190,21 @@ public abstract class PlatformService : IPlatformService
             throw new ArgumentNullException(nameof(path));
         }
 
-        string? extension, contentType, pathInStorage, tempPath;
+        string? contentType, pathInStorage, tempPath;
         try
         {
-            using var client = HttpClientFactory.CreateClient();
-            var response = await client.GetAsync(url, cancellation);
+            using HttpClient client = HttpClientFactory.CreateClient();
+            HttpResponseMessage response = await client.GetAsync(url, cancellation);
             response.EnsureSuccessStatusCode();
 
             contentType = response.Content.Headers.ContentType?.MediaType;
-            extension = MimeUtility.GetExtensions(contentType)?.FirstOrDefault();
+            string? extension = MimeUtility.GetExtensions(contentType)?.FirstOrDefault();
             extension = extension == "jpeg" ? "jpg" : extension;
             pathInStorage = $"{path}.{extension}";
 
             tempPath = Path.GetTempFileName();
             tempPath = Path.ChangeExtension(tempPath, extension);
-            await using var contentStream = await response.Content.ReadAsStreamAsync(cancellation);
+            await using Stream contentStream = await response.Content.ReadAsStreamAsync(cancellation);
             await using var fileStream = new FileStream(tempPath, FileMode.Create);
             await contentStream.CopyToAsync(fileStream, cancellation);
         }
@@ -216,16 +216,16 @@ public abstract class PlatformService : IPlatformService
 
         try
         {
-            List<Task> tasks =
-            [
-                StorageService.UploadPublicFileAsync(contentType, pathInStorage, tempPath, cancellation),
-                StorageService.UploadPublicFileAsync(KnownMimeTypes.Avif,
-                    $"{path}.avif",
-                    await ImageHelper.ConvertToAvifAsync(tempPath),
-                    cancellation)
-            ];
+            await StorageService.UploadPublicFileAsync(contentType: contentType,
+                                                       pathInStorage: pathInStorage,
+                                                       filePathToUpload: tempPath,
+                                                       cancellation: cancellation);
 
-            await Task.WhenAll(tasks);
+            await StorageService.UploadPublicFileAsync(contentType: KnownMimeTypes.Avif,
+                                                       pathInStorage: $"{path}.avif",
+                                                       filePathToUpload: await ImageHelper.ConvertToAvifAsync(tempPath),
+                                                       cancellation: cancellation);
+
             return pathInStorage;
         }
         catch (Exception e)
@@ -242,6 +242,7 @@ public abstract class PlatformService : IPlatformService
             }
             catch (IOException)
             {
+                // ignored
             }
         }
     }
