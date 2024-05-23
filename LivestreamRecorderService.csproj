@@ -12,6 +12,7 @@
     <EnableTrimAnalyzer>false</EnableTrimAnalyzer>
     <DockerDefaultTargetOS>Linux</DockerDefaultTargetOS>
     <DockerfileContext>.</DockerfileContext>
+    <ContainerDevelopmentMode>Fast</ContainerDevelopmentMode>
     <DockerfileFastModeStage>debug</DockerfileFastModeStage>
     <Configurations>CouchDB;CosmosDB;AzureCosmosDB_Release;ApacheCouchDB_Release</Configurations>
   </PropertyGroup>
@@ -23,6 +24,8 @@
     <DefineConstants>$(DefineConstants);COUCHDB;RELEASE</DefineConstants>
     <Optimize>True</Optimize>
   </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='CouchDB|AnyCPU'" />
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='CosmosDB|AnyCPU'" />
   <ItemGroup>
     <Compile Remove="LivestreamRecorder.DB\**" />
     <Content Remove="LivestreamRecorder.DB\**" />

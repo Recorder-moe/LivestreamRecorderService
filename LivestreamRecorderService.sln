@@ -7,8 +7,6 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "LivestreamRecorderService",
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "LivestreamRecorder.DB", "LivestreamRecorder.DB\LivestreamRecorder.DB.csproj", "{194EA7A4-7735-40ED-B89A-AFAC094B91C0}"
 EndProject
-Project("{E53339B2-1760-4266-BCC7-CA923CBCF16C}") = "docker-compose", "docker-compose.dcproj", "{D9705463-12BD-4589-B8E0-53C6EE792EE8}"
-EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "方案項目", "方案項目", "{05516183-EF2E-4C8F-B2F3-97C2222C1723}"
 	ProjectSection(SolutionItems) = preProject
 		.github\workflows\docker_publish.yml = .github\workflows\docker_publish.yml
@@ -38,10 +36,6 @@ Global
 		{194EA7A4-7735-40ED-B89A-AFAC094B91C0}.CosmosDB|Any CPU.Build.0 = CosmosDB|Any CPU
 		{194EA7A4-7735-40ED-B89A-AFAC094B91C0}.CouchDB|Any CPU.ActiveCfg = CouchDB|Any CPU
 		{194EA7A4-7735-40ED-B89A-AFAC094B91C0}.CouchDB|Any CPU.Build.0 = CouchDB|Any CPU
-		{D9705463-12BD-4589-B8E0-53C6EE792EE8}.ApacheCouchDB_Release|Any CPU.ActiveCfg = Release|Any CPU
-		{D9705463-12BD-4589-B8E0-53C6EE792EE8}.AzureCosmosDB_Release|Any CPU.ActiveCfg = Release|Any CPU
-		{D9705463-12BD-4589-B8E0-53C6EE792EE8}.CosmosDB|Any CPU.ActiveCfg = Release|Any CPU
-		{D9705463-12BD-4589-B8E0-53C6EE792EE8}.CouchDB|Any CPU.ActiveCfg = CouchDB|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

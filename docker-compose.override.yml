@@ -1,9 +1,0 @@
-services:
-  livestreamrecorderservice:
-    image: ghcr.io/recorder-moe/livestreamrecorderservice:debug
-    build:
-      target: debug
-    environment:
-      - DOTNET_ENVIRONMENT=Development
-    volumes:
-      - ${APPDATA}/Microsoft/UserSecrets:/root/.microsoft/usersecrets:ro
