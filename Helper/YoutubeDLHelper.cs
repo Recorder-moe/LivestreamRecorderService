@@ -111,8 +111,8 @@ internal static partial class YoutubeDL
                                where File.Exists(path)
                                select path)?.FirstOrDefault();
 
-        Log.Debug("Found yt-dlp.exe at {YtdlpPath}", _YtdlpPath);
-        Log.Debug("Found ffmpeg.exe at {FFmpegPath}", _FFmpegPath);
+        Log.Debug("Found yt-dlp at {YtdlpPath}", _YtdlpPath);
+        Log.Debug("Found ffmpeg at {FFmpegPath}", _FFmpegPath);
 
         return (_YtdlpPath, _FFmpegPath);
     }

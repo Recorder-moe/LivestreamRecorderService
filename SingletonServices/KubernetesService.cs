@@ -19,6 +19,16 @@ public class KubernetesService(
 
     private readonly string _kubernetesNamespace = options.Value.Namespace ?? "recordermoe";
 
+    public Task<bool> IsJobMissing(Video video, CancellationToken cancellation)
+    {
+        return IsJobMissing(NameHelper.CleanUpInstanceName(video.id), cancellation);
+    }
+
+    public async Task<bool> IsJobMissing(string keyword, CancellationToken cancellation)
+    {
+        return (await GetJobsByKeywordAsync(keyword, cancellation)).Count == 0;
+    }
+
     public Task<bool> IsJobSucceededAsync(Video video, CancellationToken cancellation = default)
     {
         return IsJobSucceededAsync(NameHelper.CleanUpInstanceName(video.id), cancellation);

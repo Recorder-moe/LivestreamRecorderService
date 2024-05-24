@@ -21,6 +21,16 @@ public class AciService(ILogger<AciService> logger,
     private const string FallbackRegistry = "recordermoe/";
     private readonly string _resourceGroupName = options.Value.ContainerInstance!.ResourceGroupName;
 
+    public Task<bool> IsJobMissing(Video video, CancellationToken cancellation)
+    {
+        return IsJobMissing(NameHelper.CleanUpInstanceName(video.id), cancellation);
+    }
+
+    public async Task<bool> IsJobMissing(string keyword, CancellationToken cancellation)
+    {
+        return null == (await GetResourceByKeywordAsync(keyword, cancellation));
+    }
+
     public Task<bool> IsJobSucceededAsync(Video video, CancellationToken cancellation = default)
     {
         return IsJobSucceededAsync(NameHelper.CleanUpInstanceName(video.id), cancellation);
@@ -29,7 +39,9 @@ public class AciService(ILogger<AciService> logger,
     public async Task<bool> IsJobSucceededAsync(string keyword, CancellationToken cancellation = default)
     {
         ContainerGroupResource? resource = await GetResourceByKeywordAsync(keyword, cancellation);
-        return null != resource && resource.HasData && resource.Data.InstanceView.State == "Succeeded";
+        return null != resource
+               && resource.HasData
+               && resource.Data.InstanceView.State == "Succeeded";
     }
 
     public Task<bool> IsJobFailedAsync(Video video, CancellationToken cancellation = default)
@@ -40,7 +52,9 @@ public class AciService(ILogger<AciService> logger,
     public async Task<bool> IsJobFailedAsync(string keyword, CancellationToken cancellation)
     {
         ContainerGroupResource? resource = await GetResourceByKeywordAsync(keyword, cancellation);
-        return null == resource || !resource.HasData || resource.Data.InstanceView.State == "Failed";
+        return null != resource
+               && (!resource.HasData
+                   || resource.Data.InstanceView.State == "Failed");
     }
 
     /// <summary>
@@ -166,9 +180,12 @@ public class AciService(ILogger<AciService> logger,
             resourceGroupResource.GetContainerGroups()
                                  .FirstOrDefault(p => p.Id.Name.Contains(NameHelper.CleanUpInstanceName(keyword)));
 
-        return null == containerGroupResourceTemp
-            ? null
-            : (await resourceGroupResource.GetContainerGroupAsync(containerGroupResourceTemp.Id.Name, cancellation)).Value;
+        if (null == containerGroupResourceTemp) return null;
+
+        Response<ContainerGroupResource> response =
+            (await resourceGroupResource.GetContainerGroupAsync(containerGroupResourceTemp.Id.Name, cancellation));
+
+        return response.HasValue ? response.Value : null;
     }
 
     private async Task<ResourceGroupResource> GetResourceGroupAsync(CancellationToken cancellation = default)

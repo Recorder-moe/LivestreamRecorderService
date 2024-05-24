@@ -82,6 +82,33 @@ public class TwitchService(
                     case VideoStatus.Skipped:
                         logger.LogTrace("{videoId} is rejected for recording.", video.id);
                         return;
+                    case VideoStatus.Missing:
+                        logger.LogWarning(
+                            "{videoId} has been marked missing. It is possible that a server malfunction occurred during the previous recording. Changed its state back to Recording.",
+                            video.id);
+
+                        video.Status = VideoStatus.WaitingToRecord;
+                        break;
+                    case VideoStatus.Archived:
+                    case VideoStatus.PermanentArchived:
+                        logger.LogWarning(
+                            "{videoId} has already been archived. It is possible that an internet disconnect occurred during the process. Changed its state back to Recording.",
+                            video.id);
+
+                        video.Status = VideoStatus.WaitingToRecord;
+                        break;
+
+                    case VideoStatus.Unknown:
+                    case VideoStatus.Scheduled:
+                    case VideoStatus.Pending:
+                    case VideoStatus.WaitingToDownload:
+                    case VideoStatus.Downloading:
+                    //case VideoStatus.Uploading:
+                    case VideoStatus.Expired:
+                    case VideoStatus.Error:
+                    case VideoStatus.Exist:
+                    case VideoStatus.Edited:
+                    case VideoStatus.Deleted:
                     default:
                         logger.LogWarning("{videoId} is in {status}, skip.", video.id, Enum.GetName(typeof(VideoStatus), video.Status));
                         return;
