@@ -321,7 +321,11 @@ public class TwitcastingService(
         }
 
         string? getChannelName()
-            => htmlDoc.DocumentNode.SelectSingleNode("//span[@class='tw-user-nav-name']").InnerText;
+        {
+            HtmlNode? nameNode1 = htmlDoc.DocumentNode.SelectSingleNode("//span[@class='tw-user-nav-name']");
+            HtmlNode? nameNode2 = htmlDoc.DocumentNode.SelectSingleNode("//span[@class='tw-user-nav2-name']");
+            return nameNode1?.InnerText ?? nameNode2?.InnerText;
+        }
     }
 
     private async Task<(bool Live, string? Id)> GetTwitcastingLiveStatusAsync(Channel channel, CancellationToken cancellation = default)
