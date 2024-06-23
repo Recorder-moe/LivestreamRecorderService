@@ -192,7 +192,7 @@ public class TwitchService(
 
     public override async Task UpdateChannelDataAsync(Channel channel, CancellationToken stoppingToken)
     {
-        string? channelId = channel.id;
+        string channelId = channel.id;
         GetUsersResponse? usersResponse =
             await twitchApi.Helix.Users.GetUsersAsync(logins: [NameHelper.ChangeId.ChannelId.PlatformType(channelId, PlatformName)]);
 
