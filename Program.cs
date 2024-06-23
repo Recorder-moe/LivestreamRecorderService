@@ -119,7 +119,6 @@ try
 
                 services.AddSingleton<IUploaderService, UploaderService>();
 
-                services.AddHostedService<MigrationWorker>();
                 services.AddHostedService<MonitorWorker>();
                 services.AddHostedService<RecordWorker>();
                 services.AddSingleton<RecordService>();
