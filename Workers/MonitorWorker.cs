@@ -32,14 +32,14 @@ public class MonitorWorker(
             {
                 // KubernetesService needed to be initialized first
                 IJobService ___ = scope.ServiceProvider.GetRequiredService<IJobService>();
-                YoutubeService youtubeSerivce = scope.ServiceProvider.GetRequiredService<YoutubeService>();
+                YoutubeService youtubeService = scope.ServiceProvider.GetRequiredService<YoutubeService>();
                 TwitcastingService twitcastingService = scope.ServiceProvider.GetRequiredService<TwitcastingService>();
                 Fc2Service fc2Service = scope.ServiceProvider.GetRequiredService<Fc2Service>();
                 VideoService videoService = scope.ServiceProvider.GetRequiredService<VideoService>();
 
                 #endregion
 
-                await MonitorPlatformAsync(youtubeSerivce, videoService, stoppingToken);
+                await MonitorPlatformAsync(youtubeService, videoService, stoppingToken);
                 await MonitorPlatformAsync(twitcastingService, videoService, stoppingToken);
                 await MonitorPlatformAsync(fc2Service, videoService, stoppingToken);
 
@@ -59,7 +59,7 @@ public class MonitorWorker(
     {
         if (!platformService.StepInterval(Interval)) return;
 
-        List<Channel>? channels = await platformService.GetMonitoringChannels();
+        List<Channel> channels = await platformService.GetMonitoringChannels();
         logger.LogTrace("Get {channelCount} channels for {platform}", channels.Count, platformService.PlatformName);
         await updateVideosDataFromSource();
         await updateScheduledVideosStatus();

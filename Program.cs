@@ -10,11 +10,12 @@ using LivestreamRecorderService.SingletonServices.Downloader;
 using LivestreamRecorderService.Workers;
 using Microsoft.Extensions.Options;
 using Serilog;
-using Serilog.Debugging;
 
 // ReSharper disable SwitchStatementHandlesSomeKnownEnumValuesWithDefault
 
 #if !RELEASE
+using Serilog.Debugging;
+
 SelfLog.Enable(Console.WriteLine);
 #endif
 
@@ -119,7 +120,6 @@ try
 
                 services.AddSingleton<IUploaderService, UploaderService>();
 
-                services.AddHostedService<MigrationWorker>();
                 services.AddHostedService<MonitorWorker>();
                 services.AddHostedService<RecordWorker>();
                 services.AddSingleton<RecordService>();

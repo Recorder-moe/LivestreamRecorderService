@@ -81,7 +81,7 @@ public static class NameHelper
                 return platform switch
                 {
                     "Youtube" or IYtarchiveService.Name or IYtdlpService.Name
-                        => videoId.TrimStart('Y'),
+                        => videoId.StartsWith('Y') ? videoId[1..] : videoId,
                     "Twitch" or IStreamlinkService.Name
                         => videoId.StartsWith("TW") ? videoId[2..] : videoId,
                     "Twitcasting" or ITwitcastingRecorderService.Name
@@ -97,13 +97,13 @@ public static class NameHelper
                 return platform switch
                 {
                     "Youtube" or IYtarchiveService.Name or IYtdlpService.Name
-                        => videoId.StartsWith('Y') ? videoId : "Y" + videoId,
+                        => "Y" + videoId,
                     "Twitch" or IStreamlinkService.Name
-                        => videoId.StartsWith("TW") ? videoId : "TW" + videoId,
+                        => "TW" + videoId,
                     "Twitcasting" or ITwitcastingRecorderService.Name
-                        => videoId.StartsWith("TC") ? videoId : "TC" + videoId,
+                        => "TC" + videoId,
                     "FC2" or IFc2LiveDLService.Name
-                        => videoId.StartsWith("FC") ? videoId : "FC" + videoId,
+                        => "FC" + videoId,
                     _ => throw new NotImplementedException()
                 };
             }
