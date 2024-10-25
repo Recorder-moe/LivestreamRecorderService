@@ -303,6 +303,7 @@ public class RecordService
         using IDisposable __ = LogContext.PushProperty("videoId", video.id);
 
         await channelService.UpdateChannelLatestVideoAsync(video);
+        Channel? channel = await channelService.GetByChannelIdAndSourceAsync(video.ChannelId, video.Source);
 
         try
         {
@@ -312,10 +313,10 @@ public class RecordService
             _logger.LogInformation("Video {videoId} is successfully uploaded to Storage.", video.id);
             await videoService.UpdateVideoArchivedTimeAsync(video);
 
-            if (_discordService != null)
-                await _discordService.SendArchivedMessageAsync(
-                    video,
-                    await channelService.GetByChannelIdAndSourceAsync(video.ChannelId, video.Source));
+            if (null != _discordService
+                && (null == channel
+                    || channel.Hide != true))
+                await _discordService.SendArchivedMessageAsync(video, channel);
         }
         catch (Exception e)
         {

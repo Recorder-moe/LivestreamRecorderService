@@ -147,7 +147,9 @@ public class TwitchService(
 
                 video.Status = VideoStatus.Recording;
                 logger.LogInformation("{channelId} is now lived! Start recording.", channel.id);
-                if (null != DiscordService) await DiscordService.SendStartRecordingMessageAsync(video, channel);
+                if (null != DiscordService
+                    && channel.Hide != true)
+                    await DiscordService.SendStartRecordingMessageAsync(video, channel);
             }
 
             await videoRepository.AddOrUpdateAsync(video);
