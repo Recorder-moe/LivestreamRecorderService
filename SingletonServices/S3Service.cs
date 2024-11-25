@@ -23,20 +23,16 @@ public class S3Service(
             ObjectStat? stat = await minioClient.StatObjectAsync(new StatObjectArgs()
                                                                  .WithBucket(_options.BucketName_Private)
                                                                  .WithObject($"videos/{filename}"),
-                cancellation);
+                                                                 cancellation);
 
             return !stat.DeleteMarker;
         }
         catch (MinioException e)
         {
             if (e is ObjectNotFoundException)
-            {
                 logger.LogWarning(e, "Video file not found: {filename}", filename);
-            }
             else
-            {
                 logger.LogError(e, "Failed to check video file: {filename}", filename);
-            }
 
             return false;
         }
@@ -49,20 +45,16 @@ public class S3Service(
             await minioClient.RemoveObjectAsync(new RemoveObjectArgs()
                                                 .WithBucket(_options.BucketName_Private)
                                                 .WithObject($"videos/{filename}"),
-                cancellation);
+                                                cancellation);
 
             return true;
         }
         catch (MinioException e)
         {
             if (e is ObjectNotFoundException)
-            {
                 logger.LogWarning(e, "Video file not found: {filename}", filename);
-            }
             else
-            {
                 logger.LogError(e, "Failed to delete video file: {filename}", filename);
-            }
 
             return false;
         }

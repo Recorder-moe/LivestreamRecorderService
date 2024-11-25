@@ -1,13 +1,13 @@
-﻿using LivestreamRecorder.DB.Interfaces;
+﻿using System.Configuration;
+using LivestreamRecorder.DB.Interfaces;
 using LivestreamRecorder.DB.Models;
 using LivestreamRecorderService.Helper;
 using LivestreamRecorderService.Interfaces;
 using LivestreamRecorderService.Models;
+using LivestreamRecorderService.Models.Options;
 using LivestreamRecorderService.SingletonServices;
 using Microsoft.Extensions.Options;
 using MimeMapping;
-using System.Configuration;
-using LivestreamRecorderService.Models.Options;
 using YoutubeDLSharp;
 using YoutubeDLSharp.Options;
 using YoutubeDL = LivestreamRecorderService.Helper.YoutubeDL;
@@ -16,16 +16,12 @@ namespace LivestreamRecorderService.ScopedServices.PlatformService;
 
 public abstract class PlatformService : IPlatformService
 {
-    protected readonly IChannelRepository ChannelRepository;
-    protected readonly IStorageService StorageService;
-    protected readonly IHttpClientFactory HttpClientFactory;
-    private readonly ILogger<PlatformService> _logger;
-
-    public abstract string PlatformName { get; }
-    public abstract int Interval { get; }
-
     private static readonly Dictionary<string, int> _elapsedTime = [];
+    private readonly ILogger<PlatformService> _logger;
+    protected readonly IChannelRepository ChannelRepository;
     protected readonly DiscordService? DiscordService;
+    protected readonly IHttpClientFactory HttpClientFactory;
+    protected readonly IStorageService StorageService;
 
     private string _ffmpegPath = "/usr/local/bin/ffmpeg";
     private string _ytdlPath = "/venv/bin/yt-dlp";
@@ -48,13 +44,20 @@ public abstract class PlatformService : IPlatformService
             DiscordService = serviceProvider.GetRequiredService<DiscordService>();
     }
 
+    public abstract string PlatformName { get; }
+    public abstract int Interval { get; }
+
     public Task<List<Channel>> GetAllChannels()
-        => ChannelRepository.GetChannelsBySourceAsync(PlatformName);
+    {
+        return ChannelRepository.GetChannelsBySourceAsync(PlatformName);
+    }
 
     public async Task<List<Channel>> GetMonitoringChannels()
-        => (await GetAllChannels())
-           .Where(p => p.Monitoring)
-           .ToList();
+    {
+        return (await GetAllChannels())
+               .Where(p => p.Monitoring)
+               .ToList();
+    }
 
     public abstract Task UpdateVideosDataAsync(Channel channel, CancellationToken cancellation = default);
 
@@ -69,10 +72,7 @@ public abstract class PlatformService : IPlatformService
         }
 
         _elapsedTime[PlatformName] += elapsedTime;
-        if (_elapsedTime[PlatformName] >= Interval)
-        {
-            _elapsedTime[PlatformName] = 0;
-        }
+        if (_elapsedTime[PlatformName] >= Interval) _elapsedTime[PlatformName] = 0;
 
         return false;
     }
@@ -81,7 +81,7 @@ public abstract class PlatformService : IPlatformService
     {
         if (!File.Exists(_ytdlPath) || !File.Exists(_ffmpegPath))
         {
-            var (ytdlPath, fFmpegPath) = YoutubeDL.WhereIs();
+            (string? ytdlPath, string? fFmpegPath) = YoutubeDL.WhereIs();
             _ytdlPath = ytdlPath ?? throw new ConfigurationErrorsException("Yt-dlp is missing.");
             _ffmpegPath = fFmpegPath ?? throw new ConfigurationErrorsException("FFmpeg is missing.");
         }
@@ -99,10 +99,8 @@ public abstract class PlatformService : IPlatformService
         {
             RunResult<YtdlpVideoData>? res = await ytdl.RunVideoDataFetch_Alt(url, overrideOptions: optionSet, ct: cancellation);
             if (!res.Success)
-            {
                 throw new InvalidOperationException(
                     $"Failed to fetch video data from yt-dlp for URL: {url}. Errors: {string.Join(' ', res.ErrorOutput)}");
-            }
 
             YtdlpVideoData? videoData = res.Data;
             return videoData;
@@ -114,17 +112,19 @@ public abstract class PlatformService : IPlatformService
         }
     }
 
+    public abstract Task UpdateChannelDataAsync(Channel channel, CancellationToken stoppingToken);
+
     protected async Task<string[]?> GetVideoIdsByYtdlpAsync(string url, int limit = 50, CancellationToken cancellation = default)
     {
         if (!File.Exists(_ytdlPath) || !File.Exists(_ffmpegPath))
         {
-            var (ytdlPath, _) = YoutubeDL.WhereIs();
+            (string? ytdlPath, _) = YoutubeDL.WhereIs();
             _ytdlPath = ytdlPath ?? throw new ConfigurationErrorsException("Yt-dlp is missing.");
         }
 
         var ytdl = new YoutubeDLSharp.YoutubeDL
         {
-            YoutubeDLPath = _ytdlPath,
+            YoutubeDLPath = _ytdlPath
         };
 
         OptionSet optionSet = new();
@@ -138,10 +138,8 @@ public abstract class PlatformService : IPlatformService
         {
             RunResult<string[]>? res = await ytdl.RunWithOptions([url], optionSet, ct: cancellation);
             if (!res.Success)
-            {
                 throw new InvalidOperationException(
                     $"Failed to fetch video data from yt-dlp for URL: {url}. Errors: {string.Join(' ', res.ErrorOutput)}");
-            }
 
             string[] videoIds = res.Data;
             return videoIds;
@@ -154,19 +152,21 @@ public abstract class PlatformService : IPlatformService
     }
 
     /// <summary>
-    /// Download thumbnail.
+    ///     Download thumbnail.
     /// </summary>
     /// <param name="thumbnail">Url to download the thumbnail.</param>
     /// <param name="videoId"></param>
     /// <param name="cancellation"></param>
     /// <returns>Thumbnail file name with extension.</returns>
     protected async Task<string?> DownloadThumbnailAsync(string thumbnail, string videoId, CancellationToken cancellation = default)
-        => string.IsNullOrEmpty(thumbnail)
+    {
+        return string.IsNullOrEmpty(thumbnail)
             ? null
             : (await DownloadImageAndUploadToBlobStorageAsync(thumbnail, $"thumbnails/{videoId}", cancellation))?.Replace("thumbnails/", "");
+    }
 
     /// <summary>
-    /// Download image and upload it to Blob Storage
+    ///     Download image and upload it to Blob Storage
     /// </summary>
     /// <param name="url">Image source url to download.</param>
     /// <param name="path">Path in Blob storage (without extension)</param>
@@ -175,20 +175,11 @@ public abstract class PlatformService : IPlatformService
     /// <exception cref="ArgumentNullException"></exception>
     protected async Task<string?> DownloadImageAndUploadToBlobStorageAsync(string url, string path, CancellationToken cancellation)
     {
-        if (string.IsNullOrEmpty(url))
-        {
-            throw new ArgumentNullException(nameof(url));
-        }
+        if (string.IsNullOrEmpty(url)) throw new ArgumentNullException(nameof(url));
 
-        if (!url.StartsWith("http"))
-        {
-            url = "https:" + url;
-        }
+        if (!url.StartsWith("http")) url = "https:" + url;
 
-        if (string.IsNullOrEmpty(path))
-        {
-            throw new ArgumentNullException(nameof(path));
-        }
+        if (string.IsNullOrEmpty(path)) throw new ArgumentNullException(nameof(path));
 
         string? contentType, pathInStorage, tempPath;
         try
@@ -246,6 +237,4 @@ public abstract class PlatformService : IPlatformService
             }
         }
     }
-
-    public abstract Task UpdateChannelDataAsync(Channel channel, CancellationToken stoppingToken);
 }

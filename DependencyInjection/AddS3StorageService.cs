@@ -1,10 +1,10 @@
-﻿using LivestreamRecorderService.Interfaces;
+﻿using System.Configuration;
+using LivestreamRecorderService.Interfaces;
 using LivestreamRecorderService.Models.Options;
 using LivestreamRecorderService.SingletonServices;
 using Microsoft.Extensions.Options;
 using Minio;
 using Serilog;
-using System.Configuration;
 
 namespace LivestreamRecorderService.DependencyInjection;
 

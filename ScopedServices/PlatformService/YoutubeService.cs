@@ -118,7 +118,8 @@ public class YoutubeService(
                         video.Note = "Video skipped because it is not live stream.";
                         // First detected
                         if (video.Status != VideoStatus.Skipped
-                            && null != DiscordService)
+                            && null != DiscordService
+                            && channel.Hide != true)
                             await DiscordService.SendSkippedMessageAsync(video, channel);
 
                         video.Status = VideoStatus.Skipped;
@@ -219,7 +220,8 @@ public class YoutubeService(
                     video.Note = "Video skipped because it is not live stream.";
                     // First detected
                     if (video.Status != VideoStatus.Skipped
-                        && null != DiscordService)
+                        && null != DiscordService
+                        && channel.Hide != true)
                         await DiscordService.SendSkippedMessageAsync(video, channel);
 
                     video.Status = VideoStatus.Skipped;
@@ -296,7 +298,9 @@ public class YoutubeService(
                     {
                         // First detected
                         video.SourceStatus = VideoStatus.Deleted;
-                        if (null != DiscordService) await DiscordService.SendDeletedMessageAsync(video, channel);
+                        if (null != DiscordService
+                            && (null == channel || channel.Hide != true))
+                            await DiscordService.SendDeletedMessageAsync(video, channel);
                     }
 
                     video.SourceStatus = VideoStatus.Deleted;
@@ -327,7 +331,9 @@ public class YoutubeService(
                 if (video.Status != VideoStatus.Missing)
                 {
                     video.SourceStatus = VideoStatus.Missing;
-                    if (null != DiscordService) await DiscordService.SendSkippedMessageAsync(video, channel);
+                    if (null != DiscordService
+                        && (null == channel || channel.Hide != true))
+                        await DiscordService.SendSkippedMessageAsync(video, channel);
                 }
 
                 video.Status = VideoStatus.Missing;
@@ -371,7 +377,9 @@ public class YoutubeService(
                     if (video.SourceStatus != VideoStatus.Edited)
                     {
                         video.SourceStatus = VideoStatus.Edited;
-                        if (null != DiscordService) await DiscordService.SendDeletedMessageAsync(video, channel);
+                        if (null != DiscordService
+                            && (null == channel || channel.Hide != true))
+                            await DiscordService.SendDeletedMessageAsync(video, channel);
                     }
 
                     video.SourceStatus = VideoStatus.Edited;
@@ -392,7 +400,8 @@ public class YoutubeService(
                     video.Note = "Video is Skipped because it is detected access required or copyright notice.";
                     // First detected
                     if (video.Status != VideoStatus.Skipped
-                        && null != DiscordService)
+                        && null != DiscordService
+                        && (null == channel || channel.Hide != true))
                         await DiscordService.SendSkippedMessageAsync(video, channel);
 
                     video.Status = VideoStatus.Skipped;
@@ -404,7 +413,9 @@ public class YoutubeService(
                 {
                     video.SourceStatus = VideoStatus.Reject;
                     video.Note = "Video source is detected access required or copyright notice.";
-                    if (null != DiscordService) await DiscordService.SendDeletedMessageAsync(video, channel);
+                    if (null != DiscordService
+                        && (null == channel || channel.Hide != true))
+                        await DiscordService.SendDeletedMessageAsync(video, channel);
                 }
 
                 video.SourceStatus = VideoStatus.Reject;
@@ -425,7 +436,10 @@ public class YoutubeService(
 
             video.Status = VideoStatus.Recording;
             logger.LogInformation("{videoId} is now lived! Start recording.", video.id);
-            if (null != DiscordService) await DiscordService.SendStartRecordingMessageAsync(video, channel);
+            if (null != DiscordService
+                && (null == channel
+                    || channel.Hide != true))
+                await DiscordService.SendStartRecordingMessageAsync(video, channel);
         }
 
         if (video.Status < 0)

@@ -174,7 +174,9 @@ public class Fc2Service(
                                             TypeInfoResolver = SourceGenerationContext.Default
                                         }));
 
-                    if (null != DiscordService) await DiscordService.SendStartRecordingMessageAsync(video, channel);
+                    if (null != DiscordService
+                        && channel.Hide != true)
+                        await DiscordService.SendStartRecordingMessageAsync(video, channel);
                 }
             }
             else

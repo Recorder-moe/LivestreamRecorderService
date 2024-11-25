@@ -1,4 +1,5 @@
-﻿using Discord;
+﻿using System.Text.RegularExpressions;
+using Discord;
 using Discord.Webhook;
 using LivestreamRecorder.DB.Enums;
 using LivestreamRecorder.DB.Models;
@@ -6,17 +7,16 @@ using LivestreamRecorderService.Enums;
 using LivestreamRecorderService.Helper;
 using LivestreamRecorderService.Models.Options;
 using Microsoft.Extensions.Options;
-using System.Text.RegularExpressions;
 
 namespace LivestreamRecorderService.SingletonServices;
 
 public partial class DiscordService
 {
-    private readonly ILogger<DiscordService> _logger;
     private readonly DiscordOption _discordOption;
     private readonly DiscordWebhookClient _discordWebhookClient;
-    private readonly DiscordWebhookClient _discordWebhookClientWarning;
     private readonly DiscordWebhookClient _discordWebhookClientAdmin;
+    private readonly DiscordWebhookClient _discordWebhookClientWarning;
+    private readonly ILogger<DiscordService> _logger;
     private readonly string _objectStorageUrlPublic;
 
     public DiscordService(
@@ -40,20 +40,21 @@ public partial class DiscordService
             ServiceName.AzureBlobStorage =>
                 $"https://{azureOptions.Value.BlobStorage?.StorageAccountName}.blob.core.windows.net/{azureOptions.Value.BlobStorage?.BlobContainerName_Public}",
             ServiceName.S3 => (s3Options.Value.Secure ? "https" : "http") + $"://{s3Options.Value.Endpoint}/{s3Options.Value.BucketName_Public}",
-            _ => string.Empty,
+            _ => string.Empty
         };
     }
 
     #region Log mapping
 
     /// <summary>
-    /// 把.NET Core logger對應到Discord內建的logger上面
+    ///     把.NET Core logger對應到Discord內建的logger上面
     /// </summary>
     /// <param name="arg"></param>
     /// <returns></returns>
     // skipcq: CS-R1073
     private Task DiscordWebhookClient_Log(LogMessage arg)
-        => Task.Run(() =>
+    {
+        return Task.Run(() =>
         {
             switch (arg.Severity)
             {
@@ -78,6 +79,7 @@ public partial class DiscordService
                     break;
             }
         });
+    }
 
     #endregion
 
@@ -151,15 +153,15 @@ public partial class DiscordService
             embedBuilder.AddField("Start time", video.Timestamps.ActualStartTime?.ToString("yyyy/MM/dd HH:mm:ss"), true);
 
         embedBuilder.AddField("Source Url",
-            video.Source switch
-            {
-                "Youtube" => $"https://www.youtube.com/watch?v={NameHelper.ChangeId.VideoId.PlatformType(video.id, "Youtube")}",
-                "Twitcasting" =>
-                    $"https://twitcasting.tv/{NameHelper.ChangeId.ChannelId.PlatformType(video.ChannelId, "Twitcasting")}/movie/{NameHelper.ChangeId.VideoId.PlatformType(video.id, "Twitcasting")}",
-                "Twitch" => $"https://www.twitch.tv/{NameHelper.ChangeId.ChannelId.PlatformType(video.ChannelId, "Twitch")}",
-                "FC2" => $"https://live.fc2.com/{NameHelper.ChangeId.ChannelId.PlatformType(video.ChannelId, "FC2")}/",
-                _ => "",
-            });
+                              video.Source switch
+                              {
+                                  "Youtube" => $"https://www.youtube.com/watch?v={NameHelper.ChangeId.VideoId.PlatformType(video.id, "Youtube")}",
+                                  "Twitcasting" =>
+                                      $"https://twitcasting.tv/{NameHelper.ChangeId.ChannelId.PlatformType(video.ChannelId, "Twitcasting")}/movie/{NameHelper.ChangeId.VideoId.PlatformType(video.id, "Twitcasting")}",
+                                  "Twitch" => $"https://www.twitch.tv/{NameHelper.ChangeId.ChannelId.PlatformType(video.ChannelId, "Twitch")}",
+                                  "FC2" => $"https://live.fc2.com/{NameHelper.ChangeId.ChannelId.PlatformType(video.ChannelId, "FC2")}/",
+                                  _ => ""
+                              });
 
         return embedBuilder;
     }
@@ -192,28 +194,28 @@ public partial class DiscordService
         // ReSharper disable HeuristicUnreachableCode
         // skipcq: CS-W1016
         componentBuilder.WithButton(label: "Recorder.moe",
-            style: ButtonStyle.Link,
-            url: $"https://{_discordOption.FrontEndHost}/channels/{video.ChannelId}/videos/{video.id}",
-            emote: Emote.Parse(_discordOption.Emotes.RecorderMoe));
+                                    style: ButtonStyle.Link,
+                                    url: $"https://{_discordOption.FrontEndHost}/channels/{video.ChannelId}/videos/{video.id}",
+                                    emote: Emote.Parse(_discordOption.Emotes.RecorderMoe));
 
         componentBuilder.WithButton(label: video.Source,
-            style: ButtonStyle.Link,
-            url: video.Source switch
-            {
-                "Youtube" => $"https://www.youtube.com/watch?v={video.id[1..]}",
-                "Twitcasting" => $"https://twitcasting.tv/{video.ChannelId}/movie/{video.id}",
-                "Twitch" => $"https://twitch.tv/{video.ChannelId}",
-                "FC2" => $"https://live.fc2.com/{video.ChannelId}/",
-                _ => ""
-            },
-            emote: video.Source switch
-            {
-                "Youtube" => Emote.Parse(_discordOption.Emotes.Youtube),
-                "Twitcasting" => Emote.Parse(_discordOption.Emotes.Twitcasting),
-                "Twitch" => Emote.Parse(_discordOption.Emotes.Twitch),
-                "FC2" => Emote.Parse(_discordOption.Emotes.Fc2),
-                _ => ""
-            });
+                                    style: ButtonStyle.Link,
+                                    url: video.Source switch
+                                    {
+                                        "Youtube" => $"https://www.youtube.com/watch?v={video.id[1..]}",
+                                        "Twitcasting" => $"https://twitcasting.tv/{video.ChannelId}/movie/{video.id}",
+                                        "Twitch" => $"https://twitch.tv/{video.ChannelId}",
+                                        "FC2" => $"https://live.fc2.com/{video.ChannelId}/",
+                                        _ => ""
+                                    },
+                                    emote: video.Source switch
+                                    {
+                                        "Youtube" => Emote.Parse(_discordOption.Emotes.Youtube),
+                                        "Twitcasting" => Emote.Parse(_discordOption.Emotes.Twitcasting),
+                                        "Twitch" => Emote.Parse(_discordOption.Emotes.Twitch),
+                                        "FC2" => Emote.Parse(_discordOption.Emotes.Fc2),
+                                        _ => ""
+                                    });
 
         return componentBuilder;
         // ReSharper restore HeuristicUnreachableCode
@@ -252,11 +254,10 @@ public partial class DiscordService
 
     #region Send
 
-    async Task SendMessageAsync(Embed embed, MessageComponent component, string text = "")
+    private async Task SendMessageAsync(Embed embed, MessageComponent component, string text = "")
     {
-        int retry = 3;
+        var retry = 3;
         while (retry-- >= 0)
-        {
             try
             {
                 ulong messageId = await _discordWebhookClient.SendMessageAsync(
@@ -274,14 +275,13 @@ public partial class DiscordService
                 // Retry
                 _logger.LogError(e, "Failed to send message to discord, retrying...");
             }
-        }
     }
 
-    async Task SendMessageWarningAsync(Embed embed, MessageComponent component, string? text)
+    private async Task SendMessageWarningAsync(Embed embed, MessageComponent component, string? text)
     {
         AllowedMentions allowedMentions = new()
         {
-            RoleIds = new List<string?>()
+            RoleIds = new List<string?>
                 {
                     _discordOption.Mention!.Deleted,
                     _discordOption.Mention!.Channel

@@ -143,7 +143,9 @@ public class TwitcastingService(
                 video.Status = VideoStatus.Recording;
                 logger.LogInformation("{channelId} is now lived! Start recording.", channel.id);
 
-                if (null != DiscordService) await DiscordService.SendStartRecordingMessageAsync(video, channel);
+                if (null != DiscordService
+                    && channel.Hide != true)
+                    await DiscordService.SendStartRecordingMessageAsync(video, channel);
             }
         }
         else
@@ -192,7 +194,9 @@ public class TwitcastingService(
                     {
                         video.SourceStatus = VideoStatus.Reject;
                         video.Note = "Video source is detected access required.";
-                        if (null != DiscordService) await DiscordService.SendDeletedMessageAsync(video, channel);
+                        if (null != DiscordService
+                            && (null == channel || channel.Hide != true))
+                            await DiscordService.SendDeletedMessageAsync(video, channel);
 
                         logger.LogInformation("Video source is {status} because it is detected access required.",
                                               Enum.GetName(typeof(VideoStatus), video.SourceStatus));
@@ -208,9 +212,10 @@ public class TwitcastingService(
                     if (video.Status >= VideoStatus.Archived
                         && video.Status < VideoStatus.Expired)
                     {
+                        // First detected
                         video.SourceStatus = VideoStatus.Deleted;
-                        if (null != DiscordService)
-                            // First detected
+                        if (null != DiscordService
+                            && (null == channel || channel.Hide != true))
                             await DiscordService.SendDeletedMessageAsync(video, channel);
                     }
 
