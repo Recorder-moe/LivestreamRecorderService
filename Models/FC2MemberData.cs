@@ -62,7 +62,7 @@ public class ChannelData
     public int? Interval { get; set; }
 
     [JsonPropertyName("category")]
-    public string Category { get; set; }
+    public int Category { get; set; }
 
     [JsonPropertyName("category_name")]
     public string CategoryName { get; set; }
