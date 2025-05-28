@@ -7,8 +7,12 @@ using LivestreamRecorder.DB.Models;
 using LivestreamRecorderService.Models.Options;
 using Microsoft.Extensions.Options;
 using System.Configuration;
+using System.Net.Sockets;
+using Flurl.Http;
 using Flurl.Http.Configuration;
+using Polly;
 #endif
+using Polly.Retry;
 using Serilog;
 
 namespace LivestreamRecorderService.DependencyInjection;
@@ -42,25 +46,124 @@ public static partial class Extensions
                     .ConfigureFlurlClient(setting =>
                     {
                         // Always use the same HttpClient instance to optimize resource usage and performance.
-                        setting.HttpClientFactory = services.BuildServiceProvider().GetRequiredService<CouchDbHttpClientFactory>();
+                        setting.HttpClientFactory =
+                            services.BuildServiceProvider().GetRequiredService<CouchDbHttpClientFactory>(); // Configure HTTP request timeout
+
+                        setting.Timeout = TimeSpan.FromSeconds(30);
+
+                        // Configure network error handling and retry mechanism
+                        setting.OnError = call =>
+                        {
+                            if (call.Exception != null)
+                                Log.Error(exception: call.Exception,
+                                          messageTemplate: "CouchDB request failed: {Url}",
+                                          propertyValue: call.Request?.Url);
+                        };
+
+                        setting.OnErrorAsync = async call =>
+                        {
+                            // Check if this is a retryable error
+                            bool shouldRetry = call.Exception switch
+                            {
+                                HttpRequestException => true,
+                                TaskCanceledException => true,
+                                SocketException => true,
+                                IOException => true,
+                                FlurlHttpException httpEx => httpEx.StatusCode >= 500 ||
+                                                             httpEx.StatusCode == 408 ||
+                                                             httpEx.StatusCode == 429,
+                                _ => false
+                            };
+
+                            if (shouldRetry && call.Request != null)
+                            {
+                                // Create Polly retry strategy
+                                ResiliencePipeline retryPipeline = new ResiliencePipelineBuilder()
+                                                                   .AddRetry(new RetryStrategyOptions
+                                                                   {
+                                                                       ShouldHandle = new PredicateBuilder()
+                                                                                      .Handle<HttpRequestException>()
+                                                                                      .Handle<TaskCanceledException>()
+                                                                                      .Handle<SocketException>()
+                                                                                      .Handle<IOException>()
+                                                                                      .Handle<FlurlHttpException>(ex =>
+                                                                                          ex.StatusCode >= 500 ||
+                                                                                          ex.StatusCode == 408 ||
+                                                                                          ex.StatusCode == 429),
+                                                                       Delay = TimeSpan.FromSeconds(2),
+                                                                       MaxRetryAttempts = 3,
+                                                                       BackoffType = DelayBackoffType.Exponential,
+                                                                       UseJitter = true,
+                                                                       OnRetry = args =>
+                                                                       {
+                                                                           Log.Warning(
+                                                                               messageTemplate:
+                                                                               "CouchDB connection retry {AttemptNumber}/{MaxAttempts}, error: {Exception}",
+                                                                               propertyValue0: args.AttemptNumber + 1,
+                                                                               propertyValue1: 3,
+                                                                               propertyValue2: args.Outcome.Exception?.Message);
+
+                                                                           return ValueTask.CompletedTask;
+                                                                       }
+                                                                   })
+                                                                   .Build();
+
+                                try
+                                {
+                                    // Use Polly strategy to retry the request
+                                    IFlurlResponse? result = await retryPipeline.ExecuteAsync(async (token) =>
+                                    {
+                                        Log.Information(messageTemplate: "Retrying CouchDB request: {Url}", propertyValue: call.Request.Url);
+
+                                        // Recreate the same request
+                                        IFlurlRequest? retryRequest = new Flurl.Url(call.Request.Url).WithClient(call.Request.Client);
+
+                                        // Copy headers
+                                        foreach ((string Name, string Value) header in call.Request.Headers)
+                                            retryRequest = retryRequest.WithHeader(name: header.Name, value: header.Value);
+
+                                        return call.HttpRequestMessage?.Method?.Method switch
+                                        {
+                                            "POST" when call.RequestBody != null =>
+                                                await retryRequest.PostJsonAsync(data: call.RequestBody, cancellationToken: token),
+                                            "PUT" when call.RequestBody != null =>
+                                                await retryRequest.PutJsonAsync(data: call.RequestBody, cancellationToken: token),
+                                            "DELETE" =>
+                                                await retryRequest.DeleteAsync(cancellationToken: token),
+                                            _ =>
+                                                await retryRequest.GetAsync(cancellationToken: token)
+                                        };
+                                    }); // Update call response
+
+                                    call.Response = result;
+                                    call.ExceptionHandled = true;
+
+                                    Log.Information(messageTemplate: "CouchDB request retry successful: {Url}", propertyValue: call.Request.Url);
+                                }
+                                catch (Exception retryException)
+                                {
+                                    Log.Error(exception: retryException,
+                                              messageTemplate: "CouchDB request retry ultimately failed: {Url}, will throw original error",
+                                              propertyValue: call.Request.Url);
+                                    // Don't handle retry failure, let original error be thrown
+                                }
+                            }
+                        };
+
 #if !RELEASE
                         setting.BeforeCall = call
-                            => Log.Debug("Sending request to couch: {request} {body}", call, call.RequestBody);
+                            => Log.Debug(messageTemplate: "Sending request to CouchDB: {request} {body}",
+                                         propertyValue0: call,
+                                         propertyValue1: call.RequestBody);
 
                         setting.AfterCallAsync = call => Task.Run(() =>
                         {
                             if (call.Succeeded)
-                            {
-                                Log.Debug("Received response from couch: {response} {body}",
-                                    call,
-                                    call.Response.ResponseMessage.Content.ReadAsStringAsync().Result);
-                            }
+                                Log.Debug(messageTemplate: "Received CouchDB response: {response} {body}",
+                                          propertyValue0: call,
+                                          propertyValue1: call.Response.ResponseMessage.Content.ReadAsStringAsync().Result);
                         });
 #endif
-                        setting.OnErrorAsync = call => Task.Run(()
-                            => Log.Error("Request Failed: {request} {body}",
-                                call,
-                                call?.RequestBody ?? string.Empty));
                     })
                     .SetPropertyCase(PropertyCaseType.None);
             });
