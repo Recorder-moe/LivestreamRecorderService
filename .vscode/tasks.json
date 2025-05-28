@@ -7,7 +7,7 @@
             "type": "process",
             "args": [
                 "build",
-                "${workspaceFolder}/LivestreamRecorderService.sln",
+                "LivestreamRecorderService.sln",
                 "/property:GenerateFullPaths=true",
                 "/consoleloggerparameters:NoSummary"
             ],
@@ -19,7 +19,7 @@
             "type": "process",
             "args": [
                 "publish",
-                "${workspaceFolder}/LivestreamRecorderService.sln",
+                "LivestreamRecorderService.sln",
                 "/property:GenerateFullPaths=true",
                 "/consoleloggerparameters:NoSummary"
             ],
@@ -33,7 +33,63 @@
                 "watch",
                 "run",
                 "--project",
-                "${workspaceFolder}/LivestreamRecorderService.sln"
+                "LivestreamRecorderService.sln"
+            ],
+            "problemMatcher": "$msCompile"
+        },
+        {
+            "label": "build-couchdb",
+            "command": "dotnet",
+            "type": "process",
+            "args": [
+                "build",
+                "LivestreamRecorderService.sln",
+                "--configuration",
+                "CouchDB",
+                "/property:GenerateFullPaths=true",
+                "/consoleloggerparameters:NoSummary"
+            ],
+            "problemMatcher": "$msCompile"
+        },
+        {
+            "label": "build-cosmosdb",
+            "command": "dotnet",
+            "type": "process",
+            "args": [
+                "build",
+                "LivestreamRecorderService.sln",
+                "--configuration",
+                "CosmosDB",
+                "/property:GenerateFullPaths=true",
+                "/consoleloggerparameters:NoSummary"
+            ],
+            "problemMatcher": "$msCompile"
+        },
+        {
+            "label": "build-apachecouchdb-release",
+            "command": "dotnet",
+            "type": "process",
+            "args": [
+                "build",
+                "LivestreamRecorderService.sln",
+                "--configuration",
+                "ApacheCouchDB_Release",
+                "/property:GenerateFullPaths=true",
+                "/consoleloggerparameters:NoSummary"
+            ],
+            "problemMatcher": "$msCompile"
+        },
+        {
+            "label": "build-azurecosmosdb-release",
+            "command": "dotnet",
+            "type": "process",
+            "args": [
+                "build",
+                "LivestreamRecorderService.sln",
+                "--configuration",
+                "AzureCosmosDB_Release",
+                "/property:GenerateFullPaths=true",
+                "/consoleloggerparameters:NoSummary"
             ],
             "problemMatcher": "$msCompile"
         }

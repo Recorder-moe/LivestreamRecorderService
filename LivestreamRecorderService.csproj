@@ -24,8 +24,12 @@
     <DefineConstants>$(DefineConstants);COUCHDB;RELEASE</DefineConstants>
     <Optimize>True</Optimize>
   </PropertyGroup>
-  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='CouchDB|AnyCPU'" />
-  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='CosmosDB|AnyCPU'" />
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='CouchDB|AnyCPU'">
+    <DefineConstants>$(DefineConstants);COUCHDB</DefineConstants>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='CosmosDB|AnyCPU'">
+    <DefineConstants>$(DefineConstants);COSMOSDB</DefineConstants>
+  </PropertyGroup>
   <ItemGroup>
     <Compile Remove="LivestreamRecorder.DB\**" />
     <Content Remove="LivestreamRecorder.DB\**" />
