@@ -75,7 +75,7 @@ jobs:
 
       - name: Build and push ApacheCouchDB
         id: build_push_apache_couchdb
-        uses: docker/build-push-action@v5
+        uses: docker/build-push-action@v6
         with:
           context: .
           file: ./Dockerfile
@@ -108,7 +108,7 @@ jobs:
 
       - name: Build and push AzureCosmosDB
         id: build_push_azure_cosmosdb
-        uses: docker/build-push-action@v5
+        uses: docker/build-push-action@v6
         with:
           context: .
           file: ./Dockerfile
