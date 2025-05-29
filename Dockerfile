@@ -16,8 +16,8 @@ ARG TARGETARCH
 ARG TARGETVARIANT
 
 RUN --mount=type=cache,id=apk-$TARGETARCH$TARGETVARIANT,sharing=locked,target=/var/cache/apk \
-    --mount=from=ghcr.io/jim60105/static-ffmpeg-upx:7.0-1,source=/ffmpeg,target=/ffmpeg,rw \
-    --mount=from=ghcr.io/jim60105/static-ffmpeg-upx:7.0-1,source=/ffprobe,target=/ffprobe,rw \
+    --mount=from=ghcr.io/jim60105/static-ffmpeg-upx:7.1.1,source=/ffmpeg,target=/ffmpeg,rw \
+    --mount=from=ghcr.io/jim60105/static-ffmpeg-upx:7.1.1,source=/ffprobe,target=/ffprobe,rw \
     apk update && apk add -u \
     # These branches follows the yt-dlp release
     -X "https://dl-cdn.alpinelinux.org/alpine/edge/main" \
@@ -78,9 +78,9 @@ COPY --link --chown=$UID:0 --chmod=775 LICENSE /licenses/LICENSE
 ADD --link --chown=$UID:0 --chmod=775 https://raw.githubusercontent.com/yt-dlp/yt-dlp/master/LICENSE /licenses/yt-dlp.LICENSE
 
 RUN --mount=type=cache,id=apk-$TARGETARCH$TARGETVARIANT,sharing=locked,target=/var/cache/apk \
-    --mount=from=ghcr.io/jim60105/static-ffmpeg-upx:7.0-1,source=/ffmpeg,target=/ffmpeg,rw \
-    --mount=from=ghcr.io/jim60105/static-ffmpeg-upx:7.0-1,source=/ffprobe,target=/ffprobe,rw \
-    --mount=from=ghcr.io/jim60105/static-ffmpeg-upx:7.0-1,source=/dumb-init,target=/dumb-init,rw \
+    --mount=from=ghcr.io/jim60105/static-ffmpeg-upx:7.1.1,source=/ffmpeg,target=/ffmpeg,rw \
+    --mount=from=ghcr.io/jim60105/static-ffmpeg-upx:7.1.1,source=/ffprobe,target=/ffprobe,rw \
+    --mount=from=ghcr.io/jim60105/static-ffmpeg-upx:7.1.1,source=/dumb-init,target=/dumb-init,rw \
     apk update && apk add -u \
     # These branches follows the yt-dlp release
     -X "https://dl-cdn.alpinelinux.org/alpine/edge/main" \
