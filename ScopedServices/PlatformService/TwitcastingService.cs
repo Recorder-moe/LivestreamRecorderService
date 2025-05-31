@@ -286,8 +286,11 @@ public class TwitcastingService(
         async Task<string?> getAvatarBlobUrl()
         {
             HtmlNode? avatarImgNode = htmlDoc.DocumentNode.SelectSingleNode("//a[@class='tw-user-nav-icon']/img");
-            string? avatarUrl = avatarImgNode?.Attributes["src"]?.Value
-                                             .Replace("_bigger", "");
+            HtmlNode? avatarImgNode2 = htmlDoc.DocumentNode.SelectSingleNode("//div[@class='tw-user-nav2-icon']/img");
+            string avatarUrl = (avatarImgNode?.Attributes["src"]?.Value
+                                ?? avatarImgNode2?.Attributes["src"]?.Value
+                                ?? "")
+                .Replace("_bigger", "");
 
             if (string.IsNullOrEmpty(avatarUrl)) return null;
 
