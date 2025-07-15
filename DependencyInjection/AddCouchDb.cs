@@ -62,6 +62,12 @@ public static partial class Extensions
 
                         setting.OnErrorAsync = async call =>
                         {
+                            // Don't retry requests to /_session endpoint to avoid authentication lockout
+                            if (call.Request?.Url?.Path == "/_session")
+                            {
+                                return;
+                            }
+
                             // Check if this is a retryable error
                             bool shouldRetry = call.Exception switch
                             {
@@ -128,8 +134,14 @@ public static partial class Extensions
                                                 await retryRequest.PostJsonAsync(data: call.RequestBody, cancellationToken: token),
                                             "PUT" when call.RequestBody != null =>
                                                 await retryRequest.PutJsonAsync(data: call.RequestBody, cancellationToken: token),
+                                            "PATCH" when call.RequestBody != null =>
+                                                await retryRequest.PatchJsonAsync(data: call.RequestBody, cancellationToken: token),
                                             "DELETE" =>
                                                 await retryRequest.DeleteAsync(cancellationToken: token),
+                                            "HEAD" =>
+                                                await retryRequest.HeadAsync(cancellationToken: token),
+                                            "OPTIONS" =>
+                                                await retryRequest.OptionsAsync(cancellationToken: token),
                                             _ =>
                                                 await retryRequest.GetAsync(cancellationToken: token)
                                         };
