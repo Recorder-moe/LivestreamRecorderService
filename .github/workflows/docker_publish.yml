@@ -16,6 +16,8 @@ on:
 permissions:
   contents: read
   packages: write
+  id-token: write
+  attestations: write
 
 # A workflow run is made up of one or more jobs that can run sequentially or in parallel
 jobs:
@@ -73,8 +75,9 @@ jobs:
           username: ${{ github.repository_owner }}
           password: ${{ github.token }}
 
-      - name: Build and push
-        uses: docker/build-push-action@v5
+      - name: Build and push ApacheCouchDB
+        id: build_push_apache_couchdb
+        uses: docker/build-push-action@v6
         with:
           context: .
           file: ./Dockerfile
@@ -93,8 +96,21 @@ jobs:
           sbom: true
           provenance: true
 
-      - name: Build and push
-        uses: docker/build-push-action@v5
+      - name: Attest GHCR ApacheCouchDB image
+        uses: actions/attest-build-provenance@v2
+        with:
+          subject-name: ghcr.io/${{ github.repository }}
+          subject-digest: ${{ steps.build_push_apache_couchdb.outputs.digest }}
+
+      - name: Attest Docker Hub ApacheCouchDB image
+        uses: actions/attest-build-provenance@v2
+        with:
+          subject-name: index.docker.io/${{ secrets.DOCKERHUB_ORGANIZATION_NAME }}/${{ github.event.repository.name }}
+          subject-digest: ${{ steps.build_push_apache_couchdb.outputs.digest }}
+
+      - name: Build and push AzureCosmosDB
+        id: build_push_azure_cosmosdb
+        uses: docker/build-push-action@v6
         with:
           context: .
           file: ./Dockerfile
@@ -112,3 +128,15 @@ jobs:
           cache-to: type=registry,ref=ghcr.io/recorder-moe/livestreamrecorderservice:cache,mode=max
           sbom: true
           provenance: true
+
+      - name: Attest GHCR AzureCosmosDB image
+        uses: actions/attest-build-provenance@v2
+        with:
+          subject-name: ghcr.io/${{ github.repository }}
+          subject-digest: ${{ steps.build_push_azure_cosmosdb.outputs.digest }}
+
+      - name: Attest Docker Hub AzureCosmosDB image
+        uses: actions/attest-build-provenance@v2
+        with:
+          subject-name: index.docker.io/${{ secrets.DOCKERHUB_ORGANIZATION_NAME }}/${{ github.event.repository.name }}
+          subject-digest: ${{ steps.build_push_azure_cosmosdb.outputs.digest }}
