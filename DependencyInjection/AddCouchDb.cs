@@ -63,7 +63,7 @@ public static partial class Extensions
                         setting.OnErrorAsync = async call =>
                         {
                             // Don't retry requests to /_session endpoint to avoid authentication lockout
-                            if (call.Request?.Url?.Path == "/_session")
+                            if (call.Request?.Url?.ToString()?.Contains("/_session") == true)
                             {
                                 return;
                             }
