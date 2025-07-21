@@ -63,14 +63,14 @@ public class YtdlpService(IJobService jobService) : IYtdlpService
             // Because yt-dlp does not support using cookies file in Read-only file system.
             // Which it is how K8s handle secrets.
 
-            // original ENTRYPOINT: "dumb-init", "--", "yt-dlp", "--no-cache-dir"
+            // original ENTRYPOINT [ "dumb-init", "--", "sh", "-c", "node /app/build/main.js & exec yt-dlp --no-cache-dir \"$@\"", "sh" ]
 
             command = ["dumb-init", "--", "sh", "-c"];
 
             // cp under mountPath to make sure the permission is writable
             args =
             [
-                $"cp -r /cookies {mountPath}/cookies && yt-dlp --ignore-config --retries 30 --concurrent-fragments 16 --merge-output-format mp4 -S '+proto:http,+codec:h264' --embed-thumbnail --embed-metadata --no-part --cookies {mountPath}/cookies/{video.ChannelId}.txt -o '{fileName}' '{url}'"
+                $"cp -r /cookies {mountPath}/cookies && node /app/build/main.js & yt-dlp --ignore-config --retries 30 --concurrent-fragments 16 --merge-output-format mp4 -S '+proto:http,+codec:h264' --embed-thumbnail --embed-metadata --no-part --cookies {mountPath}/cookies/{video.ChannelId}.txt -o '{fileName}' '{url}'"
             ];
 
             // Workaround for twitcasting ERROR:
