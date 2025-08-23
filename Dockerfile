@@ -3,7 +3,7 @@ ARG UID=1654
 ARG VERSION=EDGE
 ARG RELEASE=0
 ARG BUILD_CONFIGURATION=ApacheCouchDB_Release
-ARG YTDLP_VERSION=2025.06.30
+ARG YTDLP_VERSION=2025.08.22
 
 ########################################
 # Debug stage
@@ -17,11 +17,11 @@ ARG TARGETARCH
 ARG TARGETVARIANT
 
 # ffmpeg and ffprobe
-COPY --link --from=ghcr.io/jim60105/static-ffmpeg-upx:7.1.1 /ffmpeg /usr/bin/
-COPY --link --from=ghcr.io/jim60105/static-ffmpeg-upx:7.1.1 /ffprobe /usr/bin/
+COPY --link --from=ghcr.io/jim60105/static-ffmpeg-upx:8.0 /ffmpeg /usr/bin/
+COPY --link --from=ghcr.io/jim60105/static-ffmpeg-upx:8.0 /ffprobe /usr/bin/
 
 # dumb-init
-COPY --link --from=ghcr.io/jim60105/static-ffmpeg-upx:7.1.1 /dumb-init /usr/bin/
+COPY --link --from=ghcr.io/jim60105/static-ffmpeg-upx:8.0 /dumb-init /usr/bin/
 
 # yt-dlp
 ARG YTDLP_VERSION
@@ -79,11 +79,11 @@ COPY --link --chown=$UID:0 --chmod=775 LICENSE /licenses/LICENSE
 ADD --link --chown=$UID:0 --chmod=775 https://raw.githubusercontent.com/yt-dlp/yt-dlp/master/LICENSE /licenses/yt-dlp.LICENSE
 
 # ffmpeg and ffprobe
-COPY --link --from=ghcr.io/jim60105/static-ffmpeg-upx:7.1.1 /ffmpeg /usr/bin/
-COPY --link --from=ghcr.io/jim60105/static-ffmpeg-upx:7.1.1 /ffprobe /usr/bin/
+COPY --link --from=ghcr.io/jim60105/static-ffmpeg-upx:8.0 /ffmpeg /usr/bin/
+COPY --link --from=ghcr.io/jim60105/static-ffmpeg-upx:8.0 /ffprobe /usr/bin/
 
 # dumb-init
-COPY --link --from=ghcr.io/jim60105/static-ffmpeg-upx:7.1.1 /dumb-init /usr/bin/
+COPY --link --from=ghcr.io/jim60105/static-ffmpeg-upx:8.0 /dumb-init /usr/bin/
 
 # yt-dlp
 ARG YTDLP_VERSION
