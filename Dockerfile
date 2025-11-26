@@ -3,6 +3,7 @@ ARG UID=1654
 ARG VERSION=EDGE
 ARG RELEASE=0
 ARG BUILD_CONFIGURATION=ApacheCouchDB_Release
+ARG YTDLP_VERSION=2025.08.22
 
 ########################################
 # Debug stage
@@ -15,17 +16,16 @@ WORKDIR /app
 ARG TARGETARCH
 ARG TARGETVARIANT
 
-RUN --mount=type=cache,id=apk-$TARGETARCH$TARGETVARIANT,sharing=locked,target=/var/cache/apk \
-    --mount=from=ghcr.io/jim60105/static-ffmpeg-upx:7.1.1,source=/ffmpeg,target=/ffmpeg,rw \
-    --mount=from=ghcr.io/jim60105/static-ffmpeg-upx:7.1.1,source=/ffprobe,target=/ffprobe,rw \
-    apk update && apk add -u \
-    # These branches follows the yt-dlp release
-    -X "https://dl-cdn.alpinelinux.org/alpine/edge/main" \
-    -X "https://dl-cdn.alpinelinux.org/alpine/edge/community" \
-    yt-dlp && \
-    # Copy the compressed ffmpeg and ffprobe and overwrite the apk installed ones
-    cp /ffmpeg /usr/bin/ && \
-    cp /ffprobe /usr/bin/
+# ffmpeg and ffprobe
+COPY --link --from=ghcr.io/jim60105/static-ffmpeg-upx:8.0 /ffmpeg /usr/bin/
+COPY --link --from=ghcr.io/jim60105/static-ffmpeg-upx:8.0 /ffprobe /usr/bin/
+
+# dumb-init
+COPY --link --from=ghcr.io/jim60105/static-ffmpeg-upx:8.0 /dumb-init /usr/bin/
+
+# yt-dlp
+ARG YTDLP_VERSION
+ADD --link --chown=root:0 --chmod=755 https://github.com/yt-dlp/yt-dlp/releases/download/${YTDLP_VERSION}/yt-dlp_linux /usr/bin/yt-dlp
 
 ########################################
 # Build stage
@@ -53,7 +53,7 @@ RUN --mount=source=.,target=.,rw \
 ########################################
 # Final stage
 ########################################
-FROM alpine:3 as final
+FROM alpine:3 AS final
 
 # RUN mount cache for multi-arch: https://github.com/docker/buildx/issues/549#issuecomment-1788297892
 ARG TARGETARCH
@@ -71,25 +71,23 @@ RUN --mount=type=cache,id=apk-$TARGETARCH$TARGETVARIANT,sharing=locked,target=/v
 
 # Create directories with correct permissions
 RUN install -d -m 775 -o $UID -g 0 /app && \
-    install -d -m 775 -o $UID -g 0 /licenses
+    install -d -m 775 -o $UID -g 0 /licenses && \
+    install -d -m 775 -o $UID -g 0 /.cache
 
 # Copy licenses (OpenShift Policy)
 COPY --link --chown=$UID:0 --chmod=775 LICENSE /licenses/LICENSE
 ADD --link --chown=$UID:0 --chmod=775 https://raw.githubusercontent.com/yt-dlp/yt-dlp/master/LICENSE /licenses/yt-dlp.LICENSE
 
-RUN --mount=type=cache,id=apk-$TARGETARCH$TARGETVARIANT,sharing=locked,target=/var/cache/apk \
-    --mount=from=ghcr.io/jim60105/static-ffmpeg-upx:7.1.1,source=/ffmpeg,target=/ffmpeg,rw \
-    --mount=from=ghcr.io/jim60105/static-ffmpeg-upx:7.1.1,source=/ffprobe,target=/ffprobe,rw \
-    --mount=from=ghcr.io/jim60105/static-ffmpeg-upx:7.1.1,source=/dumb-init,target=/dumb-init,rw \
-    apk update && apk add -u \
-    # These branches follows the yt-dlp release
-    -X "https://dl-cdn.alpinelinux.org/alpine/edge/main" \
-    -X "https://dl-cdn.alpinelinux.org/alpine/edge/community" \
-    yt-dlp && \
-    # Copy the compressed ffmpeg and ffprobe and overwrite the apk installed ones
-    cp /ffmpeg /usr/bin/ && \
-    cp /ffprobe /usr/bin/ && \
-    cp /dumb-init /usr/bin/
+# ffmpeg and ffprobe
+COPY --link --from=ghcr.io/jim60105/static-ffmpeg-upx:8.0 /ffmpeg /usr/bin/
+COPY --link --from=ghcr.io/jim60105/static-ffmpeg-upx:8.0 /ffprobe /usr/bin/
+
+# dumb-init
+COPY --link --from=ghcr.io/jim60105/static-ffmpeg-upx:8.0 /dumb-init /usr/bin/
+
+# yt-dlp
+ARG YTDLP_VERSION
+ADD --link --chown=$UID:0 --chmod=775 https://github.com/yt-dlp/yt-dlp/releases/download/${YTDLP_VERSION}/yt-dlp_linux /usr/bin/yt-dlp
 
 COPY --link --chown=$UID:0 --chmod=775 --from=publish /app /app
 
