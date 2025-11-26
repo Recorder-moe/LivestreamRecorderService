@@ -191,10 +191,12 @@ public class GiftList
 public class ProfileData
 {
     [JsonPropertyName("userid")]
-    public string Userid { get; set; }
+    [JsonNumberHandling(JsonNumberHandling.AllowReadingFromString)]
+    public long? Userid { get; set; }
 
     [JsonPropertyName("fc2id")]
-    public string Fc2id { get; set; }
+    [JsonNumberHandling(JsonNumberHandling.AllowReadingFromString)]
+    public long? Fc2id { get; set; }
 
     [JsonPropertyName("name")]
     public string Name { get; set; }
@@ -212,5 +214,6 @@ public class ProfileData
     public string Sex { get; set; }
 
     [JsonPropertyName("age")]
-    public string Age { get; set; }
+    [JsonNumberHandling(JsonNumberHandling.AllowReadingFromString)]
+    public int? Age { get; set; }
 }
