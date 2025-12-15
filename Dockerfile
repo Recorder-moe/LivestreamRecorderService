@@ -8,13 +8,19 @@ ARG YTDLP_VERSION=2025.12.08
 ########################################
 # Debug stage
 ########################################
-FROM mcr.microsoft.com/dotnet/runtime:8.0-alpine AS debug
+FROM mcr.microsoft.com/dotnet/runtime:8.0 AS debug
 
 WORKDIR /app
 
 # RUN mount cache for multi-arch: https://github.com/docker/buildx/issues/549#issuecomment-1788297892
 ARG TARGETARCH
 ARG TARGETVARIANT
+
+ARG UID
+
+# Create directories with correct permissions
+RUN install -d -m 775 -o $UID -g 0 /etc/yt-dlp-plugins/bgutil-ytdlp-pot-provider && \
+    install -d -m 775 -o $UID -g 0 /deno-dir
 
 # ffmpeg and ffprobe
 COPY --link --from=ghcr.io/jim60105/static-ffmpeg-upx:8.0 /ffmpeg /usr/bin/
@@ -23,14 +29,27 @@ COPY --link --from=ghcr.io/jim60105/static-ffmpeg-upx:8.0 /ffprobe /usr/bin/
 # dumb-init
 COPY --link --from=ghcr.io/jim60105/static-ffmpeg-upx:8.0 /dumb-init /usr/bin/
 
-# yt-dlp
+# Copy POToken server (bgutil-pot)
+COPY --link --chown=$UID:0 --chmod=775 --from=ghcr.io/jim60105/bgutil-pot:latest /bgutil-pot /usr/bin/
+
+# Copy POToken client plugin
+COPY --link --chown=$UID:0 --chmod=775 --from=ghcr.io/jim60105/bgutil-pot:latest /client /etc/yt-dlp-plugins/bgutil-ytdlp-pot-provider
+
+# yt-dlp (using Linux build for Debian with glibc)
 ARG YTDLP_VERSION
 ADD --link --chown=root:0 --chmod=755 https://github.com/yt-dlp/yt-dlp/releases/download/${YTDLP_VERSION}/yt-dlp_linux /usr/bin/yt-dlp
+
+# Deno JS runtime for yt-dlp
+ENV DENO_USE_CGROUPS=1 \
+    DENO_DIR=/deno-dir/ \
+    DENO_INSTALL_ROOT=/usr/local
+
+COPY --link --chown=$UID:0 --chmod=775 --from=docker.io/denoland/deno:bin /deno /usr/bin/
 
 ########################################
 # Build stage
 ########################################
-FROM --platform=$BUILDPLATFORM mcr.microsoft.com/dotnet/sdk:8.0-alpine AS build
+FROM --platform=$BUILDPLATFORM mcr.microsoft.com/dotnet/sdk:8.0 AS build
 
 WORKDIR /source
 
@@ -53,7 +72,7 @@ RUN --mount=source=.,target=.,rw \
 ########################################
 # Final stage
 ########################################
-FROM docker.io/denoland/deno:alpine AS final
+FROM mcr.microsoft.com/dotnet/runtime-deps:8.0 AS final
 
 # RUN mount cache for multi-arch: https://github.com/docker/buildx/issues/549#issuecomment-1788297892
 ARG TARGETARCH
@@ -65,15 +84,12 @@ ENV APP_UID=$UID
 ENV DOTNET_RUNNING_IN_CONTAINER=true 
 ENV DOTNET_SYSTEM_GLOBALIZATION_INVARIANT=true
 
-RUN --mount=type=cache,id=apk-$TARGETARCH$TARGETVARIANT,sharing=locked,target=/var/cache/apk \
-    apk update && apk add -u \
-    ca-certificates-bundle libgcc libssl3 libstdc++ zlib 
-
 # Create directories with correct permissions
 RUN install -d -m 775 -o $UID -g 0 /app && \
     install -d -m 775 -o $UID -g 0 /licenses && \
     install -d -m 775 -o $UID -g 0 /.cache && \
-    install -d -m 775 -o $UID -g 0 /etc/yt-dlp-plugins
+    install -d -m 775 -o $UID -g 0 /etc/yt-dlp-plugins/bgutil-ytdlp-pot-provider && \
+    install -d -m 775 -o $UID -g 0 /deno-dir
 
 # Copy licenses (OpenShift Policy)
 COPY --link --chown=$UID:0 --chmod=775 LICENSE /licenses/LICENSE
@@ -87,14 +103,21 @@ COPY --link --from=ghcr.io/jim60105/static-ffmpeg-upx:8.0 /ffprobe /usr/bin/
 COPY --link --from=ghcr.io/jim60105/static-ffmpeg-upx:8.0 /dumb-init /usr/bin/
 
 # Copy POToken server (bgutil-pot)
-COPY --link --chown=$APP_UID:0 --chmod=775 --from=ghcr.io/jim60105/bgutil-pot:latest /bgutil-pot /usr/bin/
+COPY --link --chown=$UID:0 --chmod=775 --from=ghcr.io/jim60105/bgutil-pot:latest /bgutil-pot /usr/bin/
 
 # Copy POToken client plugin
-COPY --link --chown=$APP_UID:0 --chmod=775 --from=ghcr.io/jim60105/bgutil-pot:latest /client /etc/yt-dlp-plugins/bgutil-ytdlp-pot-provider
+COPY --link --chown=$UID:0 --chmod=775 --from=ghcr.io/jim60105/bgutil-pot:latest /client /etc/yt-dlp-plugins/bgutil-ytdlp-pot-provider
 
-# yt-dlp
+# yt-dlp (using Linux build for Debian with glibc)
 ARG YTDLP_VERSION
 ADD --link --chown=$UID:0 --chmod=775 https://github.com/yt-dlp/yt-dlp/releases/download/${YTDLP_VERSION}/yt-dlp_linux /usr/bin/yt-dlp
+
+# Deno JS runtime for yt-dlp
+ENV DENO_USE_CGROUPS=1 \
+    DENO_DIR=/deno-dir/ \
+    DENO_INSTALL_ROOT=/usr/local
+
+COPY --link --chown=$UID:0 --chmod=775 --from=docker.io/denoland/deno:bin /deno /usr/bin/
 
 COPY --link --chown=$UID:0 --chmod=775 --from=publish /app /app
 
