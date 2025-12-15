@@ -89,7 +89,7 @@ jobs:
             BUILD_CONFIGURATION=ApacheCouchDB_Release
             VERSION=${{ github.ref_name }}
             RELEASE=${{ github.run_number }}
-          platforms: linux/amd64,linux/arm64
+          platforms: linux/amd64 # ,linux/arm64
           # Cache to regietry instead of gha to avoid the capacity limit.
           cache-from: type=registry,ref=ghcr.io/recorder-moe/livestreamrecorderservice:cache
           cache-to: type=registry,ref=ghcr.io/recorder-moe/livestreamrecorderservice:cache,mode=max
@@ -122,7 +122,7 @@ jobs:
             BUILD_CONFIGURATION=AzureCosmosDB_Release
             VERSION=${{ github.ref_name }}
             RELEASE=${{ github.run_number }}
-          platforms: linux/amd64,linux/arm64
+          platforms: linux/amd64 # ,linux/arm64
           # Cache to regietry instead of gha to avoid the capacity limit.
           cache-from: type=registry,ref=ghcr.io/recorder-moe/livestreamrecorderservice:cache
           cache-to: type=registry,ref=ghcr.io/recorder-moe/livestreamrecorderservice:cache,mode=max
