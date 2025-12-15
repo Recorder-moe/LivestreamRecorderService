@@ -3,7 +3,7 @@ ARG UID=1654
 ARG VERSION=EDGE
 ARG RELEASE=0
 ARG BUILD_CONFIGURATION=ApacheCouchDB_Release
-ARG YTDLP_VERSION=2025.08.22
+ARG YTDLP_VERSION=2025.12.08
 
 ########################################
 # Debug stage
@@ -53,7 +53,7 @@ RUN --mount=source=.,target=.,rw \
 ########################################
 # Final stage
 ########################################
-FROM alpine:3 AS final
+FROM docker.io/denoland/deno:alpine AS final
 
 # RUN mount cache for multi-arch: https://github.com/docker/buildx/issues/549#issuecomment-1788297892
 ARG TARGETARCH
@@ -72,7 +72,8 @@ RUN --mount=type=cache,id=apk-$TARGETARCH$TARGETVARIANT,sharing=locked,target=/v
 # Create directories with correct permissions
 RUN install -d -m 775 -o $UID -g 0 /app && \
     install -d -m 775 -o $UID -g 0 /licenses && \
-    install -d -m 775 -o $UID -g 0 /.cache
+    install -d -m 775 -o $UID -g 0 /.cache && \
+    install -d -m 775 -o $UID -g 0 /etc/yt-dlp-plugins
 
 # Copy licenses (OpenShift Policy)
 COPY --link --chown=$UID:0 --chmod=775 LICENSE /licenses/LICENSE
@@ -84,6 +85,12 @@ COPY --link --from=ghcr.io/jim60105/static-ffmpeg-upx:8.0 /ffprobe /usr/bin/
 
 # dumb-init
 COPY --link --from=ghcr.io/jim60105/static-ffmpeg-upx:8.0 /dumb-init /usr/bin/
+
+# Copy POToken server (bgutil-pot)
+COPY --link --chown=$APP_UID:0 --chmod=775 --from=ghcr.io/jim60105/bgutil-pot:latest /bgutil-pot /usr/bin/
+
+# Copy POToken client plugin
+COPY --link --chown=$APP_UID:0 --chmod=775 --from=ghcr.io/jim60105/bgutil-pot:latest /client /etc/yt-dlp-plugins/bgutil-ytdlp-pot-provider
 
 # yt-dlp
 ARG YTDLP_VERSION
