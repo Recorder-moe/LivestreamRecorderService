@@ -49,7 +49,8 @@ internal static partial class YoutubeDL
             Exec = "echo outfile: {}",
             DumpSingleJson = true,
             FlatPlaylist = flat,
-            WriteComments = fetchComments
+            WriteComments = fetchComments,
+            Verbose = true
         };
 
         if (overrideOptions != null)
