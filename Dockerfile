@@ -130,7 +130,8 @@ USER $UID
 STOPSIGNAL SIGINT
 
 # Use dumb-init as PID 1 to handle signals properly
-ENTRYPOINT [ "dumb-init", "--", "/app/LivestreamRecorderService" ]
+# Start bgutil-pot server in background and LivestreamRecorderService in foreground
+ENTRYPOINT [ "dumb-init", "--", "sh", "-c", "/usr/bin/bgutil-pot & exec /app/LivestreamRecorderService" ]
 
 ARG VERSION
 ARG RELEASE

@@ -50,7 +50,6 @@ internal static partial class YoutubeDL
             DumpSingleJson = true,
             FlatPlaylist = flat,
             WriteComments = fetchComments,
-            ExtractorArgs = new MultiValue<string>("youtubepot-bgutilscript"),
             Verbose = true
         };
 
