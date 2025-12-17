@@ -394,6 +394,10 @@ public class YoutubeService(
                 break;
             // Copyright Notice
             case "needs_auth":
+                // It seems that we now always get "needs_auth" for upcoming videos.
+                if (videoData.LiveStatus == "is_upcoming")
+                    goto case "public";
+
                 // Not archived
                 if (video.Status < VideoStatus.Archived)
                 {
