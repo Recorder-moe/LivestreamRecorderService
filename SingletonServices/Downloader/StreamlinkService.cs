@@ -11,6 +11,7 @@ public class StreamlinkService(IJobService jobService) : IStreamlinkService
     public Task CreateJobAsync(Video video,
                                bool useCookiesFile = false,
                                string? url = null,
+                               bool liveFromStart = false,
                                CancellationToken cancellation = default)
     {
         url ??= $"twitch.tv/{NameHelper.ChangeId.ChannelId.PlatformType(video.ChannelId, Name)}";

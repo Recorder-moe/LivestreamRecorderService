@@ -18,12 +18,10 @@ public class RecordService
     private readonly ILogger<RecordWorker> _logger;
     private readonly IStreamlinkService _streamlinkService;
     private readonly ITwitcastingRecorderService _twitcastingRecorderService;
-    private readonly IYtarchiveService _ytarchiveService;
     private readonly IYtdlpService _ytdlpService;
 
     public RecordService(ILogger<RecordWorker> logger,
                          IJobService jobService,
-                         IYtarchiveService ytarchiveService,
                          IYtdlpService ytdlpService,
                          ITwitcastingRecorderService twitcastingRecorderService,
                          IStreamlinkService streamlinkService,
@@ -33,7 +31,6 @@ public class RecordService
     {
         _logger = logger;
         _jobService = jobService;
-        _ytarchiveService = ytarchiveService;
         _ytdlpService = ytdlpService;
         _twitcastingRecorderService = twitcastingRecorderService;
         _streamlinkService = streamlinkService;
@@ -126,9 +123,10 @@ public class RecordService
                 switch (video.Source)
                 {
                     case "Youtube":
-                        await _ytarchiveService.CreateJobAsync(
+                        await _ytdlpService.CreateJobAsync(
                             video: video,
                             useCookiesFile: channel?.UseCookiesFile == true,
+                            liveFromStart: true,
                             cancellation: stoppingToken);
 
                         break;

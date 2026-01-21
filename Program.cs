@@ -112,7 +112,6 @@ try
 
                 services.AddDiscordService(configuration);
 
-                services.AddSingleton<IYtarchiveService, YtarchiveService>();
                 services.AddSingleton<IYtdlpService, YtdlpService>();
                 services.AddSingleton<IStreamlinkService, StreamlinkService>();
                 services.AddSingleton<ITwitcastingRecorderService, TwitcastingRecorderService>();
