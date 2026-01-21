@@ -7,6 +7,7 @@ public interface IDownloaderService
     Task CreateJobAsync(Video video,
                         bool useCookiesFile = false,
                         string? url = null,
+                        bool liveFromStart = false,
                         CancellationToken cancellation = default);
 }
 
@@ -23,11 +24,6 @@ public interface IStreamlinkService : IDownloaderService
 public interface ITwitcastingRecorderService : IDownloaderService
 {
     public const string Name = "twitcastingrecorder";
-}
-
-public interface IYtarchiveService : IDownloaderService
-{
-    public const string Name = "ytarchive";
 }
 
 public interface IYtdlpService : IDownloaderService

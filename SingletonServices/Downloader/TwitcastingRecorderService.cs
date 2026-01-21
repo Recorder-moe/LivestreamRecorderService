@@ -11,6 +11,7 @@ public class TwitcastingRecorderService(IJobService jobService) : ITwitcastingRe
     public Task CreateJobAsync(Video video,
                                bool useCookiesFile = false,
                                string? url = null,
+                               bool liveFromStart = false,
                                CancellationToken cancellation = default)
     {
         string channelId = url?.Split('/', StringSplitOptions.RemoveEmptyEntries).Last()

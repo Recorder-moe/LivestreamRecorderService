@@ -26,7 +26,7 @@ public class YoutubeService(
     RssService rSsService,
     IStorageService storageService,
     // ReSharper disable once SuggestBaseTypeForParameterInConstructor
-    IYtarchiveService ytarchiveService,
+    IYtdlpService ytdlpService,
     IHttpClientFactory httpClientFactory,
     IOptions<DiscordOption> discordOptions,
     IServiceProvider serviceProvider) : PlatformService(channelRepository,
@@ -434,9 +434,10 @@ public class YoutubeService(
 
         if (video.Status == VideoStatus.WaitingToRecord)
         {
-            await ytarchiveService.CreateJobAsync(video: video,
-                                                  useCookiesFile: channel?.UseCookiesFile == true,
-                                                  cancellation: cancellation);
+            await ytdlpService.CreateJobAsync(video: video,
+                                              useCookiesFile: channel?.UseCookiesFile == true,
+                                              liveFromStart: true,
+                                              cancellation: cancellation);
 
             video.Status = VideoStatus.Recording;
             logger.LogInformation("{videoId} is now lived! Start recording.", video.id);

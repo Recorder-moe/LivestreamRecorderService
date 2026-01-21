@@ -11,6 +11,7 @@ public class Fc2LiveDLService(IJobService jobService) : IFc2LiveDLService
     public Task CreateJobAsync(Video video,
                                bool useCookiesFile = false,
                                string? url = null,
+                               bool liveFromStart = false,
                                CancellationToken cancellation = default)
     {
         url ??= $"https://live.fc2.com/{NameHelper.ChangeId.ChannelId.PlatformType(video.ChannelId, Name)}";

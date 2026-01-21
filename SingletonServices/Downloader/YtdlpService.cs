@@ -11,6 +11,7 @@ public class YtdlpService(IJobService jobService) : IYtdlpService
     public Task CreateJobAsync(Video video,
                                bool useCookiesFile = false,
                                string? url = null,
+                               bool liveFromStart = false,
                                CancellationToken cancellation = default)
     {
         string instanceName = NameHelper.GetInstanceName(Name, video.id);
@@ -36,6 +37,8 @@ public class YtdlpService(IJobService jobService) : IYtdlpService
             "-o", fileName,
             url
         ];
+
+        if (liveFromStart) args = ["--live-from-start", .. args];
 
         // Workaround for twitcasting ERROR:
         // Initialization fragment found after media fragments, unable to download
@@ -68,9 +71,10 @@ public class YtdlpService(IJobService jobService) : IYtdlpService
             command = ["dumb-init", "--", "sh", "-c"];
 
             // cp under mountPath to make sure the permission is writable
+            string liveFromStartArg = liveFromStart ? "--live-from-start " : string.Empty;
             args =
             [
-                $"cp -r /cookies {mountPath}/cookies && yt-dlp --ignore-config --retries 30 --concurrent-fragments 16 --merge-output-format mp4 -S '+proto:http,+codec:h264' --embed-thumbnail --embed-metadata --no-part --cookies {mountPath}/cookies/{video.ChannelId}.txt -o '{fileName}' '{url}'"
+                $"cp -r /cookies {mountPath}/cookies && yt-dlp {liveFromStartArg}--ignore-config --retries 30 --concurrent-fragments 16 --merge-output-format mp4 -S '+proto:http,+codec:h264' --embed-thumbnail --embed-metadata --no-part --cookies {mountPath}/cookies/{video.ChannelId}.txt -o '{fileName}' '{url}'"
             ];
 
             // Workaround for twitcasting ERROR:

@@ -25,7 +25,7 @@ public static class NameHelper
     {
         return platform switch
         {
-            "Youtube" or IYtarchiveService.Name or IYtdlpService.Name => $"{video.id}.mp4",
+            "Youtube" or IYtdlpService.Name => $"{video.id}.mp4",
             "Twitch" or IStreamlinkService.Name => $"{video.id}.mp4",
             "Twitcasting" or ITwitcastingRecorderService.Name => $"{video.ChannelId}_{DateTime.UtcNow:yyyyMMddHHmmss}.mp4",
             "FC2" or IFc2LiveDLService.Name => $"{video.ChannelId}_{DateTime.UtcNow:yyyyMMddHHmmss}.mp4",
@@ -45,7 +45,7 @@ public static class NameHelper
             {
                 return platform switch
                 {
-                    "Youtube" or IYtarchiveService.Name or IYtdlpService.Name
+                    "Youtube" or IYtdlpService.Name
                         => channelId, // Youtube channelId already starts with "UC"
                     "Twitch" or IStreamlinkService.Name
                         => channelId.StartsWith("TW") ? channelId[2..] : channelId,
@@ -61,7 +61,7 @@ public static class NameHelper
             {
                 return platform switch
                 {
-                    "Youtube" or IYtarchiveService.Name or IYtdlpService.Name
+                    "Youtube" or IYtdlpService.Name
                         => channelId, // Youtube channelId always starts with "UC"
                     "Twitch" or IStreamlinkService.Name
                         => channelId.StartsWith("TW") ? channelId : "TW" + channelId,
@@ -80,7 +80,7 @@ public static class NameHelper
             {
                 return platform switch
                 {
-                    "Youtube" or IYtarchiveService.Name or IYtdlpService.Name
+                    "Youtube" or IYtdlpService.Name
                         => videoId.StartsWith('Y') ? videoId[1..] : videoId,
                     "Twitch" or IStreamlinkService.Name
                         => videoId.StartsWith("TW") ? videoId[2..] : videoId,
@@ -96,7 +96,7 @@ public static class NameHelper
             {
                 return platform switch
                 {
-                    "Youtube" or IYtarchiveService.Name or IYtdlpService.Name
+                    "Youtube" or IYtdlpService.Name
                         => "Y" + videoId,
                     "Twitch" or IStreamlinkService.Name
                         => "TW" + videoId,
