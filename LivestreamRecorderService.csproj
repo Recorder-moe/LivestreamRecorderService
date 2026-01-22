@@ -95,8 +95,6 @@
     <TrimmerRootAssembly Include="CouchDB.NET" />
     <TrimmerRootAssembly Include="CouchDB.NET.DependencyInjection" />
     <TrimmerRootAssembly Include="Flurl" />
-    <TrimmerRootAssembly Include="IdentityModel.OidcClient" />
-    <TrimmerRootAssembly Include="IdentityModel" />
     <TrimmerRootAssembly Include="KubernetesClient" />
     <TrimmerRootAssembly Include="Microsoft.Extensions.Azure" />
     <TrimmerRootAssembly Include="Minio" />
