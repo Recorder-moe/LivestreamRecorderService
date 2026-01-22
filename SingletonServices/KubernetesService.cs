@@ -185,7 +185,11 @@ public class KubernetesService(
                                     }
                                 },
                                 Env = uploaderService.GetEnvironmentVariables()
-                                                     .Select(p => new V1EnvVar(p.Name, p.Value ?? p.SecureValue))
+                                                     .Select(p => new V1EnvVar
+                                                     {
+                                                         Name = p.Name,
+                                                         Value = p.Value ?? p.SecureValue
+                                                     })
                                                      .ToList()
                             }
                         },
