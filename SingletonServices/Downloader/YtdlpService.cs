@@ -24,26 +24,43 @@ public class YtdlpService(IJobService jobService) : IYtdlpService
         string fileName = NameHelper.GetFileName(video, Name);
         video.Filename = fileName;
         string[]? command = null;
-        string[] args =
-        [
-            "--ignore-config",
-            "--retries", "30",
-            "--concurrent-fragments", "16",
-            "--merge-output-format", "mp4",
-            "-S", "+proto:http,+codec:h264",
-            "--embed-thumbnail",
-            "--embed-metadata",
-            "--no-part",
-            "-o", fileName,
-            url
-        ];
+        string[] args;
 
-        if (liveFromStart) args = ["--live-from-start", .. args];
+        // Live-from-start mode uses minimal args to avoid compatibility issues
+        // Working example: yt-dlp --live-from-start --no-part -o filename url
+        if (liveFromStart)
+        {
+            args =
+            [
+                "--live-from-start",
+                "--embed-thumbnail",
+                "--embed-metadata",
+                "--no-part",
+                "-o", fileName,
+                url
+            ];
+        }
+        else
+        {
+            args =
+            [
+                "--ignore-config",
+                "--retries", "30",
+                "--concurrent-fragments", "16",
+                "--merge-output-format", "mp4",
+                "-S", "+proto:http,+codec:h264",
+                "--embed-thumbnail",
+                "--embed-metadata",
+                "--no-part",
+                "-o", fileName,
+                url
+            ];
 
-        // Workaround for twitcasting ERROR:
-        // Initialization fragment found after media fragments, unable to download
-        // https://github.com/yt-dlp/yt-dlp/issues/5497
-        if (url.Contains("twitcasting.tv")) args = ["--downloader", "ffmpeg", .. args];
+            // Workaround for twitcasting ERROR:
+            // Initialization fragment found after media fragments, unable to download
+            // https://github.com/yt-dlp/yt-dlp/issues/5497
+            if (url.Contains("twitcasting.tv")) args = ["--downloader", "ffmpeg", .. args];
+        }
 
         if (useCookiesFile)
             //args = ["--cookies", $"/cookies/{video.ChannelId}.txt", .. args];
@@ -71,16 +88,26 @@ public class YtdlpService(IJobService jobService) : IYtdlpService
             command = ["dumb-init", "--", "sh", "-c"];
 
             // cp under mountPath to make sure the permission is writable
-            string liveFromStartArg = liveFromStart ? "--live-from-start " : string.Empty;
-            args =
-            [
-                $"cp -r /cookies {mountPath}/cookies && yt-dlp {liveFromStartArg}--ignore-config --retries 30 --concurrent-fragments 16 --merge-output-format mp4 -S '+proto:http,+codec:h264' --embed-thumbnail --embed-metadata --no-part --cookies {mountPath}/cookies/{video.ChannelId}.txt -o '{fileName}' '{url}'"
-            ];
+            // Live-from-start mode uses minimal args to avoid compatibility issues
+            if (liveFromStart)
+            {
+                args =
+                [
+                    $"cp -r /cookies {mountPath}/cookies && yt-dlp --live-from-start --no-part --cookies {mountPath}/cookies/{video.ChannelId}.txt -o '{fileName}' '{url}'"
+                ];
+            }
+            else
+            {
+                args =
+                [
+                    $"cp -r /cookies {mountPath}/cookies && yt-dlp --ignore-config --retries 30 --concurrent-fragments 16 --merge-output-format mp4 -S '+proto:http,+codec:h264' --embed-thumbnail --embed-metadata --no-part --cookies {mountPath}/cookies/{video.ChannelId}.txt -o '{fileName}' '{url}'"
+                ];
 
-            // Workaround for twitcasting ERROR:
-            // Initialization fragment found after media fragments, unable to download
-            // https://github.com/yt-dlp/yt-dlp/issues/5497
-            if (url.Contains("twitcasting.tv")) args[0] = args[0].Replace("--ignore-config", "--ignore-config --downloader ffmpeg");
+                // Workaround for twitcasting ERROR:
+                // Initialization fragment found after media fragments, unable to download
+                // https://github.com/yt-dlp/yt-dlp/issues/5497
+                if (url.Contains("twitcasting.tv")) args[0] = args[0].Replace("--ignore-config", "--ignore-config --downloader ffmpeg");
+            }
 
             return (command, args);
         }
