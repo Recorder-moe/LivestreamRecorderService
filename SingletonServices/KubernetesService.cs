@@ -110,8 +110,8 @@ public class KubernetesService(
         V1Job? oldJob = await GetJobByKeywordAsync(containerName, cancellation);
         if (null != oldJob && oldJob.Status.Active != 0)
         {
-            logger.LogError("An already active job found for {imageName}", imageName);
-            throw new InvalidOperationException("An already active job found.");
+            logger.LogWarning("An already active job found for {imageName}, skipping job creation", imageName);
+            return;
         }
 
         V1Job job = new()
