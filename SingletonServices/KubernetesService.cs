@@ -108,10 +108,34 @@ public class KubernetesService(
             throw new ArgumentNullException(nameof(args), "command and args cannot be empty at the same time.");
 
         V1Job? oldJob = await GetJobByKeywordAsync(containerName, cancellation);
-        if (null != oldJob && oldJob.Status.Active != 0)
+        if (null != oldJob)
         {
-            logger.LogWarning("An already active job found for {imageName}, skipping job creation", imageName);
-            return;
+            // If job is active, skip creation since it's already running
+            if (oldJob.Status.Active != 0)
+            {
+                logger.LogWarning("An already active job found for {imageName}, skipping job creation", imageName);
+                return;
+            }
+
+            // If job failed, clean it up before creating a new one
+            if ((oldJob.Status.Active is null or 0) && oldJob.Status.Failed > 0)
+            {
+                logger.LogInformation("Found failed job {jobName}, cleaning it up before creating new job", oldJob.Name());
+
+                V1Status? status = await kubernetes.DeleteNamespacedJobAsync(
+                    name: oldJob.Name(),
+                    namespaceParameter: oldJob.Namespace(),
+                    propagationPolicy: "Background",
+                    cancellationToken: cancellation);
+
+                if (status.Status != "Success")
+                {
+                    logger.LogError("Failed to delete job {jobName} {status}", oldJob.Name(), status.Message);
+                    throw new InvalidOperationException($"Failed to delete job {oldJob.Name()} {status.Message}");
+                }
+
+                logger.LogInformation("Failed K8s job {jobName} removed, proceeding with job creation", oldJob.Name());
+            }
         }
 
         V1Job job = new()
